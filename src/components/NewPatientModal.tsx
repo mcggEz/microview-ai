@@ -40,7 +40,7 @@ export default function NewPatientModal({ isOpen, onClose, onPatientCreated, cur
       const patientData = {
         patient_id: formData.patient_id.trim(),
         name: formData.name.trim(),
-        age,
+        age: age.toString(),
         gender: formData.gender
       }
 

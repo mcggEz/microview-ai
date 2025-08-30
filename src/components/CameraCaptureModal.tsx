@@ -43,7 +43,7 @@ export default function CameraCaptureModal({
         stream.getTracks().forEach(track => track.stop())
       }
     }
-  }, [isOpen])
+  }, [isOpen, stream])
 
   const startCamera = async () => {
     try {

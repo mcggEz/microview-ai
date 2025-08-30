@@ -44,7 +44,7 @@ export default function Report() {
   const [showNewPatientModal, setShowNewPatientModal] = useState(false)
   const [showImageAnalysisModal, setShowImageAnalysisModal] = useState(false)
   const [showCamera, setShowCamera] = useState(false)
-  const [capturedImage, setCapturedImage] = useState<string | null>(null) // Used in handleImageCapture
+  const [capturedImage, setCapturedImage] = useState<string | null>(null) // Used in handleImageCapture - keeping for future use
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState('')
@@ -120,10 +120,10 @@ export default function Report() {
     return 'text-red-600 bg-red-100'
   }
 
-  const [dummy, setDummy] = useState(0) // Used to trigger re-renders
+  const [dummy, setDummy] = useState(0) // Used to trigger re-renders - keeping for future use
   const toggleEdit = () => setDummy(prev => prev + 1)
 
-  const findings = useMemo(() => getMicroscopicFindings(), [selectedTest, getMicroscopicFindings])
+  const findings = useMemo(() => getMicroscopicFindings(), [selectedTest])
 
   // Initialize edit data when patient/test changes
   useEffect(() => {

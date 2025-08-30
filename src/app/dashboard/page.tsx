@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { Calendar, ChevronLeft, ChevronRight, TestTube, RefreshCw } from 'lucide-react'
 import { getTestsInRange } from '@/lib/api'
 import { useRouter } from 'next/navigation'
@@ -18,7 +18,7 @@ export default function Dashboard() {
   const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`)
   const toISO = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
-  const loadCounts = async () => {
+  const loadCounts = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -54,7 +54,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [firstDayOfMonth, lastDayOfMonth, current])
 
   useEffect(() => {
     loadCounts()
