@@ -5,7 +5,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'LabTech Pro - Medical Lab Analysis Platform',
+  title: 'MicroView AI - Medical Lab Analysis Platform',
   description: 'Advanced AI-powered image processing and analysis platform for medical laboratories',
 }
 

@@ -1,12 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useEffect, useState, useMemo } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useDashboard } from '@/hooks/useDashboard'
-import { updatePatient, updateTest, createPatient } from '@/lib/api'
-import { Calendar, Download, Printer, Microscope, Edit, CheckCircle, Save, X, Plus, User } from 'lucide-react'
+import { updatePatient, updateTest, createPatient, updateTestWithAnalysis, testDatabaseConnection, deleteTest } from '@/lib/api'
+import { Calendar, Download, Printer, Microscope, Edit, CheckCircle, Save, X, Plus, User, Brain, Camera, Trash2, ChevronDown } from 'lucide-react'
 import ImageModal from '@/components/ImageModal'
+import ImageAnalysisModal from '@/components/ImageAnalysisModal'
+import NewPatientModal from '@/components/NewPatientModal'
+import ConfirmationModal from '@/components/ConfirmationModal'
+import CameraCaptureModal from '@/components/CameraCaptureModal'
+import Notification from '@/components/Notification'
 import Image from 'next/image'
+import { UrinalysisResult } from '@/lib/gemini'
+import { UrineTest } from '@/types/database'
 
 interface MicroscopicFindings {
   item: string
@@ -20,6 +27,7 @@ interface MicroscopicFindings {
 }
 
 export default function Report() {
+  const router = useRouter()
   const [selectedDate, setSelectedDate] = useState('')
   const [modalImage, setModalImage] = useState<{ src: string; alt: string; title: string } | null>(null)
   const [imageErrors, setImageErrors] = useState<{ [key: string]: boolean }>({})
@@ -34,8 +42,28 @@ export default function Report() {
   })
   const [saving, setSaving] = useState(false)
   const [showNewPatientModal, setShowNewPatientModal] = useState(false)
+  const [showImageAnalysisModal, setShowImageAnalysisModal] = useState(false)
+  const [showCamera, setShowCamera] = useState(false)
+  const [capturedImage, setCapturedImage] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showNotification, setShowNotification] = useState(false)
+  const [notificationMessage, setNotificationMessage] = useState('')
+  const [notificationType, setNotificationType] = useState<'success' | 'error' | 'warning' | 'info'>('success')
+  const [showMonthDropdown, setShowMonthDropdown] = useState(false)
   const searchParams = useSearchParams()
   const dateParam = searchParams.get('date')
+
+  // Close month dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showMonthDropdown && !(event.target as Element).closest('.month-dropdown')) {
+        setShowMonthDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showMonthDropdown])
 
   const {
     patients,
@@ -46,15 +74,19 @@ export default function Report() {
     error,
     selectPatient,
     setSelectedTest,
+    setSelectedPatient,
     clearError,
-    preloadByDate
+    preloadByDate,
+    addPatientWithTest
   } = useDashboard()
 
   useEffect(() => {
     if (dateParam) {
+      console.log('Report page: Loading data for date:', dateParam)
+      setSelectedDate(dateParam)
       preloadByDate(dateParam)
     }
-  }, [dateParam]) // Remove preloadByDate from dependencies to prevent infinite re-renders
+  }, [dateParam, preloadByDate])
 
   const getMicroscopicFindings = (): MicroscopicFindings[] => {
     if (!selectedTest) return []
@@ -91,7 +123,7 @@ export default function Report() {
   const [_, setDummy] = useState(0)
   const toggleEdit = (index: number) => setDummy(prev => prev + 1)
 
-  const findings = getMicroscopicFindings()
+  const findings = useMemo(() => getMicroscopicFindings(), [selectedTest])
 
   // Initialize edit data when patient/test changes
   useEffect(() => {
@@ -160,9 +192,14 @@ export default function Report() {
       // Refresh data
       await preloadByDate(dateParam || '')
       setIsEditing(false)
+      setNotificationMessage('Changes saved successfully!')
+      setNotificationType('success')
+      setShowNotification(true)
     } catch (error) {
       console.error('Failed to save changes:', error)
-      alert('Failed to save changes. Please try again.')
+      setNotificationMessage('Failed to save changes. Please try again.')
+      setNotificationType('error')
+      setShowNotification(true)
     } finally {
       setSaving(false)
     }
@@ -172,10 +209,104 @@ export default function Report() {
     setShowNewPatientModal(true)
   }
 
-  const handlePatientCreated = async (newPatient: any) => {
-    // Refresh the patient list
-    await preloadByDate(dateParam || '')
-    setShowNewPatientModal(false)
+  const handleImageAnalysis = () => {
+    setShowImageAnalysisModal(true)
+  }
+
+  const handleCameraCapture = () => {
+    setShowCamera(true)
+  }
+
+  const handleImageCapture = (imageData: string) => {
+    setCapturedImage(imageData)
+    // Here you would typically save the image to the database
+    console.log('Image captured:', imageData.substring(0, 100) + '...')
+    
+    // Show success message
+    setNotificationMessage('Image captured successfully!')
+    setNotificationType('success')
+    setShowNotification(true)
+  }
+
+  const handleDeleteTest = async () => {
+    if (!selectedTest) return
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDeleteTest = async () => {
+    if (!selectedTest) return
+    
+    try {
+      await deleteTest(selectedTest.id)
+      console.log('Test deleted successfully')
+      
+      // Refresh the data for the current date
+      if (dateParam) {
+        await preloadByDate(dateParam)
+      }
+      
+      // Clear selected test and patient
+      setSelectedTest(null)
+      setSelectedPatient(null)
+      
+      setNotificationMessage('Test deleted successfully!')
+      setNotificationType('success')
+      setShowNotification(true)
+    } catch (error) {
+      console.error('Error deleting test:', error)
+      setNotificationMessage('Failed to delete test. Please try again.')
+      setNotificationType('error')
+      setShowNotification(true)
+    }
+  }
+
+  const handleAnalysisComplete = async (result: UrinalysisResult) => {
+    if (selectedTest) {
+      try {
+        await updateTestWithAnalysis(selectedTest.id, result)
+        // Refresh the data to show updated results
+        if (dateParam) {
+          preloadByDate(dateParam)
+        }
+        alert('Analysis results saved successfully!')
+      } catch (error) {
+        console.error('Failed to save analysis:', error)
+        alert('Failed to save analysis results. Please try again.')
+      }
+    }
+  }
+
+  const handlePatientCreated = async (patientData: any) => {
+    try {
+      // Test database connection first
+      const isConnected = await testDatabaseConnection()
+      if (!isConnected) {
+        console.error('Database connection failed')
+        return
+      }
+      
+      // Create patient with test for the current date
+      const result = await addPatientWithTest(patientData, dateParam || new Date().toISOString().split('T')[0])
+      
+      if (result.test && result.patient) {
+        setNotificationMessage(`✅ Success! Patient "${result.patient.name}" and test "${result.test.test_code}" created successfully.`)
+        setNotificationType('success')
+        setShowNotification(true)
+      } else if (result.patient) {
+        setNotificationMessage(`⚠️ Patient "${result.patient.name}" created but test creation failed. Check console for details.`)
+        setNotificationType('warning')
+        setShowNotification(true)
+      } else {
+        setNotificationMessage(`❌ Failed to create patient and test. Check console for details.`)
+        setNotificationType('error')
+        setShowNotification(true)
+      }
+      
+      setShowNewPatientModal(false)
+    } catch (error) {
+      console.error('Failed to create patient:', error)
+      // Error handling is done in the hook
+    }
   }
 
   return (
@@ -183,28 +314,73 @@ export default function Report() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Microscopic Report</h1>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span>Back</span>
+            </button>
+            <h1 className="text-2xl font-bold text-gray-900">Microscopic Report</h1>
+          </div>
                      <div className="flex items-center space-x-4">
              <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">
                <Download className="h-5 w-5" />
                <span>Export</span>
              </button>
-             <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">
-               <Printer className="h-5 w-5" />
-               <span>Print</span>
-             </button>
-             <div className="relative">
-               <input type="text" placeholder="mm/dd/yyyy" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-               <Calendar className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+             
+             {/* Month Navigation Dropdown */}
+             <div className="relative month-dropdown">
+               <button
+                 onClick={() => setShowMonthDropdown(!showMonthDropdown)}
+                 className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+               >
+                 <Calendar className="h-4 w-4" />
+                 <span className="font-medium">Quick Month</span>
+                 <ChevronDown className={`h-4 w-4 transition-transform ${showMonthDropdown ? 'rotate-180' : ''}`} />
+               </button>
+               
+               {showMonthDropdown && (
+                 <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                   <div className="py-2">
+                     {Array.from({ length: 12 }, (_, i) => {
+                       const month = new Date(2025, i, 1).toLocaleString('default', { month: 'long' })
+                       const monthNumber = String(i + 1).padStart(2, '0')
+                       return (
+                         <button
+                           key={i}
+                           onClick={() => {
+                             const newDate = `2025-${monthNumber}-01`
+                             setSelectedDate(newDate)
+                             preloadByDate(newDate)
+                             setShowMonthDropdown(false)
+                           }}
+                           className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors"
+                         >
+                           {month}
+                         </button>
+                       )
+                     })}
+                   </div>
+                 </div>
+               )}
              </div>
+             
+             <div className="flex items-center text-lg font-semibold text-gray-900">
+               <span>{selectedDate}</span>
+             </div>
+
            </div>
         </div>
       </div>
 
       <div className="flex">
-                 {/* Left Sidebar - Patients */}
+                 {/* Left Sidebar */}
          <div className="w-80 bg-white border-r border-gray-200 min-h-screen p-4">
-           <h2 className="text-lg font-semibold text-gray-900 mb-4">Patients</h2>
+
            {loading ? (
              <div className="text-center py-4 text-gray-600">
                <div className="animate-pulse">
@@ -221,30 +397,43 @@ export default function Report() {
            ) : (
              <>
                <div className="space-y-2 mb-4">
-                 {patients.map((p) => (
-                   <div 
-                     key={p.id} 
-                     onClick={() => selectPatient(p)} 
-                     className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                       selectedPatient?.id === p.id 
-                         ? 'bg-blue-100 border-l-4 border-blue-500' 
-                         : 'bg-gray-100 hover:bg-gray-200'
-                     }`}
-                   >
-                     <div className="font-medium text-gray-900">{p.name}</div>
-                     <div className="text-sm text-gray-600">ID: {p.patient_id}</div>
-                   </div>
-                 ))}
+                 {tests.length === 0 ? (
+                   <div className="text-gray-500 text-sm text-center py-4">No tests available</div>
+                 ) : (
+                   tests.map((test) => {
+                     const patient = patients.find(p => p.id === test.patient_id)
+                     return (
+                       <div 
+                         key={test.id} 
+                         onClick={() => {
+                           if (patient) {
+                             setSelectedPatient(patient)
+                             setSelectedTest(test)
+                           }
+                         }} 
+                         className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                           selectedTest?.id === test.id 
+                             ? 'bg-blue-100 border-l-4 border-blue-500' 
+                             : 'bg-gray-100 hover:bg-gray-200'
+                         }`}
+                       >
+                         <div className="font-medium text-gray-900">{patient?.name || 'Unknown Patient'}</div>
+                         <div className="text-sm text-gray-600">Test: {test.test_code}</div>
+                         <div className="text-xs text-gray-500">Status: {test.status}</div>
+                       </div>
+                     )
+                   })
+                 )}
                </div>
                
-               {/* New Patient Button */}
+               {/* New Test Button */}
                <div className="border-t border-gray-200 pt-4">
                  <button
                    onClick={handleNewPatient}
                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                  >
                    <Plus className="h-5 w-5" />
-                   <span className="font-medium">Add New Patient</span>
+                   <span className="font-medium">Add New Test</span>
                  </button>
                </div>
              </>
@@ -257,11 +446,24 @@ export default function Report() {
             <div className="text-center py-12 text-gray-600">Select a patient or use the calendar</div>
           ) : (
             <>
+              {/* Back Button and Delete Button */}
+              <div className="mb-4 flex items-center justify-end">
+                {selectedTest && (
+                  <button 
+                    onClick={handleDeleteTest}
+                    className="flex items-center space-x-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    title="Delete Test"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Delete</span>
+                  </button>
+                )}
+              </div>
                              {/* Header info */}
                <div className="bg-white rounded-lg p-6 shadow-sm mb-6 relative">
                  <h1 className="text-2xl font-bold text-center text-gray-900 mb-6">Microscopic Urine Analysis Report - {selectedTest?.test_code || 'N/A'}</h1>
                                   <div className="grid grid-cols-3 gap-6 mb-6">
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-gray-700 font-medium">Name:</span>
                         {isEditing ? (
@@ -295,7 +497,7 @@ export default function Report() {
                         )}
                       </div>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-gray-700 font-medium">Gender:</span>
                         {isEditing ? (
@@ -339,7 +541,7 @@ export default function Report() {
                         )}
                       </div>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-gray-700 font-medium">Analysis Date:</span>
                         <span className="font-semibold text-gray-900">{selectedTest?.analysis_date || 'N/A'}</span>
@@ -357,9 +559,21 @@ export default function Report() {
                           <span className="font-semibold text-gray-900">{selectedTest?.technician || 'N/A'}</span>
                         )}
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between items-center mb-6">
                         <span className="text-gray-700 font-medium">Status:</span>
-                        <span className="font-semibold text-orange-600">{selectedTest?.status}</span>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          selectedTest?.status === 'pending' 
+                            ? 'bg-orange-100 text-orange-800 border border-orange-200'
+                            : selectedTest?.status === 'completed'
+                            ? 'bg-green-100 text-green-800 border border-green-200'
+                            : selectedTest?.status === 'in_progress'
+                            ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                            : selectedTest?.status === 'reviewed'
+                            ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                            : 'bg-gray-100 text-gray-800 border border-gray-200'
+                        }`}>
+                          {selectedTest?.status?.replace('_', ' ').toUpperCase() || 'N/A'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -367,7 +581,7 @@ export default function Report() {
                   {/* Edit Button in Lower Right */}
                   <div className="absolute bottom-4 right-4">
                     {selectedPatient && (
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-5">
                         <button 
                           onClick={handleEditToggle}
                           className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
@@ -402,27 +616,6 @@ export default function Report() {
                        Microscopic Images
                        <span className="ml-2 text-sm text-gray-600 font-normal">- Sample Analysis</span>
                      </h3>
-                                           <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => document.getElementById('image-upload')?.click()}
-                          className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                        >
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                          </svg>
-                          <span>Upload Image</span>
-                        </button>
-                        <button
-                          onClick={() => document.getElementById('camera-capture')?.click()}
-                          className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                        >
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          <span>Capture</span>
-                        </button>
-                      </div>
                    </div>
                    
                    {/* Hidden file inputs */}
@@ -626,26 +819,14 @@ export default function Report() {
                        <p className="text-lg font-medium">No microscopic images available</p>
                        <p className="text-sm">Images will appear here when uploaded for this test</p>
                        
-                       {/* Upload/Capture buttons in empty state */}
-                       <div className="flex items-center justify-center space-x-4 mt-6">
+                       {/* Single Capture Image button */}
+                       <div className="flex items-center justify-center mt-6">
                          <button
-                           onClick={() => document.getElementById('image-upload')?.click()}
-                           className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                           onClick={handleCameraCapture}
+                           className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
                          >
-                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                           </svg>
-                           <span>Upload Image</span>
-                         </button>
-                         <button
-                           onClick={() => document.getElementById('camera-capture')?.click()}
-                           className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                         >
-                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                           </svg>
-                           <span>Capture Image</span>
+                           <Camera className="h-5 w-5" />
+                           <span className="font-medium">Capture Image</span>
                          </button>
                        </div>
                      </div>
@@ -661,7 +842,7 @@ export default function Report() {
                        <tr className="border-b border-gray-200"><th className="text-left py-2 font-semibold text-gray-800">Element</th><th className="text-left py-2 font-semibold text-gray-800">Count</th><th className="text-left py-2 font-semibold text-gray-800">Morphology</th><th className="text-left py-2 font-semibold text-gray-800">Status</th><th className="text-left py-2 font-semibold text-gray-800">AI Accuracy</th><th className="text-left py-2 font-semibold text-gray-800">Notes</th><th className="text-left py-2 font-semibold text-gray-800">Actions</th></tr>
                      </thead>
                      <tbody>
-                       {findings.map((item, index) => (
+                       {findings.map((item: MicroscopicFindings, index: number) => (
                          <tr key={index} className="border-b border-gray-100">
                            <td className="py-2 text-gray-900 font-semibold">{item.item}</td>
                            <td className="py-2 font-bold text-gray-900">{item.count} {item.unit}</td>
@@ -680,34 +861,51 @@ export default function Report() {
               {/* History */}
               <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient Test History</h3>
-                {tests.length === 0 ? (
-                  <div className="text-sm text-gray-600">No previous tests</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-200"><th className="text-left py-2 font-semibold text-gray-800">Test Code</th><th className="text-left py-2 font-semibold text-gray-800">Date</th><th className="text-left py-2 font-semibold text-gray-800">Status</th><th className="text-left py-2 font-semibold text-gray-800">Action</th></tr>
-                      </thead>
-                      <tbody>
-                        {tests.map(t => (
-                          <tr key={t.id} className="border-b border-gray-100">
-                            <td className="py-2 text-gray-900 font-semibold">{t.test_code}</td>
-                            <td className="py-2 text-gray-800 font-medium">{t.analysis_date}</td>
-                            <td className="py-2 text-gray-800 font-medium">{t.status}</td>
-                            <td className="py-2">
-                              <button onClick={() => setSelectedTest(t)} className={`px-3 py-1 rounded text-sm ${selectedTest?.id === t.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>View</button>
-                            </td>
+                {!selectedPatient ? (
+                  <div className="text-sm text-gray-600">Select a patient to view their test history</div>
+                ) : (() => {
+                  const patientTests = tests.filter(t => t.patient_id === selectedPatient.id)
+                  if (patientTests.length === 0) {
+                    return <div className="text-sm text-gray-600">No previous tests for this patient</div>
+                  }
+                  
+                  return (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-2 font-semibold text-gray-800">Test Code</th>
+                            <th className="text-left py-2 font-semibold text-gray-800">Date</th>
+                            <th className="text-left py-2 font-semibold text-gray-800">Status</th>
+                            <th className="text-left py-2 font-semibold text-gray-800">Action</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        </thead>
+                        <tbody>
+                          {patientTests.map((t: UrineTest) => (
+                            <tr key={t.id} className="border-b border-gray-100">
+                              <td className="py-2 text-gray-900 font-semibold">{t.test_code}</td>
+                              <td className="py-2 text-gray-800 font-medium">{t.analysis_date}</td>
+                              <td className="py-2 text-gray-800 font-medium">{t.status}</td>
+                              <td className="py-2">
+                                <button 
+                                  onClick={() => setSelectedTest(t)} 
+                                  className={`px-3 py-1 rounded text-sm ${selectedTest?.id === t.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                                >
+                                  View
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                })()}
               </div>
             </>
           )}
-                 </div>
-       </div>
+        </div>
+      </div>
        
                {/* Image Modal */}
         <ImageModal
@@ -720,110 +918,51 @@ export default function Report() {
 
         {/* New Patient Modal */}
         {showNewPatientModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-hidden">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                  <User className="h-5 w-5 mr-2 text-blue-600" />
-                  New Patient
-                </h2>
-                <button
-                  onClick={() => setShowNewPatientModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X className="h-5 w-5 text-gray-600" />
-                </button>
-              </div>
-              <form onSubmit={async (e) => {
-                e.preventDefault()
-                const formData = new FormData(e.currentTarget)
-                const patientData = {
-                  patient_id: formData.get('patient_id') as string,
-                  name: formData.get('name') as string,
-                  age: parseInt(formData.get('age') as string),
-                  gender: formData.get('gender') as 'male' | 'female' | 'other'
-                }
-                
-                try {
-                  await createPatient(patientData)
-                  await handlePatientCreated(patientData)
-                } catch (error) {
-                  console.error('Failed to create patient:', error)
-                  alert('Failed to create patient. Please try again.')
-                }
-              }} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Patient ID *
-                  </label>
-                  <input
-                    name="patient_id"
-                    type="text"
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter patient ID"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name *
-                  </label>
-                  <input
-                    name="name"
-                    type="text"
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter full name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Age *
-                  </label>
-                  <input
-                    name="age"
-                    type="number"
-                    required
-                    min="0"
-                    max="150"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter age"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Gender *
-                  </label>
-                  <select
-                    name="gender"
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div className="flex space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPatientModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Create Patient
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+          <NewPatientModal
+            isOpen={showNewPatientModal}
+            onClose={() => setShowNewPatientModal(false)}
+            onPatientCreated={handlePatientCreated}
+            currentDate={dateParam || new Date().toISOString().split('T')[0]}
+          />
         )}
 
+        {/* Image Analysis Modal */}
+        {showImageAnalysisModal && (
+          <ImageAnalysisModal
+            isOpen={showImageAnalysisModal}
+            onClose={() => setShowImageAnalysisModal(false)}
+            onAnalysisComplete={handleAnalysisComplete}
+          />
+        )}
+
+        {/* Camera Capture Modal */}
+        <CameraCaptureModal
+          isOpen={showCamera}
+          onClose={() => setShowCamera(false)}
+          onCapture={handleImageCapture}
+        />
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={confirmDeleteTest}
+          title="Delete Test"
+          message="Are you sure you want to delete this test? This action cannot be undone."
+          type="danger"
+          confirmText="Delete"
+          cancelText="Cancel"
+        />
+
+        {/* Notification */}
+        {showNotification && (
+          <Notification
+            message={notificationMessage}
+            type={notificationType}
+            onClose={() => setShowNotification(false)}
+            duration={4000}
+          />
+        )}
 
       </div>
     )

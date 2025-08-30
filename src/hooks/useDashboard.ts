@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { getPatients, updatePatient, getTestsByPatient, getTestsByDate } from '@/lib/api'
+import { useState, useEffect, useCallback } from 'react'
+import { getPatients, updatePatient, getTestsByPatient, getTestsByDate, createPatient, createTest, checkTableStructure } from '@/lib/api'
 import { Patient, UrineTest } from '@/types/database'
 
 export const useDashboard = () => {
@@ -66,50 +66,121 @@ export const useDashboard = () => {
     }
   }
 
-  const preloadByDate = async (date: string) => {
+  const preloadByDate = useCallback(async (date: string) => {
     try {
       setLoading(true)
       setError(null)
       
-      // Load tests for the specific date
+      console.log('Preloading data for date:', date)
+      
+      // Clear all state first to prevent data bleeding
+      setSelectedPatient(null)
+      setSelectedTest(null)
+      setTests([])
+      setPatients([])
+      
+      // Load tests for the specific date ONLY
       const testsForDate = await getTestsByDate(date)
+      console.log(`Tests found for date ${date}:`, testsForDate.length)
       
       if (testsForDate.length === 0) {
-        // No tests found for this date
-        setSelectedPatient(null)
-        setSelectedTest(null)
-        setTests([])
+        console.log('No tests found for this date, state cleared')
         return
       }
       
-      const firstTest = testsForDate[0]
+      // Get unique patient IDs from tests for this date ONLY
+      const patientIds = [...new Set(testsForDate.map(test => test.patient_id))]
+      console.log('Patient IDs with tests on this date:', patientIds)
       
-      // Load patients if not already loaded
-      let currentPatients = patients
-      if (currentPatients.length === 0) {
-        currentPatients = await getPatients()
-        setPatients(currentPatients)
+      // Load only the patients who have tests on this specific date
+      const allPatients = await getPatients()
+      const patientsForDate = allPatients.filter(patient => 
+        patientIds.includes(patient.id)
+      )
+      console.log('Patients with tests on this date:', patientsForDate.length)
+      
+      // Update state with ONLY the data for this date
+      setPatients(patientsForDate)
+      setTests(testsForDate)
+      
+      // Set the first patient and their test for this date
+      if (patientsForDate.length > 0) {
+        const firstPatient = patientsForDate[0]
+        console.log('Setting first patient:', firstPatient.name, 'for date:', date)
+        setSelectedPatient(firstPatient)
+        
+        // Get tests for this specific patient on this specific date
+        const patientTests = testsForDate.filter(test => test.patient_id === firstPatient.id)
+        setSelectedTest(patientTests[0] || null)
+        console.log('Patient tests set:', patientTests.length, 'for patient:', firstPatient.name)
       }
-      
-      // Find the patient for this test
-      const patient = currentPatients.find(p => p.id === firstTest.patient_id)
-      if (!patient) {
-        setError('Patient not found for this test')
-        return
-      }
-      
-      // Load all tests for this patient
-      const allTests = await getTestsByPatient(patient.id)
-      setTests(allTests)
-      
-      // Set the patient and the specific test for the date
-      setSelectedPatient(patient)
-      const matchingTest = allTests.find(t => t.analysis_date === date) || firstTest
-      setSelectedTest(matchingTest)
       
     } catch (err) {
+      console.error('Error in preloadByDate:', err)
       setError('Failed to load data for selected date')
-      console.error('Error preloading by date:', err)
+      // Clear state on error to prevent showing wrong data
+      setSelectedPatient(null)
+      setSelectedTest(null)
+      setTests([])
+      setPatients([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+    const addPatientWithTest = async (patientData: any, date: string) => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      console.log('Starting test creation process for date:', date)
+      
+      // First, check if patient already exists (by patient_id)
+      let existingPatient = null
+      try {
+        const allPatients = await getPatients()
+        existingPatient = allPatients.find(p => p.patient_id === patientData.patient_id)
+        if (existingPatient) {
+          console.log('Patient already exists:', existingPatient.name)
+        }
+      } catch (err) {
+        console.log('No existing patient found, will create new one')
+      }
+      
+      // Create patient if doesn't exist, otherwise use existing
+      let patientToUse = existingPatient
+      if (!existingPatient) {
+        console.log('Creating new patient with data:', patientData)
+        patientToUse = await createPatient(patientData)
+        console.log('New patient created:', patientToUse)
+      }
+      
+      // Now create the test for this patient on the specific date
+      console.log('Creating test for patient:', patientToUse.name, 'on date:', date)
+      
+      const testData = {
+        patient_id: patientToUse.id,
+        test_code: `T-${Date.now()}`,
+        analysis_date: date,
+        status: 'pending',
+        // Add minimal required fields
+        collection_time: '08:00:00',
+        technician: 'Lab Tech'
+      }
+      
+      console.log('Creating test with data:', testData)
+      const newTest = await createTest(testData)
+      console.log('Test created successfully:', newTest)
+      
+      // Refresh the data for the current date to show the new test
+      await preloadByDate(date)
+      
+      return { patient: patientToUse, test: newTest }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
+      setError(`Failed to create test: ${errorMessage}`)
+      console.error('Error creating test:', err)
+      throw err
     } finally {
       setLoading(false)
     }
@@ -124,10 +195,12 @@ export const useDashboard = () => {
     error,
     selectPatient,
     setSelectedTest,
+    setSelectedPatient,
     updateSelectedPatient,
     clearError,
     loadPatients,
     loadTestsForPatient,
-    preloadByDate
+    preloadByDate,
+    addPatientWithTest
   }
 }

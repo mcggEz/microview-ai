@@ -15,10 +15,14 @@ npm install
 ```
 
 2) Environment variables
-- Create a local `.env.local` with your Supabase credentials:
+- Create a local `.env.local` with your credentials:
 ```bash
+# Supabase (required)
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Google Gemini API (for AI image analysis)
+GEMINI_API_KEY=your_gemini_api_key
 ```
 Note: Env files are ignored by git (see `.gitignore`). Do not commit secrets.
 
@@ -53,6 +57,7 @@ Schema overview:
 - Patient sidebar with Add New Patient modal
 - Test-centric data model, recent history per patient
 - Microscopic images with enlarge modal, upload/capture placeholders
+- **AI-powered image analysis using Google Gemini API**
 - Inline edit mode for patient and test metadata
 
 ### Scripts
@@ -61,6 +66,12 @@ npm run dev       # start local dev
 npm run build     # production build
 npm run start     # start production server
 ```
+
+### AI Image Analysis
+- Uses Google Gemini Pro Vision model for urinalysis microscopy analysis
+- Analyzes uploaded/captured images and provides detailed findings
+- Returns structured data with counts, morphology, clinical status, and confidence levels
+- Results can be integrated with test records
 
 ### Image Upload (Next Steps)
 - Buttons for Upload/Capture are wired; integrate Supabase Storage to upload files and update `urine_tests.image_n_url` fields.
