@@ -3,8 +3,8 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useDashboard } from '@/hooks/useDashboard'
-import { updatePatient, updateTest, createPatient, updateTestWithAnalysis, testDatabaseConnection, deleteTest } from '@/lib/api'
-import { Calendar, Download, Printer, Microscope, Edit, CheckCircle, Save, X, Plus, User, Brain, Camera, Trash2, ChevronDown } from 'lucide-react'
+import { updatePatient, updateTest, updateTestWithAnalysis, testDatabaseConnection, deleteTest } from '@/lib/api'
+import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown } from 'lucide-react'
 import ImageModal from '@/components/ImageModal'
 import ImageAnalysisModal from '@/components/ImageAnalysisModal'
 import NewPatientModal from '@/components/NewPatientModal'
@@ -44,7 +44,7 @@ export default function Report() {
   const [showNewPatientModal, setShowNewPatientModal] = useState(false)
   const [showImageAnalysisModal, setShowImageAnalysisModal] = useState(false)
   const [showCamera, setShowCamera] = useState(false)
-  const [capturedImage, setCapturedImage] = useState<string | null>(null)
+  const [capturedImage, setCapturedImage] = useState<string | null>(null) // Used in handleImageCapture
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState('')
@@ -72,7 +72,7 @@ export default function Report() {
     selectedTest,
     loading,
     error,
-    selectPatient,
+    // selectPatient, // Unused but kept for potential future use
     setSelectedTest,
     setSelectedPatient,
     clearError,
@@ -120,10 +120,10 @@ export default function Report() {
     return 'text-red-600 bg-red-100'
   }
 
-  const [dummy, setDummy] = useState(0)
+  const [dummy, setDummy] = useState(0) // Used to trigger re-renders
   const toggleEdit = () => setDummy(prev => prev + 1)
 
-  const findings = useMemo(() => getMicroscopicFindings(), [selectedTest])
+  const findings = useMemo(() => getMicroscopicFindings(), [selectedTest, getMicroscopicFindings])
 
   // Initialize edit data when patient/test changes
   useEffect(() => {
@@ -209,9 +209,9 @@ export default function Report() {
     setShowNewPatientModal(true)
   }
 
-  const handleImageAnalysis = () => {
-    setShowImageAnalysisModal(true)
-  }
+  // const handleImageAnalysis = () => {
+  //   setShowImageAnalysisModal(true)
+  // }
 
   const handleCameraCapture = () => {
     setShowCamera(true)

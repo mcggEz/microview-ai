@@ -145,7 +145,7 @@ export const testDatabaseConnection = async (): Promise<boolean> => {
     console.log('Testing database connection...')
     
     // Test patients table
-    const { data: patientsData, error: patientsError } = await supabase
+    const { error: patientsError } = await supabase
       .from('patients')
       .select('count')
       .limit(1)
@@ -156,7 +156,7 @@ export const testDatabaseConnection = async (): Promise<boolean> => {
     }
     
     // Test urine_tests table
-    const { data: testsData, error: testsError } = await supabase
+    const { error: testsError } = await supabase
       .from('urine_tests')
       .select('count')
       .limit(1)
@@ -232,7 +232,19 @@ export const deleteTest = async (testId: string): Promise<void> => {
   console.log('Test deleted successfully')
 }
 
-export const updateTestWithAnalysis = async (testId: string, analysis: any): Promise<UrineTest> => {
+export const updateTestWithAnalysis = async (testId: string, analysis: { 
+  rbc: { count: string; unit: string; morphology: string; notes: string; status: string }; 
+  wbc: { count: string; unit: string; morphology: string; notes: string; status: string }; 
+  epithelial_cells: { count: string; unit: string; morphology: string; notes: string; status: string }; 
+  crystals: { count: string; unit: string; morphology: string; notes: string; status: string }; 
+  casts: { count: string; unit: string; morphology: string; notes: string; status: string }; 
+  bacteria: { count: string; unit: string; morphology: string; notes: string; status: string }; 
+  yeast: { count: string; unit: string; morphology: string; notes: string; status: string }; 
+  mucus: { count: string; unit: string; morphology: string; notes: string; status: string }; 
+  sperm: { count: string; unit: string; morphology: string; notes: string; status: string }; 
+  parasites: { count: string; unit: string; morphology: string; notes: string; status: string }; 
+  overall_accuracy: number 
+}): Promise<UrineTest> => {
   const updates = {
     rbc_count: analysis.rbc.count,
     rbc_unit: analysis.rbc.unit,

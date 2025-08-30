@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, Shield, Zap, BarChart3, Users, TestTube, CheckCircle, GraduationCap, BookOpen, Microscope, Brain, Menu, X } from 'lucide-react'
+import { ArrowRight, Shield, Zap, BarChart3, TestTube, CheckCircle, GraduationCap, Microscope, Brain, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 
 export default function Home() {

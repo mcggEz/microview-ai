@@ -1,6 +1,6 @@
 'use client'
 
-import { X, AlertTriangle, CheckCircle, Info } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Info } from 'lucide-react'
 import { useEffect } from 'react'
 
 interface ConfirmationModalProps {

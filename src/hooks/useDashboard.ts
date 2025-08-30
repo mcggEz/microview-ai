@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getPatients, updatePatient, getTestsByPatient, getTestsByDate, createPatient, createTest, checkTableStructure } from '@/lib/api'
+import { getPatients, updatePatient, getTestsByPatient, getTestsByDate, createPatient, createTest } from '@/lib/api'
 import { Patient, UrineTest } from '@/types/database'
 
 export const useDashboard = () => {
@@ -128,7 +128,7 @@ export const useDashboard = () => {
     }
   }, [])
 
-    const addPatientWithTest = async (patientData: any, date: string) => {
+    const addPatientWithTest = async (patientData: { name: string; age: string; gender: string; patient_id: string }, date: string) => {
     try {
       setLoading(true)
       setError(null)
@@ -143,7 +143,7 @@ export const useDashboard = () => {
         if (existingPatient) {
           console.log('Patient already exists:', existingPatient.name)
         }
-      } catch (err) {
+      } catch {
         console.log('No existing patient found, will create new one')
       }
       

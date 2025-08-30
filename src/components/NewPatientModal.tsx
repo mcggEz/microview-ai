@@ -2,13 +2,10 @@
 
 import { useState } from 'react'
 import { X, User, Calendar, Hash } from 'lucide-react'
-import { createPatient } from '@/lib/api'
-import { Patient } from '@/types/database'
-
 interface NewPatientModalProps {
   isOpen: boolean
   onClose: () => void
-  onPatientCreated: (patient: any) => void
+  onPatientCreated: (patient: { name: string; age: string; gender: string; patient_id: string }) => void
   currentDate?: string
 }
 

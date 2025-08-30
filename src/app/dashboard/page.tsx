@@ -68,7 +68,7 @@ export default function Dashboard() {
     }, 30000)
     
     return () => clearInterval(interval)
-  }, [])
+  }, [loadCounts])
 
   const days: Date[] = useMemo(() => {
     const daysInMonth = lastDayOfMonth.getDate()

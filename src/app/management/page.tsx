@@ -5,10 +5,7 @@ import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { getTestsInRange } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 
-interface DayCount {
-  date: string
-  count: number
-}
+
 
 export default function Management() {
   const router = useRouter()

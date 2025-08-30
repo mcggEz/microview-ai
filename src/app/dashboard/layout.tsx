@@ -1,5 +1,4 @@
-import Link from 'next/link'
-import { TestTube, Home } from 'lucide-react'
+import { TestTube } from 'lucide-react'
 
 export default function DashboardLayout({
   children,
