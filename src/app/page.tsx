@@ -44,7 +44,7 @@ export default function Home() {
                 {isNavOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
             </div>
-          </div>
+        </div>
 
           {/* Mobile Navigation */}
           <div className={`md:hidden transition-all duration-300 ${
@@ -57,15 +57,15 @@ export default function Home() {
                 onClick={() => setIsNavOpen(false)}
               >
                 Overview
-              </a>
-              <a 
+        </a>
+        <a
                 href="#technology" 
                 className="block text-gray-600 hover:text-blue-600 transition-colors"
                 onClick={() => setIsNavOpen(false)}
               >
                 Technology
-              </a>
-              <a 
+        </a>
+        <a
                 href="#about" 
                 className="block text-gray-600 hover:text-blue-600 transition-colors"
                 onClick={() => setIsNavOpen(false)}
@@ -97,7 +97,7 @@ export default function Home() {
             MicroView AI:
             <span className="text-blue-600"> Leveraging Large Vision-Language Models</span>
             <br />
-            in an Augmentative Raspberry Pi–Based System
+            in an Augmentative Raspberry Pi-Based System
             <br />
             <span className="text-2xl md:text-3xl text-gray-700 mt-4 block">
               for Automated Urine Microscopy Analysis

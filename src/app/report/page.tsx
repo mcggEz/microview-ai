@@ -120,8 +120,8 @@ export default function Report() {
     return 'text-red-600 bg-red-100'
   }
 
-  const [_, setDummy] = useState(0)
-  const toggleEdit = (index: number) => setDummy(prev => prev + 1)
+  const [dummy, setDummy] = useState(0)
+  const toggleEdit = () => setDummy(prev => prev + 1)
 
   const findings = useMemo(() => getMicroscopicFindings(), [selectedTest])
 
@@ -276,7 +276,7 @@ export default function Report() {
     }
   }
 
-  const handlePatientCreated = async (patientData: any) => {
+  const handlePatientCreated = async (patientData: { name: string; age: string; gender: string; patient_id: string }) => {
     try {
       // Test database connection first
       const isConnected = await testDatabaseConnection()
@@ -850,7 +850,7 @@ export default function Report() {
                            <td className="py-2"><span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>{item.status}</span></td>
                            <td className="py-2"><span className={`px-2 py-1 rounded-full text-xs font-medium ${getAccuracyColor(item.accuracy)}`}>{item.accuracy}%</span></td>
                            <td className="py-2 text-gray-800 text-sm max-w-xs font-medium">{item.notes}</td>
-                           <td className="py-2"><button onClick={() => toggleEdit(index)} className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit findings">{item.isEditing ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Edit className="h-4 w-4" />}</button></td>
+                           <td className="py-2"><button onClick={() => toggleEdit()} className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit findings">{item.isEditing ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Edit className="h-4 w-4" />}</button></td>
                          </tr>
                        ))}
                      </tbody>
