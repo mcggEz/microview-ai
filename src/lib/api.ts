@@ -319,3 +319,132 @@ export const updateTestWithAnalysis = async (testId: string, analysis: {
   
   return await updateTest(testId, updates)
 }
+
+// Image Upload Functions
+export const uploadImageToStorage = async (file: File, testId: string, imageType: 'microscopic' | 'gross' = 'microscopic'): Promise<string> => {
+  try {
+    // Generate unique filename
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const fileExtension = file.name.split('.').pop() || 'jpg'
+    const fileName = `${testId}/${imageType}_${timestamp}.${fileExtension}`
+    
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('urine-images')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      })
+
+    if (error) {
+      console.error('Error uploading image:', error)
+      throw error
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('urine-images')
+      .getPublicUrl(fileName)
+
+    return urlData.publicUrl
+  } catch (error) {
+    console.error('Failed to upload image:', error)
+    throw error
+  }
+}
+
+export const uploadBase64Image = async (base64Data: string, testId: string, imageType: 'microscopic' | 'gross' = 'microscopic'): Promise<string> => {
+  try {
+    // Convert base64 to blob
+    const base64Response = await fetch(base64Data)
+    const blob = await base64Response.blob()
+    
+    // Create file from blob
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const fileName = `captured_${imageType}_${timestamp}.jpg`
+    const file = new File([blob], fileName, { type: 'image/jpeg' })
+    
+    // Upload using the file upload function
+    return await uploadImageToStorage(file, testId, imageType)
+  } catch (error) {
+    console.error('Failed to upload base64 image:', error)
+    throw error
+  }
+}
+
+export const addImageToTest = async (testId: string, imageUrl: string, imageType: 'microscopic' | 'gross' = 'microscopic'): Promise<UrineTest> => {
+  try {
+    // Get current test to see existing images
+    const currentTest = await getTest(testId)
+    if (!currentTest) {
+      throw new Error('Test not found')
+    }
+
+    // Update the appropriate image field based on type
+    const updates: Partial<UrineTest> = {}
+    
+    if (imageType === 'microscopic') {
+      // Add to microscopic images array or create new array
+      const currentImages = currentTest.microscopic_images || []
+      updates.microscopic_images = [...currentImages, imageUrl]
+    } else {
+      // Add to gross images array or create new array
+      const currentImages = currentTest.gross_images || []
+      updates.gross_images = [...currentImages, imageUrl]
+    }
+
+    return await updateTest(testId, updates)
+  } catch (error) {
+    console.error('Failed to add image to test:', error)
+    throw error
+  }
+}
+
+export const deleteImageFromTest = async (testId: string, imageUrl: string, imageType: 'microscopic' | 'gross' = 'microscopic'): Promise<UrineTest> => {
+  try {
+    // Get current test
+    const currentTest = await getTest(testId)
+    if (!currentTest) {
+      throw new Error('Test not found')
+    }
+
+    // Remove image from array
+    const updates: Partial<UrineTest> = {}
+    
+    if (imageType === 'microscopic') {
+      const currentImages = currentTest.microscopic_images || []
+      updates.microscopic_images = currentImages.filter(img => img !== imageUrl)
+    } else {
+      const currentImages = currentTest.gross_images || []
+      updates.gross_images = currentImages.filter(img => img !== imageUrl)
+    }
+
+    return await updateTest(testId, updates)
+  } catch (error) {
+    console.error('Failed to delete image from test:', error)
+    throw error
+  }
+}
+
+export const deleteImageFromStorage = async (imageUrl: string): Promise<void> => {
+  try {
+    // Extract file path from URL
+    const url = new URL(imageUrl)
+    const pathParts = url.pathname.split('/')
+    const fileName = pathParts[pathParts.length - 1]
+    const folderPath = pathParts.slice(-2).join('/') // Get folder/filename
+    
+    // Delete from Supabase Storage
+    const { error } = await supabase.storage
+      .from('urine-images')
+      .remove([folderPath])
+
+    if (error) {
+      console.error('Error deleting image from storage:', error)
+      throw error
+    }
+  } catch (error) {
+    console.error('Failed to delete image from storage:', error)
+    throw error
+  }
+}

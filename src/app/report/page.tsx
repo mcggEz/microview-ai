@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useDashboard } from '@/hooks/useDashboard'
-import { updatePatient, updateTest, updateTestWithAnalysis, testDatabaseConnection, deleteTest } from '@/lib/api'
+import { updatePatient, updateTest, updateTestWithAnalysis, testDatabaseConnection, deleteTest, deleteImageFromTest, deleteImageFromStorage, addImageToTest, uploadImageToStorage, uploadBase64Image } from '@/lib/api'
 import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown } from 'lucide-react'
 import ImageModal from '@/components/ImageModal'
 import ImageAnalysisModal from '@/components/ImageAnalysisModal'
@@ -49,21 +49,8 @@ export default function Report() {
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState('')
   const [notificationType, setNotificationType] = useState<'success' | 'error' | 'warning' | 'info'>('success')
-  const [showMonthDropdown, setShowMonthDropdown] = useState(false)
   const searchParams = useSearchParams()
   const dateParam = searchParams.get('date')
-
-  // Close month dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (showMonthDropdown && !(event.target as Element).closest('.month-dropdown')) {
-        setShowMonthDropdown(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showMonthDropdown])
 
   const {
     patients,
@@ -217,15 +204,39 @@ export default function Report() {
     setShowCamera(true)
   }
 
-  const handleImageCapture = (imageData: string) => {
-    setCapturedImage(imageData)
-    // Here you would typically save the image to the database
-    console.log('Image captured:', imageData.substring(0, 100) + '...')
-    
-    // Show success message
-    setNotificationMessage('Image captured successfully!')
-    setNotificationType('success')
-    setShowNotification(true)
+  const handleImageCapture = async (imageData: string) => {
+    if (!selectedTest) {
+      setNotificationMessage('No test selected. Please select a test first.')
+      setNotificationType('error')
+      setShowNotification(true)
+      return
+    }
+
+    try {
+      setNotificationMessage('Uploading image...')
+      setNotificationType('info')
+      setShowNotification(true)
+
+      // Upload the captured image to Supabase Storage
+      const imageUrl = await uploadBase64Image(imageData, selectedTest.id, 'microscopic')
+      
+      // Add the image URL to the test record
+      await addImageToTest(selectedTest.id, imageUrl, 'microscopic')
+      
+      // Refresh the data to show the new image
+      if (dateParam) {
+        await preloadByDate(dateParam)
+      }
+      
+      setNotificationMessage('Image captured and saved successfully!')
+      setNotificationType('success')
+      setShowNotification(true)
+    } catch (error) {
+      console.error('Error saving captured image:', error)
+      setNotificationMessage('Failed to save image. Please try again.')
+      setNotificationType('error')
+      setShowNotification(true)
+    }
   }
 
   const handleDeleteTest = async () => {
@@ -309,6 +320,41 @@ export default function Report() {
     }
   }
 
+  const handleFileUpload = async (file: File) => {
+    if (!selectedTest) {
+      setNotificationMessage('No test selected. Please select a test first.')
+      setNotificationType('error')
+      setShowNotification(true)
+      return
+    }
+
+    try {
+      setNotificationMessage('Uploading image...')
+      setNotificationType('info')
+      setShowNotification(true)
+
+      // Upload the file to Supabase Storage
+      const imageUrl = await uploadImageToStorage(file, selectedTest.id, 'microscopic')
+      
+      // Add the image URL to the test record
+      await addImageToTest(selectedTest.id, imageUrl, 'microscopic')
+      
+      // Refresh the data to show the new image
+      if (dateParam) {
+        await preloadByDate(dateParam)
+      }
+      
+      setNotificationMessage('Image uploaded successfully!')
+      setNotificationType('success')
+      setShowNotification(true)
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      setNotificationMessage('Failed to upload image. Please try again.')
+      setNotificationType('error')
+      setShowNotification(true)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -331,43 +377,6 @@ export default function Report() {
                <Download className="h-5 w-5" />
                <span>Export</span>
              </button>
-             
-             {/* Month Navigation Dropdown */}
-             <div className="relative month-dropdown">
-               <button
-                 onClick={() => setShowMonthDropdown(!showMonthDropdown)}
-                 className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-               >
-                 <Calendar className="h-4 w-4" />
-                 <span className="font-medium">Quick Month</span>
-                 <ChevronDown className={`h-4 w-4 transition-transform ${showMonthDropdown ? 'rotate-180' : ''}`} />
-               </button>
-               
-               {showMonthDropdown && (
-                 <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                   <div className="py-2">
-                     {Array.from({ length: 12 }, (_, i) => {
-                       const month = new Date(2025, i, 1).toLocaleString('default', { month: 'long' })
-                       const monthNumber = String(i + 1).padStart(2, '0')
-                       return (
-                         <button
-                           key={i}
-                           onClick={() => {
-                             const newDate = `2025-${monthNumber}-01`
-                             setSelectedDate(newDate)
-                             preloadByDate(newDate)
-                             setShowMonthDropdown(false)
-                           }}
-                           className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors"
-                         >
-                           {month}
-                         </button>
-                       )
-                     })}
-                   </div>
-                 </div>
-               )}
-             </div>
              
              <div className="flex items-center text-lg font-semibold text-gray-900">
                <span>{selectedDate}</span>
@@ -650,187 +659,92 @@ export default function Report() {
                      }}
                    />
                   {selectedTest && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Dynamic Image 1 */}
-                      {selectedTest.image_1_url && (
-                        <div className="space-y-3">
-                          <h4 className="font-medium text-gray-900">
-                            {selectedTest.image_1_description?.split(' - ')[0] || 'Sample 1'}
-                          </h4>
-                          <div className="relative group cursor-pointer" onClick={() => setModalImage({
-                            src: selectedTest.image_1_url!,
-                            alt: selectedTest.image_1_description || 'Microscopic image 1',
-                            title: selectedTest.image_1_description?.split(' - ')[0] || 'Sample 1'
-                          })}>
-                            {imageErrors['image1'] ? (
-                              <div className="w-full h-64 bg-gray-100 rounded-lg border border-gray-200 shadow-sm flex items-center justify-center">
-                                <div className="text-center text-gray-500">
-                                  <Microscope className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                                  <p className="text-sm">Image not available</p>
+                    <div className="space-y-6">
+                      {/* Display captured microscopic images */}
+                      {selectedTest.microscopic_images && selectedTest.microscopic_images.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {selectedTest.microscopic_images.map((imageUrl, index) => (
+                            <div key={index} className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-medium text-gray-900">
+                                  Sample {index + 1}
+                                </h4>
+                                <button
+                                  onClick={async () => {
+                                    if (confirm('Are you sure you want to delete this image?')) {
+                                      try {
+                                        await deleteImageFromTest(selectedTest.id, imageUrl, 'microscopic')
+                                        await deleteImageFromStorage(imageUrl)
+                                        // Refresh the data
+                                        if (dateParam) {
+                                          await preloadByDate(dateParam)
+                                        }
+                                        setNotificationMessage('Image deleted successfully!')
+                                        setNotificationType('success')
+                                        setShowNotification(true)
+                                      } catch (error) {
+                                        console.error('Error deleting image:', error)
+                                        setNotificationMessage('Failed to delete image. Please try again.')
+                                        setNotificationType('error')
+                                        setShowNotification(true)
+                                      }
+                                    }
+                                  }}
+                                  className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                                  title="Delete image"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                              <div className="relative group cursor-pointer" onClick={() => setModalImage({
+                                src: imageUrl,
+                                alt: `Microscopic image ${index + 1}`,
+                                title: `Sample ${index + 1}`
+                              })}>
+                                <Image 
+                                  src={imageUrl} 
+                                  alt={`Microscopic image ${index + 1}`}
+                                  width={400}
+                                  height={256}
+                                  className="w-full h-64 object-contain rounded-lg border border-gray-200 shadow-sm bg-white"
+                                  onError={(e) => {
+                                    console.error('Image failed to load:', imageUrl)
+                                    // You could set an error state here if needed
+                                  }}
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
+                                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white bg-opacity-90 px-3 py-1 rounded-full text-sm font-medium text-gray-800">
+                                    Click to enlarge
+                                  </div>
                                 </div>
                               </div>
-                            ) : (
-                              <Image 
-                                src={selectedTest.image_1_url} 
-                                alt={selectedTest.image_1_description || 'Microscopic image 1'} 
-                                width={400}
-                                height={256}
-                                className="w-full h-64 object-contain rounded-lg border border-gray-200 shadow-sm bg-white"
-                                onError={() => setImageErrors(prev => ({ ...prev, image1: true }))}
-                              />
-                            )}
-                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white bg-opacity-90 px-3 py-1 rounded-full text-sm font-medium text-gray-800">
-                                Click to enlarge
+                              <div className="text-sm text-gray-600">
+                                <p><strong>Captured:</strong> {new Date().toLocaleDateString()}</p>
+                                <p><strong>Type:</strong> Microscopic analysis</p>
                               </div>
                             </div>
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            <p><strong>Analysis:</strong> {selectedTest.image_1_description?.split(' - ')[1] || 'Microscopic analysis'}</p>
-                          </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <Microscope className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                          <p className="text-lg font-medium">No microscopic images available</p>
+                          <p className="text-sm">Images will appear here when captured for this test</p>
                         </div>
                       )}
                       
-                      {/* Dynamic Image 2 */}
-                      {selectedTest.image_2_url && (
-                        <div className="space-y-3">
-                          <h4 className="font-medium text-gray-900">
-                            {selectedTest.image_2_description?.split(' - ')[0] || 'Sample 2'}
-                          </h4>
-                          <div className="relative group cursor-pointer" onClick={() => setModalImage({
-                            src: selectedTest.image_2_url!,
-                            alt: selectedTest.image_2_description || 'Microscopic image 2',
-                            title: selectedTest.image_2_description?.split(' - ')[0] || 'Sample 2'
-                          })}>
-                            {imageErrors['image2'] ? (
-                              <div className="w-full h-64 bg-gray-100 rounded-lg border border-gray-200 shadow-sm flex items-center justify-center">
-                                <div className="text-center text-gray-500">
-                                  <Microscope className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                                  <p className="text-sm">Image not available</p>
-                                </div>
-                              </div>
-                            ) : (
-                              <Image 
-                                src={selectedTest.image_2_url} 
-                                alt={selectedTest.image_2_description || 'Microscopic image 2'} 
-                                width={400}
-                                height={256}
-                                className="w-full h-64 object-contain rounded-lg border border-gray-200 shadow-sm bg-white"
-                                onError={() => setImageErrors(prev => ({ ...prev, image2: true }))}
-                              />
-                            )}
-                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white bg-opacity-90 px-3 py-1 rounded-full text-sm font-medium text-gray-800">
-                                Click to enlarge
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            <p><strong>Analysis:</strong> {selectedTest.image_2_description?.split(' - ')[1] || 'Microscopic analysis'}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Dynamic Image 3 */}
-                      {selectedTest.image_3_url && (
-                        <div className="space-y-3">
-                          <h4 className="font-medium text-gray-900">
-                            {selectedTest.image_3_description?.split(' - ')[0] || 'Sample 3'}
-                          </h4>
-                          <div className="relative group cursor-pointer" onClick={() => setModalImage({
-                            src: selectedTest.image_3_url!,
-                            alt: selectedTest.image_3_description || 'Microscopic image 3',
-                            title: selectedTest.image_3_description?.split(' - ')[0] || 'Sample 3'
-                          })}>
-                            {imageErrors['image3'] ? (
-                              <div className="w-full h-64 bg-gray-100 rounded-lg border border-gray-200 shadow-sm flex items-center justify-center">
-                                <div className="text-center text-gray-500">
-                                  <Microscope className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                                  <p className="text-sm">Image not available</p>
-                                </div>
-                              </div>
-                            ) : (
-                              <Image 
-                                src={selectedTest.image_3_url} 
-                                alt={selectedTest.image_3_description || 'Microscopic image 3'} 
-                                width={400}
-                                height={256}
-                                className="w-full h-64 object-contain rounded-lg border border-gray-200 shadow-sm bg-white"
-                                onError={() => setImageErrors(prev => ({ ...prev, image3: true }))}
-                              />
-                            )}
-                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white bg-opacity-90 px-3 py-1 rounded-full text-sm font-medium text-gray-800">
-                                Click to enlarge
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            <p><strong>Analysis:</strong> {selectedTest.image_3_description?.split(' - ')[1] || 'Microscopic analysis'}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Dynamic Image 4 */}
-                      {selectedTest.image_4_url && (
-                        <div className="space-y-3">
-                          <h4 className="font-medium text-gray-900">
-                            {selectedTest.image_4_description?.split(' - ')[0] || 'Sample 4'}
-                          </h4>
-                          <div className="relative group cursor-pointer" onClick={() => setModalImage({
-                            src: selectedTest.image_4_url!,
-                            alt: selectedTest.image_4_description || 'Microscopic image 4',
-                            title: selectedTest.image_4_description?.split(' - ')[0] || 'Sample 4'
-                          })}>
-                            {imageErrors['image4'] ? (
-                              <div className="w-full h-64 bg-gray-100 rounded-lg border border-gray-200 shadow-sm flex items-center justify-center">
-                                <div className="text-center text-gray-500">
-                                  <Microscope className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                                  <p className="text-sm">Image not available</p>
-                                </div>
-                              </div>
-                            ) : (
-                              <Image 
-                                src={selectedTest.image_4_url} 
-                                alt={selectedTest.image_4_description || 'Microscopic image 4'} 
-                                width={400}
-                                height={256}
-                                className="w-full h-64 object-contain rounded-lg border border-gray-200 shadow-sm bg-white"
-                                onError={() => setImageErrors(prev => ({ ...prev, image4: true }))}
-                              />
-                            )}
-                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white bg-opacity-90 px-3 py-1 rounded-full text-sm font-medium text-gray-800">
-                                Click to enlarge
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            <p><strong>Analysis:</strong> {selectedTest.image_4_description?.split(' - ')[1] || 'Microscopic analysis'}</p>
-                          </div>
-                        </div>
-                      )}
+                      {/* Capture Image button */}
+                      <div className="flex items-center justify-center pt-4">
+                        <button
+                          onClick={handleCameraCapture}
+                          className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                        >
+                          <Camera className="h-5 w-5" />
+                          <span className="font-medium">Capture Image</span>
+                        </button>
+                      </div>
                     </div>
                   )}
-                  
-                                     {(!selectedTest || (!selectedTest.image_1_url && !selectedTest.image_2_url && !selectedTest.image_3_url && !selectedTest.image_4_url)) && (
-                     <div className="text-center py-8 text-gray-500">
-                       <Microscope className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                       <p className="text-lg font-medium">No microscopic images available</p>
-                       <p className="text-sm">Images will appear here when uploaded for this test</p>
-                       
-                       {/* Single Capture Image button */}
-                       <div className="flex items-center justify-center mt-6">
-                         <button
-                           onClick={handleCameraCapture}
-                           className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
-                         >
-                           <Camera className="h-5 w-5" />
-                           <span className="font-medium">Capture Image</span>
-                         </button>
-                       </div>
-                     </div>
-                   )}
                 </div>
 
                {/* Findings table */}

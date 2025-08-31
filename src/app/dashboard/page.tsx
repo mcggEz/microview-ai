@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
-import { Calendar, ChevronLeft, ChevronRight, TestTube, RefreshCw } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, TestTube, RefreshCw, ChevronDown } from 'lucide-react'
 import { getTestsInRange } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 
@@ -11,6 +11,7 @@ export default function Dashboard() {
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showMonthDropdown, setShowMonthDropdown] = useState(false)
 
   const firstDayOfMonth = useMemo(() => new Date(current.getFullYear(), current.getMonth(), 1), [current])
   const lastDayOfMonth = useMemo(() => new Date(current.getFullYear(), current.getMonth() + 1, 0), [current])
@@ -70,6 +71,18 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [loadCounts])
 
+  // Close month dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showMonthDropdown && !(event.target as Element).closest('.month-dropdown')) {
+        setShowMonthDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showMonthDropdown])
+
   const days: Date[] = useMemo(() => {
     const daysInMonth = lastDayOfMonth.getDate()
     const startWeekday = firstDayOfMonth.getDay()
@@ -99,9 +112,72 @@ export default function Dashboard() {
             <Calendar className="h-6 w-6 mr-2" /> Management Dashboard
           </h1>
                      <div className="flex items-center space-x-2">
-             <button onClick={goPrev} className="p-2 rounded hover:bg-gray-100 border border-gray-200"><ChevronLeft className="h-5 w-5 text-gray-700" /></button>
-             <div className="font-semibold text-gray-900">{current.toLocaleString('default', { month: 'long' })} {current.getFullYear()}</div>
-             <button onClick={goNext} className="p-2 rounded hover:bg-gray-100 border border-gray-200"><ChevronRight className="h-5 w-5 text-gray-700" /></button>
+                       <button onClick={goPrev} className="p-2 rounded hover:bg-gray-100 border border-gray-200"><ChevronLeft className="h-5 w-5 text-gray-700" /></button>
+                       
+                       {/* Month Navigation Dropdown */}
+                       <div className="relative month-dropdown">
+                         <button
+                           onClick={() => setShowMonthDropdown(!showMonthDropdown)}
+                           className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                         >
+                           <Calendar className="h-4 w-4" />
+                           <span className="font-medium">{current.toLocaleString('default', { month: 'long' })} {current.getFullYear()}</span>
+                           <ChevronDown className={`h-4 w-4 text-black transition-transform ${showMonthDropdown ? 'rotate-180' : ''}`} />
+                         </button>
+                         
+                         {showMonthDropdown && (
+                           <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                             {/* Year Selection */}
+                             <div className="border-b border-gray-200">
+                               <div className="px-4 py-2 bg-gray-50">
+                                 <div className="flex items-center justify-between">
+                                   <span className="text-sm font-medium text-gray-700">Year</span>
+                                   <div className="flex items-center space-x-1">
+                                     <button
+                                       onClick={() => setCurrent(new Date(current.getFullYear() - 1, current.getMonth(), 1))}
+                                       className="p-1 hover:bg-gray-200 rounded"
+                                     >
+                                       <ChevronLeft className="h-3 w-3 text-black" />
+                                     </button>
+                                     <span className="text-sm font-semibold text-gray-900">{current.getFullYear()}</span>
+                                     <button
+                                       onClick={() => setCurrent(new Date(current.getFullYear() + 1, current.getMonth(), 1))}
+                                       className="p-1 hover:bg-gray-200 rounded"
+                                     >
+                                       <ChevronRight className="h-3 w-3 text-black" />
+                                     </button>
+                                   </div>
+                                 </div>
+                               </div>
+                             </div>
+                             
+                             {/* Month Selection */}
+                             <div className="py-2">
+                               <div className="px-4 py-1 text-sm font-medium text-gray-700">Month</div>
+                               {Array.from({ length: 12 }, (_, i) => {
+                                 const month = new Date(current.getFullYear(), i, 1).toLocaleString('default', { month: 'long' })
+                                 const isCurrentMonth = i === current.getMonth()
+                                 return (
+                                   <button
+                                     key={i}
+                                     onClick={() => {
+                                       setCurrent(new Date(current.getFullYear(), i, 1))
+                                       setShowMonthDropdown(false)
+                                     }}
+                                     className={`w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors ${
+                                       isCurrentMonth ? 'bg-blue-50 text-blue-700 font-medium' : ''
+                                     }`}
+                                   >
+                                     {month}
+                                   </button>
+                                 )
+                               })}
+                             </div>
+                           </div>
+                         )}
+                       </div>
+                       
+                       <button onClick={goNext} className="p-2 rounded hover:bg-gray-100 border border-gray-200"><ChevronRight className="h-5 w-5 text-gray-700" /></button>
              <button 
                onClick={loadCounts} 
                className="p-2 rounded hover:bg-gray-100 border border-gray-200"

@@ -103,6 +103,10 @@ export interface UrineTest {
   image_4_url?: string
   image_4_description?: string
 
+  // Dynamic image arrays
+  microscopic_images?: string[]
+  gross_images?: string[]
+
   created_at: string
   updated_at: string
 }
