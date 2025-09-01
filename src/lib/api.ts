@@ -60,6 +60,26 @@ export const updatePatient = async (id: string, updates: Partial<Patient>): Prom
   return data
 }
 
+export const deletePatient = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('patients')
+    .delete()
+    .eq('id', id)
+
+  if (error) throw error
+}
+
+export const checkPatientHasTests = async (patientId: string): Promise<boolean> => {
+  const { data, error } = await supabase
+    .from('urine_tests')
+    .select('id')
+    .eq('patient_id', patientId)
+    .limit(1)
+
+  if (error) throw error
+  return (data && data.length > 0)
+}
+
 // Urine Tests
 export const getTestsByPatient = async (patientId: string): Promise<UrineTest[]> => {
   const { data, error } = await supabase

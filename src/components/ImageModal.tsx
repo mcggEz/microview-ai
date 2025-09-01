@@ -15,7 +15,7 @@ export default function ImageModal({ isOpen, onClose, imageSrc, imageAlt, title 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-opacity-75 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
@@ -27,13 +27,24 @@ export default function ImageModal({ isOpen, onClose, imageSrc, imageAlt, title 
           </button>
         </div>
                  <div className="p-4">
-           <Image
-             src={imageSrc}
-             alt={imageAlt}
-             width={800}
-             height={600}
-             className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
-           />
+           {imageSrc.startsWith('data:') ? (
+             // Handle base64 images
+             <img
+               src={imageSrc}
+               alt={imageAlt}
+               className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
+             />
+           ) : (
+             // Handle URL images
+             <Image
+               src={imageSrc}
+               alt={imageAlt}
+               width={800}
+               height={600}
+               className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
+               unoptimized={imageSrc.startsWith('http')}
+             />
+           )}
          </div>
       </div>
     </div>

@@ -2,6 +2,46 @@ export type Gender = 'male' | 'female' | 'other'
 export type ReportStatus = 'pending' | 'in_progress' | 'completed' | 'reviewed'
 export type ResultStatus = 'normal' | 'abnormal' | 'critical'
 
+// Individual urinalysis field interface
+export interface UrinalysisField {
+  count: string
+  unit: string
+  morphology: string
+  notes: string
+  status: ResultStatus
+  accuracy: number
+}
+
+// Buckets for organizing urinalysis fields
+export interface UrinalysisBuckets {
+  // Blood cells
+  red_blood_cells: UrinalysisField
+  white_blood_cells: UrinalysisField
+  
+  // Cellular elements
+  epithelial_cells: UrinalysisField
+  
+  // Crystalline elements
+  crystals: UrinalysisField
+  
+  // Casts and formations
+  casts: UrinalysisField
+  
+  // Microorganisms
+  bacteria: UrinalysisField
+  yeast: UrinalysisField
+  
+  // Other elements
+  mucus: UrinalysisField
+  sperm: UrinalysisField
+  parasites: UrinalysisField
+  
+  // Additional elements (if needed)
+  other_elements?: UrinalysisField
+}
+
+export type UrinalysisBucketKey = keyof UrinalysisBuckets
+
 export interface Patient {
   id: string
   patient_id: string

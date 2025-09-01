@@ -104,7 +104,7 @@ export default function FileUploadModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex justify-center p-4">
-        <div className="fixed inset-0 bg-black bg-opacity-75 transition-opacity" onClick={handleClose}></div>
+        <div className="fixed inset-0  bg-opacity-75 transition-opacity" onClick={handleClose}></div>
         
         <div className="relative transform overflow-hidden rounded-lg bg-white shadow-xl transition-all w-full max-w-md mt-4">
           {/* Header */}

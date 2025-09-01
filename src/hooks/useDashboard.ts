@@ -158,13 +158,49 @@ export const useDashboard = () => {
       // Now create the test for this patient on the specific date
       console.log('Creating test for patient:', patientToUse.name, 'on date:', date)
       
+      // Get current time for both test code generation and collection time
+      const now = new Date()
+      
+      // Generate test code in format: YYYYMMDD-FL-XX
+      // Examples: 20241201-JD-14 (Dec 1, 2024, John Doe, 2 PM), 20241201-MX-09 (Dec 1, 2024, Mary X, 9 AM)
+      const generateTestCode = (date: string, patientName: string, currentTime: Date) => {
+        const dateStr = date.replace(/-/g, '') // Convert YYYY-MM-DD to YYYYMMDD
+        
+        // Extract first letter of first and last name
+        const nameParts = patientName.trim().split(' ')
+        const firstName = nameParts[0] || ''
+        const lastName = nameParts[nameParts.length - 1] || ''
+        
+        // Handle edge cases for names
+        let firstInitial = firstName.charAt(0).toUpperCase()
+        let lastInitial = lastName.charAt(0).toUpperCase()
+        
+        // If no last name, use first name twice or fallback to 'X'
+        if (!lastName || lastName === firstName) {
+          lastInitial = firstName.length > 1 ? firstName.charAt(1).toUpperCase() : 'X'
+        }
+        
+        // Fallback if no valid initials
+        if (!firstInitial || firstInitial === ' ') firstInitial = 'X'
+        if (!lastInitial || lastInitial === ' ') lastInitial = 'X'
+        
+        // Get last two digits of hour (24-hour format)
+        const hour = currentTime.getHours()
+        const hourStr = hour.toString().padStart(2, '0')
+        
+        const testCode = `${dateStr}-${firstInitial}${lastInitial}-${hourStr}`
+        console.log('Generated test code:', testCode, 'for patient:', patientName, 'at hour:', hour)
+        
+        return testCode
+      }
+      
       const testData = {
         patient_id: patientToUse.id,
-        test_code: `T-${Date.now()}`,
+        test_code: generateTestCode(date, patientToUse.name, now),
         analysis_date: date,
         status: 'pending',
         // Add minimal required fields
-        collection_time: '08:00:00',
+        collection_time: now.toTimeString().slice(0, 8), // Use actual current time
         technician: 'Lab Tech'
       }
       

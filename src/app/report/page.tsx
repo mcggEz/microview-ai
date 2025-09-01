@@ -4,13 +4,14 @@ import { useEffect, useState, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useDashboard } from '@/hooks/useDashboard'
 import { updatePatient, updateTest, updateTestWithAnalysis, testDatabaseConnection, deleteTest, deleteImageFromTest, deleteImageFromStorage, addImageToTest, uploadImageToStorage, uploadBase64Image } from '@/lib/api'
-import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown } from 'lucide-react'
+import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown, Upload, ChevronLeft, ChevronRight, Brain, Search } from 'lucide-react'
 import ImageModal from '@/components/ImageModal'
 import ImageAnalysisModal from '@/components/ImageAnalysisModal'
 import NewPatientModal from '@/components/NewPatientModal'
 import ConfirmationModal from '@/components/ConfirmationModal'
 import CameraCaptureModal from '@/components/CameraCaptureModal'
 import Notification from '@/components/Notification'
+import PatientTestHistory from '@/components/PatientTestHistory'
 import Image from 'next/image'
 import { UrinalysisResult } from '@/lib/gemini'
 import { UrineTest } from '@/types/database'
@@ -49,6 +50,9 @@ export default function Report() {
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState('')
   const [notificationType, setNotificationType] = useState<'success' | 'error' | 'warning' | 'info'>('success')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'in_progress' | 'reviewed'>('all')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const searchParams = useSearchParams()
   const dateParam = searchParams.get('date')
 
@@ -101,6 +105,7 @@ export default function Report() {
   }
 
   const getAccuracyColor = (accuracy: number) => {
+    if (accuracy === 0) return 'text-gray-500 bg-gray-100'
     if (accuracy >= 95) return 'text-green-600 bg-green-100'
     if (accuracy >= 90) return 'text-yellow-600 bg-yellow-100'
     if (accuracy >= 80) return 'text-orange-600 bg-orange-100'
@@ -111,6 +116,32 @@ export default function Report() {
   const toggleEdit = () => setDummy(prev => prev + 1)
 
   const findings = useMemo(() => getMicroscopicFindings(), [selectedTest])
+
+  // Filter and search tests
+  const filteredTests = useMemo(() => {
+    let filtered = tests
+
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(test => test.status === statusFilter)
+    }
+
+    // Apply search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(test => {
+        const patient = patients.find(p => p.id === test.patient_id)
+        return (
+          patient?.name.toLowerCase().includes(query) ||
+          patient?.patient_id.toLowerCase().includes(query) ||
+          test.test_code.toLowerCase().includes(query) ||
+          test.sample_id?.toLowerCase().includes(query)
+        )
+      })
+    }
+
+    return filtered
+  }, [tests, patients, statusFilter, searchQuery])
 
   // Initialize edit data when patient/test changes
   useEffect(() => {
@@ -212,6 +243,15 @@ export default function Report() {
       return
     }
 
+    // Check if we've reached the maximum number of images (10)
+    const currentImageCount = selectedTest.microscopic_images?.length || 0
+    if (currentImageCount >= 10) {
+      setNotificationMessage('Maximum of 10 images reached. Please delete some images before adding more.')
+      setNotificationType('error')
+      setShowNotification(true)
+      return
+    }
+
     try {
       setNotificationMessage('Uploading image...')
       setNotificationType('info')
@@ -228,7 +268,7 @@ export default function Report() {
         await preloadByDate(dateParam)
       }
       
-      setNotificationMessage('Image captured and saved successfully!')
+      setNotificationMessage(`Image captured and saved successfully! (${currentImageCount + 1}/10)`)
       setNotificationType('success')
       setShowNotification(true)
     } catch (error) {
@@ -320,9 +360,56 @@ export default function Report() {
     }
   }
 
+  const handleTestSelection = async (test: UrineTest) => {
+    try {
+      console.log('Selecting test:', test.test_code, 'for patient:', test.patient_id)
+      
+      // Set the selected test
+      setSelectedTest(test)
+      
+      // Find and set the patient for this test
+      const testPatient = patients.find(p => p.id === test.patient_id)
+      if (testPatient) {
+        setSelectedPatient(testPatient)
+        console.log('Patient set:', testPatient.name)
+      } else {
+        console.warn('Patient not found for test:', test.patient_id)
+        // Try to load the patient if not in current list
+        // This could happen if the test is from a different date
+        setNotificationMessage(`⚠️ Test loaded, but patient data may be incomplete.`)
+        setNotificationType('warning')
+        setShowNotification(true)
+        return
+      }
+      
+      // Show success notification
+      setNotificationMessage(`✅ Loaded test "${test.test_code}" for ${testPatient?.name || 'patient'} successfully!`)
+      setNotificationType('success')
+      setShowNotification(true)
+      
+      // Scroll to top to show the test details
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      
+    } catch (error) {
+      console.error('Error selecting test:', error)
+      setNotificationMessage('Failed to load test. Please try again.')
+      setNotificationType('error')
+      setShowNotification(true)
+    }
+  }
+
   const handleFileUpload = async (file: File) => {
     if (!selectedTest) {
       setNotificationMessage('No test selected. Please select a test first.')
+      setNotificationType('error')
+      setShowNotification(true)
+      return
+    }
+
+    // Check if we've reached the maximum number of images (10)
+    const currentImageCount = selectedTest.microscopic_images?.length || 0
+    if (currentImageCount >= 10) {
+      setNotificationMessage('Maximum of 10 images reached. Please delete some images before adding more.')
       setNotificationType('error')
       setShowNotification(true)
       return
@@ -344,7 +431,7 @@ export default function Report() {
         await preloadByDate(dateParam)
       }
       
-      setNotificationMessage('Image uploaded successfully!')
+      setNotificationMessage(`Image uploaded successfully! (${currentImageCount + 1}/10)`)
       setNotificationType('success')
       setShowNotification(true)
     } catch (error) {
@@ -387,29 +474,109 @@ export default function Report() {
       </div>
 
       <div className="flex">
-                 {/* Left Sidebar */}
-         <div className="w-80 bg-white border-r border-gray-200 min-h-screen p-4">
+        {/* Left Sidebar */}
+        <div className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white border-r border-gray-200 min-h-screen transition-all duration-300 ease-in-out relative`}>
+          {/* Toggle Button */}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="absolute -right-3 top-6 bg-white border border-gray-200 rounded-full p-1.5 shadow-md hover:bg-gray-50 transition-colors z-10"
+            title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          >
+            {sidebarCollapsed ? (
+              <ChevronRight className="h-4 w-4 text-gray-600" />
+            ) : (
+              <ChevronLeft className="h-4 w-4 text-gray-600" />
+            )}
+          </button>
+          
+                    <div className={`${sidebarCollapsed ? 'px-2' : 'p-4'} transition-all duration-300`}>
+            {/* Search and Filters */}
+            <div className={`${sidebarCollapsed ? 'mb-4' : 'mb-6'} ${sidebarCollapsed ? 'space-y-2' : 'space-y-4'}`}>
+              {/* Search */}
+              {!sidebarCollapsed && (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search patients, test codes..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black placeholder-gray-500"
+                  />
+                </div>
+              )}
+
+                           {/* Status Filter */}
+              {!sidebarCollapsed && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="reviewed">Reviewed</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Results Count */}
+              {!sidebarCollapsed && (
+                <div className="text-sm text-gray-600">
+                  {filteredTests.length} of {tests.length} tests
+                </div>
+              )}
+           </div>
 
            {loading ? (
-             <div className="text-center py-4 text-gray-600">
+             <div className={`text-center ${sidebarCollapsed ? 'py-2' : 'py-4'} text-gray-600`}>
                <div className="animate-pulse">
-                 <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                 <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                 <div className="h-4 bg-gray-200 rounded"></div>
+                 {sidebarCollapsed ? (
+                   <>
+                     <div className="h-3 bg-gray-200 rounded mb-1"></div>
+                     <div className="h-3 bg-gray-200 rounded mb-1"></div>
+                     <div className="h-3 bg-gray-200 rounded"></div>
+                   </>
+                 ) : (
+                   <>
+                     <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                     <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                     <div className="h-4 bg-gray-200 rounded"></div>
+                   </>
+                 )}
                </div>
              </div>
            ) : error ? (
-             <div className="text-center py-4">
-               <div className="text-red-600 mb-2">{error}</div>
-               <button onClick={clearError} className="text-blue-600 hover:text-blue-800">Try again</button>
+             <div className={`text-center ${sidebarCollapsed ? 'py-2' : 'py-4'}`}>
+               {!sidebarCollapsed && (
+                 <>
+                   <div className="text-red-600 mb-2 text-sm">{error}</div>
+                   <button onClick={clearError} className="text-blue-600 hover:text-blue-800 text-xs">Try again</button>
+                 </>
+               )}
+               {sidebarCollapsed && (
+                 <div className="text-red-500 text-xs" title={error}>⚠️</div>
+               )}
              </div>
            ) : (
              <>
                <div className="space-y-2 mb-4">
-                 {tests.length === 0 ? (
-                   <div className="text-gray-500 text-sm text-center py-4">No tests available</div>
+                 {filteredTests.length === 0 ? (
+                   <div className={`text-gray-500 ${sidebarCollapsed ? 'text-xs' : 'text-sm'} text-center ${sidebarCollapsed ? 'py-2' : 'py-4'}`}>
+                     {sidebarCollapsed ? (
+                       <div title={tests.length === 0 ? 'No tests available' : 'No tests match your search/filter'}>
+                         {tests.length === 0 ? '📭' : '🔍'}
+                       </div>
+                     ) : (
+                       tests.length === 0 ? 'No tests available' : 'No tests match your search/filter'
+                     )}
+                   </div>
                  ) : (
-                   tests.map((test) => {
+                   filteredTests.map((test) => {
                      const patient = patients.find(p => p.id === test.patient_id)
                      return (
                        <div 
@@ -420,15 +587,28 @@ export default function Report() {
                              setSelectedTest(test)
                            }
                          }} 
-                         className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                         className={`${sidebarCollapsed ? 'p-2' : 'p-3'} rounded-lg cursor-pointer transition-colors ${
                            selectedTest?.id === test.id 
                              ? 'bg-blue-100 border-l-4 border-blue-500' 
                              : 'bg-gray-100 hover:bg-gray-200'
                          }`}
                        >
-                         <div className="font-medium text-gray-900">{patient?.name || 'Unknown Patient'}</div>
-                         <div className="text-sm text-gray-600">Test: {test.test_code}</div>
-                         <div className="text-xs text-gray-500">Status: {test.status}</div>
+                         {sidebarCollapsed ? (
+                           <div className="text-center" title={`${patient?.name || 'Unknown Patient'} - ${test.test_code} - ${test.status}`}>
+                             <div className="text-xs font-medium text-gray-900 truncate">
+                               {patient?.name?.charAt(0) || 'U'}
+                             </div>
+                             <div className="text-xs text-gray-500 mt-1">
+                               {test.test_code?.split('-')[2] || 'XX'}
+                             </div>
+                           </div>
+                         ) : (
+                           <>
+                             <div className="font-medium text-gray-900">{patient?.name || 'Unknown Patient'}</div>
+                             <div className="text-sm text-gray-600">Test: {test.test_code}</div>
+                             <div className="text-xs text-gray-500">Status: {test.status}</div>
+                           </>
+                         )}
                        </div>
                      )
                    })
@@ -439,15 +619,16 @@ export default function Report() {
                <div className="border-t border-gray-200 pt-4">
                  <button
                    onClick={handleNewPatient}
-                   className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                   className={`w-full flex items-center justify-center ${sidebarCollapsed ? 'px-2 py-3' : 'px-4 py-3 space-x-2'} bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors`}
                  >
-                   <Plus className="h-5 w-5" />
-                   <span className="font-medium">Add New Test</span>
+                   <Plus className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-5 w-5'}`} />
+                   {!sidebarCollapsed && <span className="font-medium">Add New Test</span>}
                  </button>
                </div>
              </>
            )}
          </div>
+        </div>
 
         {/* Main Content */}
         <div className="flex-1 p-6" key={selectedPatient?.id || 'no-patient'}>
@@ -455,7 +636,7 @@ export default function Report() {
             <div className="text-center py-12 text-gray-600">Select a patient or use the calendar</div>
           ) : (
             <>
-              {/* Back Button and Delete Button */}
+              {/* Delete Button */}
               <div className="mb-4 flex items-center justify-end">
                 {selectedTest && (
                   <button 
@@ -624,6 +805,11 @@ export default function Report() {
                        <Microscope className="h-5 w-5 mr-2 text-green-600" />
                        Microscopic Images
                        <span className="ml-2 text-sm text-gray-600 font-normal">- Sample Analysis</span>
+                       {selectedTest && (
+                         <span className="ml-3 text-sm font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                           {selectedTest.microscopic_images?.length || 0}/10 images
+                         </span>
+                       )}
                      </h3>
                    </div>
                    
@@ -632,14 +818,11 @@ export default function Report() {
                      id="image-upload"
                      type="file"
                      accept="image/*"
-                     multiple
                      className="hidden"
                      onChange={(e) => {
-                       const files = e.target.files
-                       if (files && files.length > 0) {
-                         // Handle file upload logic here
-                         console.log('Files selected:', files)
-                         // You can implement the actual upload to Supabase storage here
+                       const file = e.target.files?.[0]
+                       if (file) {
+                         handleFileUpload(file)
                        }
                      }}
                    />
@@ -661,8 +844,13 @@ export default function Report() {
                   {selectedTest && (
                     <div className="space-y-6">
                       {/* Display captured microscopic images */}
-                      {selectedTest.microscopic_images && selectedTest.microscopic_images.length > 0 ? (
+                                            {selectedTest.microscopic_images && selectedTest.microscopic_images.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Debug info */}
+                          <div className="col-span-full bg-yellow-100 p-2 mb-4 rounded">
+                            <p className="text-sm">Debug: Found {selectedTest.microscopic_images.length} images</p>
+                            <p className="text-xs text-gray-600">First image: {selectedTest.microscopic_images[0]?.substring(0, 50)}...</p>
+                          </div>
                           {selectedTest.microscopic_images.map((imageUrl, index) => (
                             <div key={index} className="space-y-3">
                               <div className="flex items-center justify-between">
@@ -696,126 +884,452 @@ export default function Report() {
                                   <Trash2 className="h-4 w-4" />
                                 </button>
                               </div>
-                              <div className="relative group cursor-pointer" onClick={() => setModalImage({
-                                src: imageUrl,
-                                alt: `Microscopic image ${index + 1}`,
-                                title: `Sample ${index + 1}`
-                              })}>
-                                <Image 
-                                  src={imageUrl} 
-                                  alt={`Microscopic image ${index + 1}`}
-                                  width={400}
-                                  height={256}
-                                  className="w-full h-64 object-contain rounded-lg border border-gray-200 shadow-sm bg-white"
-                                  onError={(e) => {
-                                    console.error('Image failed to load:', imageUrl)
-                                    // You could set an error state here if needed
-                                  }}
-                                />
-                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
-                                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white bg-opacity-90 px-3 py-1 rounded-full text-sm font-medium text-gray-800">
-                                    Click to enlarge
+                              <div className="relative group">
+                                <div className="relative w-full h-80 rounded-lg border border-gray-200 shadow-lg overflow-hidden bg-black">
+                                  {/* Top Control Bar */}
+                                  <div className="absolute top-0 left-0 right-0 bg-black bg-opacity-70 text-white p-2 z-10">
+                                    <div className="flex items-center justify-between text-xs">
+                                      <div className="flex items-center space-x-4">
+                                        <div className="flex items-center space-x-2">
+                                          <span>🔍</span>
+                                          <span>4X</span>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                          <span>单位:</span>
+                                          <span>mm</span>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <span>测量结果: 4444.4444</span>
+                                        <button className="p-1 hover:bg-white hover:bg-opacity-20 rounded">⚙️</button>
+                                        <button className="p-1 hover:bg-white hover:bg-opacity-20 rounded">📋</button>
+                                        <button className="p-1 hover:bg-white hover:bg-opacity-20 rounded">🎯</button>
+                                        <button className="p-1 hover:bg-white hover:bg-opacity-20 rounded">✕</button>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Left Control Panel */}
+                                  <div className="absolute top-12 left-0 bg-black bg-opacity-70 text-white p-3 rounded-r-lg z-10">
+                                    <div className="space-y-3 text-xs">
+                                      <div>
+                                        <div className="flex justify-between mb-1">
+                                          <span>亮度</span>
+                                          <span>100</span>
+                                        </div>
+                                        <div className="w-24 h-1 bg-gray-600 rounded-full">
+                                          <div className="w-full h-1 bg-white rounded-full"></div>
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="flex justify-between mb-1">
+                                          <span>对比度</span>
+                                          <span>50</span>
+                                        </div>
+                                        <div className="w-24 h-1 bg-gray-600 rounded-full">
+                                          <div className="w-12 h-1 bg-white rounded-full"></div>
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="flex justify-between mb-1">
+                                          <span>锐度</span>
+                                          <span>50</span>
+                                        </div>
+                                        <div className="w-24 h-1 bg-gray-600 rounded-full">
+                                          <div className="w-12 h-1 bg-white rounded-full"></div>
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="flex justify-between mb-1">
+                                          <span>曝光补偿</span>
+                                          <span>-0.0</span>
+                                        </div>
+                                        <div className="w-24 h-1 bg-gray-600 rounded-full">
+                                          <div className="w-6 h-1 bg-white rounded-full"></div>
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="mb-2">白平衡</div>
+                                        <div className="space-y-1">
+                                          <div className="flex justify-between">
+                                            <span>R</span>
+                                            <span>50</span>
+                                          </div>
+                                          <div className="w-24 h-1 bg-gray-600 rounded-full">
+                                            <div className="w-12 h-1 bg-red-500 rounded-full"></div>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span>G</span>
+                                            <span>50</span>
+                                          </div>
+                                          <div className="w-24 h-1 bg-gray-600 rounded-full">
+                                            <div className="w-12 h-1 bg-green-500 rounded-full"></div>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span>B</span>
+                                            <span>50</span>
+                                          </div>
+                                          <div className="w-24 h-1 bg-gray-600 rounded-full">
+                                            <div className="w-12 h-1 bg-blue-500 rounded-full"></div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <button className="w-full bg-blue-600 text-white text-xs py-1 rounded hover:bg-blue-700">
+                                        恢复默认值
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Main Image */}
+                                  {imageUrl.startsWith('data:') ? (
+                                    // Handle base64 images
+                                    <img 
+                                      src={imageUrl} 
+                                      alt={`Microscopic image ${index + 1}`}
+                                      className="w-full h-full object-contain"
+                                      onError={(e) => {
+                                        console.error('Image failed to load:', imageUrl)
+                                        const target = e.target as HTMLImageElement
+                                        target.style.display = 'none'
+                                        const parent = target.parentElement
+                                        if (parent) {
+                                          parent.innerHTML = `
+                                            <div class="flex items-center justify-center h-full">
+                                              <div class="text-center">
+                                                <Microscope class="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                                                <p class="text-sm text-gray-500">Image failed to load</p>
+                                              </div>
+                                            </div>
+                                          `
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    // Handle URL images
+                                    <Image 
+                                      src={imageUrl} 
+                                      alt={`Microscopic image ${index + 1}`}
+                                      width={400}
+                                      height={320}
+                                      className="w-full h-full object-contain"
+                                      unoptimized={imageUrl.startsWith('http')}
+                                      onError={(e) => {
+                                        console.error('Image failed to load:', imageUrl)
+                                        const target = e.target as HTMLImageElement
+                                        target.style.display = 'none'
+                                        const parent = target.parentElement
+                                        if (parent) {
+                                          parent.innerHTML = `
+                                            <div class="flex items-center justify-center h-full">
+                                              <div class="text-center">
+                                                <Microscope class="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                                                <p class="text-sm text-gray-500">Image failed to load</p>
+                                              </div>
+                                            </div>
+                                          `
+                                        }
+                                      }}
+                                    />
+                                  )}
+
+                                  {/* Measurement Overlay */}
+                                  <div className="absolute inset-0 pointer-events-none">
+                                    <svg className="w-full h-full">
+                                      <line 
+                                        x1="10%" y1="10%" x2="90%" y2="90%" 
+                                        stroke="red" strokeWidth="2" 
+                                        markerEnd="url(#arrowhead)"
+                                      />
+                                      <defs>
+                                        <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                                          refX="9" refY="3.5" orient="auto">
+                                          <polygon points="0 0, 10 3.5, 0 7" fill="red" />
+                                        </marker>
+                                      </defs>
+                                    </svg>
+                                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                      <div className="bg-yellow-400 text-black text-xs px-2 py-1 rounded font-bold">
+                                        L: 1.78mm
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Click to Enlarge Overlay */}
+                                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white bg-opacity-90 px-3 py-1 rounded-full text-sm font-medium text-gray-800 shadow-sm">
+                                      Click to enlarge
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                              <div className="text-sm text-gray-600">
-                                <p><strong>Captured:</strong> {new Date().toLocaleDateString()}</p>
-                                <p><strong>Type:</strong> Microscopic analysis</p>
+                              <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3 mt-2">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="font-medium text-gray-700"><strong>Captured:</strong> {new Date().toLocaleDateString()}</p>
+                                    <p className="text-gray-600"><strong>Type:</strong> Microscopic analysis</p>
+                                  </div>
+                                  <div className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border">
+                                    Sample {index + 1}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="text-center py-8 text-gray-500">
-                          <Microscope className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                          <p className="text-lg font-medium">No microscopic images available</p>
-                          <p className="text-sm">Images will appear here when captured for this test</p>
+                        <div className="text-center py-12 text-gray-500">
+                          <div className="w-full h-64 rounded-lg border-2 border-dashed border-gray-300 bg-white flex items-center justify-center">
+                            <div className="text-center">
+                              <Microscope className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                              <p className="text-lg font-medium text-gray-600 mb-2">No microscopic images available</p>
+                              <p className="text-sm text-gray-500">Images will appear here when captured for this test</p>
+                            </div>
+                          </div>
                         </div>
                       )}
                       
-                      {/* Capture Image button */}
-                      <div className="flex items-center justify-center pt-4">
+                      {/* Image capture and analyze buttons */}
+                      <div className="flex items-center justify-center space-x-4 pt-4">
                         <button
                           onClick={handleCameraCapture}
-                          className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                          disabled={selectedTest && (selectedTest.microscopic_images?.length || 0) >= 10}
+                          className={`flex items-center space-x-2 px-6 py-3 rounded-lg transition-colors shadow-sm ${
+                            selectedTest && (selectedTest.microscopic_images?.length || 0) >= 10
+                              ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                              : 'bg-green-600 text-white hover:bg-green-700'
+                          }`}
                         >
                           <Camera className="h-5 w-5" />
-                          <span className="font-medium">Capture Image</span>
+                          <span className="font-medium">
+                            {selectedTest && (selectedTest.microscopic_images?.length || 0) >= 10
+                              ? 'Maximum images reached'
+                              : 'Open Camera'
+                            }
+                          </span>
+                        </button>
+                        
+                        <button
+                          onClick={() => setShowImageAnalysisModal(true)}
+                          disabled={!selectedTest}
+                          className={`flex items-center space-x-2 px-6 py-3 rounded-lg transition-colors shadow-sm ${
+                            !selectedTest
+                              ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                              : 'bg-blue-600 text-white hover:bg-blue-700'
+                          }`}
+                        >
+                          <Brain className="h-5 w-5" />
+                          <span className="font-medium">
+                            {!selectedTest ? 'Select a test first' : 'Analyze with AI'}
+                          </span>
                         </button>
                       </div>
                     </div>
                   )}
                 </div>
 
-               {/* Findings table */}
+               {/* Strasinger Quantitation Table */}
                <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
-                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center"><Microscope className="h-5 w-5 mr-2 text-green-600" />Microscopic Examination<span className="ml-2 text-sm text-gray-600 font-normal">- AI Generated Results</span></h3>
+                 <div className="flex items-center justify-between mb-4">
+                   <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                     <Microscope className="h-5 w-5 mr-2 text-green-600" />
+                     Microscopic Quantitations (Strasinger)
+                     <span className="ml-2 text-sm text-gray-600 font-normal">- Clinical Reference Standards</span>
+                   </h3>
+                   <div className="flex items-center space-x-4 text-sm">
+                     <div className="flex items-center space-x-2">
+                       <span className="text-gray-600">Total Elements:</span>
+                       <span className="font-semibold text-gray-900">{findings.length}</span>
+                     </div>
+                     <div className="flex items-center space-x-2">
+                       <span className="text-gray-600">Abnormal:</span>
+                       <span className="font-semibold text-orange-600">
+                         {findings.filter(f => f.status === 'abnormal' || f.status === 'critical').length}
+                       </span>
+                     </div>
+                     <div className="flex items-center space-x-2">
+                       <span className="text-gray-600">Avg Accuracy:</span>
+                       <span className="font-semibold text-blue-600">
+                         {findings.length > 0 ? Math.round(findings.reduce((sum, f) => sum + f.accuracy, 0) / findings.length) : 0}%
+                       </span>
+                     </div>
+                   </div>
+                 </div>
+                 
                  <div className="overflow-x-auto">
-                   <table className="w-full text-sm">
+                   <table className="w-full text-sm border border-gray-300">
+                     {/* Header */}
                      <thead>
-                       <tr className="border-b border-gray-200"><th className="text-left py-2 font-semibold text-gray-800">Element</th><th className="text-left py-2 font-semibold text-gray-800">Count</th><th className="text-left py-2 font-semibold text-gray-800">Morphology</th><th className="text-left py-2 font-semibold text-gray-800">Status</th><th className="text-left py-2 font-semibold text-gray-800">AI Accuracy</th><th className="text-left py-2 font-semibold text-gray-800">Notes</th><th className="text-left py-2 font-semibold text-gray-800">Actions</th></tr>
+                       <tr className="bg-blue-600 text-white">
+                         <th className="py-3 px-4 text-center font-bold text-lg" colSpan={7}>
+                           MICROSCOPIC QUANTITATIONS (Strasinger)
+                         </th>
+                       </tr>
+                       <tr className="bg-gray-100 border-b border-gray-300">
+                         <th className="py-3 px-4 text-left font-semibold text-gray-800 border-r border-gray-300">Item</th>
+                         <th className="py-3 px-4 text-center font-semibold text-gray-800 border-r border-gray-300">Quantitated</th>
+                         <th className="py-3 px-4 text-center font-semibold text-gray-800 border-r border-gray-300">None</th>
+                         <th className="py-3 px-4 text-center font-semibold text-gray-800 border-r border-gray-300">Rare</th>
+                         <th className="py-3 px-4 text-center font-semibold text-gray-800 border-r border-gray-300">Few</th>
+                         <th className="py-3 px-4 text-center font-semibold text-gray-800 border-r border-gray-300">Moderate</th>
+                         <th className="py-3 px-4 text-center font-semibold text-gray-800">Many</th>
+                       </tr>
                      </thead>
                      <tbody>
-                       {findings.map((item: MicroscopicFindings, index: number) => (
-                         <tr key={index} className="border-b border-gray-100">
-                           <td className="py-2 text-gray-900 font-semibold">{item.item}</td>
-                           <td className="py-2 font-bold text-gray-900">{item.count} {item.unit}</td>
-                           <td className="py-2 text-gray-800 font-medium">{item.morphology}</td>
-                           <td className="py-2"><span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>{item.status}</span></td>
-                           <td className="py-2"><span className={`px-2 py-1 rounded-full text-xs font-medium ${getAccuracyColor(item.accuracy)}`}>{item.accuracy}%</span></td>
-                           <td className="py-2 text-gray-800 text-sm max-w-xs font-medium">{item.notes}</td>
-                           <td className="py-2"><button onClick={() => toggleEdit()} className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit findings">{item.isEditing ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Edit className="h-4 w-4" />}</button></td>
-                         </tr>
-                       ))}
+                       {/* Epithelial cells */}
+                       <tr className="border-b border-gray-300">
+                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Epithelial cells</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">per LPF</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">0</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">0-5</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">5-20</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">20-100</td>
+                         <td className="py-3 px-4 text-center text-gray-700">&gt;100</td>
+                       </tr>
+                       
+                       {/* Crystals (normal) */}
+                       <tr className="border-b border-gray-300">
+                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Crystals (normal)</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">per HPF</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">0</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">0-2</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">2-5</td>
+                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300">5-20</td>
+                         <td className="py-3 px-4 text-center text-gray-700">&gt;20</td>
+                       </tr>
+                       
+                       {/* Bacteria */}
+                       <tr className="border-b border-gray-300">
+                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Bacteria</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">per HPF</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">0</td>
+                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300">0-10</td>
+                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300">10-50</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">50-200</td>
+                         <td className="py-3 px-4 text-center text-gray-700">&gt;200</td>
+                       </tr>
+                       
+                       {/* Mucus threads */}
+                       <tr className="border-b border-gray-300">
+                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Mucus threads</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">per LPF</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">0</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">0-1</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">1-3</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">3-10</td>
+                         <td className="py-3 px-4 text-center text-gray-700">&gt;10</td>
+                       </tr>
+                       
+                       {/* Casts */}
+                       <tr className="border-b border-gray-300">
+                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Casts</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">per LPF</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300" colSpan={5}>
+                           Numerical ranges: 0-2, 2-5, 5-10, &gt;10
+                         </td>
+                       </tr>
+                       
+                       {/* RBCs */}
+                       <tr className="border-b border-gray-300">
+                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">RBCs</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">per HPF</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300" colSpan={5}>
+                           Numerical ranges: 0-2, 2-5, 5-10, 10-25, 25-50, 50-100, &gt;100
+                         </td>
+                       </tr>
+                       
+                       {/* WBCs */}
+                       <tr className="border-b border-gray-300">
+                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">WBCs</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">per HPF</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300" colSpan={5}>
+                           Numerical ranges: 0-2, 2-5, 5-10, 10-25, 25-50, 50-100, &gt;100
+                         </td>
+                       </tr>
+                       
+                       {/* Squamous epithelial cells */}
+                       <tr className="border-b border-gray-300">
+                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Squamous epithelial cells</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300"></td>
+                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
+                           Rare, few, moderate or many per LPF
+                         </td>
+                       </tr>
+                       
+                       {/* Transitional epithelial cells, yeasts, Trichomonas */}
+                       <tr className="border-b border-gray-300">
+                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Transitional epithelial cells, yeasts, Trichomonas</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300"></td>
+                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
+                           Rare, few, moderate, or many per HPF
+                         </td>
+                       </tr>
+                       
+                       {/* Renal tubular epithelial cells */}
+                       <tr className="border-b border-gray-300">
+                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Renal tubular epithelial cells</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300"></td>
+                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
+                           Average number per 10 HPFs
+                         </td>
+                       </tr>
+                       
+                       {/* Oval fat bodies */}
+                       <tr className="border-b border-gray-300">
+                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Oval fat bodies</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300"></td>
+                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
+                           Average number per HPF
+                         </td>
+                       </tr>
+                       
+                       {/* Abnormal crystals, casts */}
+                       <tr className="border-b border-gray-300">
+                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Abnormal crystals, casts</td>
+                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300"></td>
+                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
+                           Average number per LPF
+                         </td>
+                       </tr>
                      </tbody>
                    </table>
+                 </div>
+                 
+                 {/* Current Test Results Summary */}
+                 <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                   <h4 className="text-lg font-semibold text-gray-900 mb-3">Current Test Results Summary</h4>
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                     <div className="text-center">
+                       <div className="text-2xl font-bold text-blue-600">{findings.length}</div>
+                       <div className="text-sm text-gray-600">Total Elements</div>
+                     </div>
+                     <div className="text-center">
+                       <div className="text-2xl font-bold text-orange-600">
+                         {findings.filter(f => f.status === 'abnormal' || f.status === 'critical').length}
+                       </div>
+                       <div className="text-sm text-gray-600">Abnormal</div>
+                     </div>
+                     <div className="text-center">
+                       <div className="text-2xl font-bold text-green-600">
+                         {findings.filter(f => f.status === 'normal').length}
+                       </div>
+                       <div className="text-sm text-gray-600">Normal</div>
+                     </div>
+                     <div className="text-center">
+                       <div className="text-2xl font-bold text-blue-600">
+                         {findings.length > 0 ? Math.round(findings.reduce((sum, f) => sum + f.accuracy, 0) / findings.length) : 0}%
+                       </div>
+                       <div className="text-sm text-gray-600">Avg Accuracy</div>
+                     </div>
+                   </div>
                  </div>
                </div>
 
               {/* History */}
-              <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient Test History</h3>
-                {!selectedPatient ? (
-                  <div className="text-sm text-gray-600">Select a patient to view their test history</div>
-                ) : (() => {
-                  const patientTests = tests.filter(t => t.patient_id === selectedPatient.id)
-                  if (patientTests.length === 0) {
-                    return <div className="text-sm text-gray-600">No previous tests for this patient</div>
-                  }
-                  
-                  return (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 font-semibold text-gray-800">Test Code</th>
-                            <th className="text-left py-2 font-semibold text-gray-800">Date</th>
-                            <th className="text-left py-2 font-semibold text-gray-800">Status</th>
-                            <th className="text-left py-2 font-semibold text-gray-800">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {patientTests.map((t: UrineTest) => (
-                            <tr key={t.id} className="border-b border-gray-100">
-                              <td className="py-2 text-gray-900 font-semibold">{t.test_code}</td>
-                              <td className="py-2 text-gray-800 font-medium">{t.analysis_date}</td>
-                              <td className="py-2 text-gray-800 font-medium">{t.status}</td>
-                              <td className="py-2">
-                                <button 
-                                  onClick={() => setSelectedTest(t)} 
-                                  className={`px-3 py-1 rounded text-sm ${selectedTest?.id === t.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                                >
-                                  View
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )
-                })()}
-              </div>
+              <PatientTestHistory 
+                selectedPatient={selectedPatient}
+                selectedTest={selectedTest}
+                onTestSelect={handleTestSelection}
+              />
             </>
           )}
         </div>
