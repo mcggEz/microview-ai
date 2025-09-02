@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useDashboard } from '@/hooks/useDashboard'
 import { updatePatient, updateTest, updateTestWithAnalysis, testDatabaseConnection, deleteTest, deleteImageFromTest, deleteImageFromStorage, addImageToTest, uploadImageToStorage, uploadBase64Image } from '@/lib/api'
-import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown, Upload, ChevronLeft, ChevronRight, Brain, Search } from 'lucide-react'
+import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown, Upload, ChevronLeft, ChevronRight, Brain, Search, ArrowLeft } from 'lucide-react'
 import ImageModal from '@/components/ImageModal'
 import ImageAnalysisModal from '@/components/ImageAnalysisModal'
 import NewPatientModal from '@/components/NewPatientModal'
@@ -53,6 +53,11 @@ export default function Report() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'in_progress' | 'reviewed'>('all')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+  const [showHeader, setShowHeader] = useState(true)
+  const [liveStreamActive, setLiveStreamActive] = useState(false)
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
   const searchParams = useSearchParams()
   const dateParam = searchParams.get('date')
 
@@ -156,6 +161,79 @@ export default function Report() {
       })
     }
   }, [selectedPatient, selectedTest])
+
+  // Start live camera
+  const startLiveCamera = async () => {
+    try {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        setNotificationMessage('Camera not supported in this environment.')
+        setNotificationType('error')
+        setShowNotification(true)
+        return
+      }
+      let stream: MediaStream | null = null
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        })
+      } catch (e) {
+        // Fallback to any camera
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      }
+      setMediaStream(stream)
+      if (videoRef.current) {
+        const elem = videoRef.current
+        // @ts-ignore - srcObject is supported in browsers
+        elem.srcObject = stream
+        elem.onloadedmetadata = async () => {
+          try { await elem.play() } catch {}
+        }
+      }
+      setLiveStreamActive(true)
+    } catch (err) {
+      console.error('Failed to start camera:', err)
+      setNotificationMessage('Failed to start camera. Please check permissions.')
+      setNotificationType('error')
+      setShowNotification(true)
+    }
+  }
+
+  // Stop live camera
+  const stopLiveCamera = () => {
+    try {
+      mediaStream?.getTracks().forEach(t => t.stop())
+    } catch {}
+    setMediaStream(null)
+    setLiveStreamActive(false)
+  }
+
+  // Ensure video element attaches to stream even if created later
+  useEffect(() => {
+    if (!mediaStream || !videoRef.current) return
+    const elem = videoRef.current
+    try {
+      // @ts-ignore
+      elem.srcObject = mediaStream
+      const play = async () => {
+        try { await elem.play() } catch {}
+      }
+      if (elem.readyState >= 2) {
+        play()
+      } else {
+        elem.onloadedmetadata = play
+      }
+    } catch {}
+  }, [mediaStream, videoRef])
+
+  useEffect(() => {
+    return () => {
+      // Cleanup on unmount
+      try {
+        mediaStream?.getTracks().forEach(t => t.stop())
+      } catch {}
+    }
+  }, [mediaStream])
 
   const handleEditToggle = () => {
     if (isEditing) {
@@ -282,6 +360,24 @@ export default function Report() {
   const handleDeleteTest = async () => {
     if (!selectedTest) return
     setShowDeleteConfirm(true)
+  }
+
+  const handleValidateTest = async () => {
+    if (!selectedTest) return
+    try {
+      await updateTest(selectedTest.id, { status: 'reviewed' as any })
+      if (dateParam) {
+        await preloadByDate(dateParam)
+      }
+      setNotificationMessage('Test validated successfully!')
+      setNotificationType('success')
+      setShowNotification(true)
+    } catch (error) {
+      console.error('Error validating test:', error)
+      setNotificationMessage('Failed to validate test. Please try again.')
+      setNotificationType('error')
+      setShowNotification(true)
+    }
   }
 
   const confirmDeleteTest = async () => {
@@ -442,52 +538,187 @@ export default function Report() {
     }
   }
 
+  const handleExport = () => {
+    if (!selectedTest) {
+      setNotificationMessage('No test selected for export.')
+      setNotificationType('warning')
+      setShowNotification(true)
+      return
+    }
+    // Implement actual export logic here
+    // This could involve generating a PDF or CSV
+    setNotificationMessage('Export functionality not yet implemented.')
+    setNotificationType('info')
+    setShowNotification(true)
+  }
+
+  const navigateToTest = (direction: 'prev' | 'next') => {
+    if (!selectedTest) return
+
+    const currentIndex = tests.findIndex(test => test.id === selectedTest.id)
+    if (currentIndex === -1) return
+
+    let newIndex = currentIndex
+    if (direction === 'prev') {
+      newIndex = currentIndex - 1
+    } else if (direction === 'next') {
+      newIndex = currentIndex + 1
+    }
+
+    if (newIndex >= 0 && newIndex < tests.length) {
+      const newSelectedTest = tests[newIndex]
+      setSelectedTest(newSelectedTest)
+      const testPatient = patients.find(p => p.id === newSelectedTest.patient_id)
+      if (testPatient) {
+        setSelectedPatient(testPatient)
+      } else {
+        setNotificationMessage(`⚠️ Patient data not found for test: ${newSelectedTest.test_code}`)
+        setNotificationType('warning')
+        setShowNotification(true)
+      }
+      setNotificationMessage(`✅ Navigated to test "${newSelectedTest.test_code}" for ${testPatient?.name || 'patient'}`)
+      setNotificationType('success')
+      setShowNotification(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      setNotificationMessage(`No more ${direction} test available.`)
+      setNotificationType('info')
+      setShowNotification(true)
+    }
+  }
+
+  const canNavigateToTest = (direction: 'prev' | 'next') => {
+    if (!selectedTest) return false
+    const currentIndex = tests.findIndex(test => test.id === selectedTest.id)
+    if (currentIndex === -1) return false
+
+    if (direction === 'prev') {
+      return currentIndex > 0
+    } else if (direction === 'next') {
+      return currentIndex < tests.length - 1
+    }
+    return false
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-white border-b border-gray-200 px-6 py-4 relative z-[60]">
         <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-4">
+          {/* Left side - Back button and test info */}
+          <div className="flex items-center space-x-6">
             <button
               onClick={() => router.back()}
               className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              <span>Back</span>
+              <ArrowLeft className="h-5 w-5" />
+              <span className="font-medium">Back</span>
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">Microscopic Report</h1>
+            
+            <div className="flex items-center space-x-4">
+              <h1 className="text-xl font-bold text-gray-900">Microscopic Report</h1>
+              <div className="text-lg font-mono font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">
+                {selectedTest?.test_code || 'N/A'}
+              </div>
+            </div>
           </div>
-                     <div className="flex items-center space-x-4">
-             <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">
-               <Download className="h-5 w-5" />
-               <span>Export</span>
-             </button>
-             
-             <div className="flex items-center text-lg font-semibold text-gray-900">
-               <span>{selectedDate}</span>
-             </div>
 
-           </div>
+          {/* Center - Test navigation */}
+          {selectedTest && (
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => navigateToTest('prev')}
+                disabled={!canNavigateToTest('prev')}
+                className="p-2 rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Previous test"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => navigateToTest('next')}
+                disabled={!canNavigateToTest('next')}
+                className="p-2 rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Next test"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Right side - Action buttons */}
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className={`px-3 py-1.5 rounded-lg border transition-colors ${
+                sidebarCollapsed 
+                  ? 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100' 
+                  : 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100'
+              }`}
+              title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+            >
+              {sidebarCollapsed ? (
+                <div className="flex items-center space-x-1">
+                  <ChevronRight className="h-4 w-4" />
+                  <span className="text-sm font-medium">Sidebar</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1">
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="text-sm font-medium">Sidebar</span>
+                </div>
+              )}
+            </button>
+            
+            <button
+              onClick={handleNewPatient}
+              className="px-3 py-1.5 rounded-lg border border-green-300 bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center space-x-2"
+              title="Add new test"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add Test</span>
+            </button>
+            
+            <button
+              onClick={() => setShowHeader((v) => !v)}
+              className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-800 shadow-sm hover:bg-gray-50"
+              title={showHeader ? 'Hide report details' : 'Show report details'}
+            >
+              {showHeader ? 'Hide Details' : 'Show Details'}
+            </button>
+            
+            <button
+              onClick={() => setShowHistory((v) => !v)}
+              className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-800 shadow-sm hover:bg-gray-50"
+              title={showHistory ? 'Hide patient history' : 'Show patient history'}
+            >
+              {showHistory ? 'Hide History' : 'Show History'}
+            </button>
+            
+            <button 
+              onClick={handleExport}
+              className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-800 shadow-sm hover:bg-gray-50"
+            >
+              <Download className="h-5 w-5" />
+              <span>Export</span>
+            </button>
+            
+            <button
+              onClick={() => (liveStreamActive ? stopLiveCamera() : startLiveCamera())}
+              className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg shadow-sm border transition-colors ${
+                liveStreamActive ? 'bg-red-600 text-white border-red-600 hover:bg-red-700' : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
+              }`}
+              title={liveStreamActive ? 'Stop Camera' : 'Open Camera'}
+            >
+              <Camera className="h-5 w-5" />
+              <span>{liveStreamActive ? 'Stop Camera' : 'Open Camera'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="flex">
+      <div className="flex h-[calc(100vh-72px)] overflow-hidden">
         {/* Left Sidebar */}
-        <div className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white border-r border-gray-200 min-h-screen transition-all duration-300 ease-in-out relative`}>
-          {/* Toggle Button */}
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="absolute -right-3 top-6 bg-white border border-gray-200 rounded-full p-1.5 shadow-md hover:bg-gray-50 transition-colors z-10"
-            title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-          >
-            {sidebarCollapsed ? (
-              <ChevronRight className="h-4 w-4 text-gray-600" />
-            ) : (
-              <ChevronLeft className="h-4 w-4 text-gray-600" />
-            )}
-          </button>
+        <div className={`${sidebarCollapsed ? 'hidden' : 'w-80'} bg-white border-r border-gray-200 h-full overflow-y-auto transition-all duration-300 ease-in-out relative z-[55]`}>
           
                     <div className={`${sidebarCollapsed ? 'px-2' : 'p-4'} transition-all duration-300`}>
             {/* Search and Filters */}
@@ -630,148 +861,164 @@ export default function Report() {
          </div>
         </div>
 
+      
+
         {/* Main Content */}
-        <div className="flex-1 p-6" key={selectedPatient?.id || 'no-patient'}>
+        <div className="flex-1 p-4 md:p-6 overflow-y-auto relative z-[35]" key={selectedPatient?.id || 'no-patient'}>
           {!selectedPatient ? (
             <div className="text-center py-12 text-gray-600">Select a patient or use the calendar</div>
           ) : (
             <>
-              {/* Delete Button */}
-              <div className="mb-4 flex items-center justify-end">
-                {selectedTest && (
-                  <button 
-                    onClick={handleDeleteTest}
-                    className="flex items-center space-x-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                    title="Delete Test"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span>Delete</span>
-                  </button>
-                )}
-              </div>
-                             {/* Header info */}
-               <div className="bg-white rounded-lg p-6 shadow-sm mb-6 relative">
-                 <h1 className="text-2xl font-bold text-center text-gray-900 mb-6">Microscopic Urine Analysis Report - {selectedTest?.test_code || 'N/A'}</h1>
-                                  <div className="grid grid-cols-3 gap-6 mb-6">
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-gray-700 font-medium">Name:</span>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editData.patientName}
-                            onChange={(e) => setEditData(prev => ({ ...prev, patientName: e.target.value }))}
-                            className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        ) : (
-                          <span className="font-semibold text-gray-900">{selectedPatient.name}</span>
-                        )}
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-700 font-medium">Patient ID:</span>
-                        <span className="font-semibold text-gray-900">{selectedPatient.patient_id}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-700 font-medium">Age:</span>
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            value={editData.patientAge}
-                            onChange={(e) => setEditData(prev => ({ ...prev, patientAge: e.target.value }))}
-                            className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 w-20"
-                            min="0"
-                            max="150"
-                          />
-                        ) : (
-                          <span className="font-semibold text-gray-900">{selectedPatient.age} Years</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-gray-700 font-medium">Gender:</span>
-                        {isEditing ? (
-                          <select
-                            value={editData.patientGender}
-                            onChange={(e) => setEditData(prev => ({ ...prev, patientGender: e.target.value as 'male' | 'female' | 'other' }))}
-                            className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                            <option value="other">Other</option>
-                          </select>
-                        ) : (
-                          <span className="font-semibold text-gray-900">{selectedPatient.gender}</span>
-                        )}
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-700 font-medium">Sample ID:</span>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editData.sampleId}
-                            onChange={(e) => setEditData(prev => ({ ...prev, sampleId: e.target.value }))}
-                            className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        ) : (
-                          <span className="font-semibold text-gray-900">{selectedTest?.sample_id || 'N/A'}</span>
-                        )}
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-700 font-medium">Collection Time:</span>
-                        {isEditing ? (
-                          <input
-                            type="time"
-                            value={editData.collectionTime}
-                            onChange={(e) => setEditData(prev => ({ ...prev, collectionTime: e.target.value }))}
-                            className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        ) : (
-                          <span className="font-semibold text-gray-900">{selectedTest?.collection_time || 'N/A'}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-gray-700 font-medium">Analysis Date:</span>
-                        <span className="font-semibold text-gray-900">{selectedTest?.analysis_date || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-700 font-medium">Technician:</span>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editData.technician}
-                            onChange={(e) => setEditData(prev => ({ ...prev, technician: e.target.value }))}
-                            className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        ) : (
-                          <span className="font-semibold text-gray-900">{selectedTest?.technician || 'N/A'}</span>
-                        )}
-                      </div>
-                      <div className="flex justify-between items-center mb-6">
-                        <span className="text-gray-700 font-medium">Status:</span>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          selectedTest?.status === 'pending' 
-                            ? 'bg-orange-100 text-orange-800 border border-orange-200'
-                            : selectedTest?.status === 'completed'
-                            ? 'bg-green-100 text-green-800 border border-green-200'
-                            : selectedTest?.status === 'in_progress'
-                            ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                            : selectedTest?.status === 'reviewed'
-                            ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                            : 'bg-gray-100 text-gray-800 border border-gray-200'
-                        }`}>
-                          {selectedTest?.status?.replace('_', ' ').toUpperCase() || 'N/A'}
-                        </span>
-                      </div>
-                    </div>
+       
+          
+                         
+              {showHeader ? (
+              <div className="bg-white rounded-lg p-6 shadow-sm mb-6 relative z-[40]">
+                <div className="flex items-center justify-between mb-4">
+                   <h1 className="text-2xl font-bold text-center text-gray-900">Microscopic Urine Analysis Report - {selectedTest?.test_code || 'N/A'}</h1>
+                   <div className="w-24"></div>
+                 </div>
+                                 <div className="grid grid-cols-3 gap-6 mb-6">
+                   <div className="space-y-3">
+                     <div className="flex justify-between">
+                       <span className="text-gray-700 font-medium">Name:</span>
+                       {isEditing ? (
+                         <input
+                           type="text"
+                           value={editData.patientName}
+                           onChange={(e) => setEditData(prev => ({ ...prev, patientName: e.target.value }))}
+                           className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                         />
+                       ) : (
+                         <span className="font-semibold text-gray-900">{selectedPatient.name}</span>
+                       )}
+                     </div>
+                     <div className="flex justify-between">
+                       <span className="text-gray-700 font-medium">Patient ID:</span>
+                       <span className="font-semibold text-gray-900">{selectedPatient.patient_id}</span>
+                     </div>
+                     <div className="flex justify-between">
+                       <span className="text-gray-700 font-medium">Age:</span>
+                       {isEditing ? (
+                         <input
+                           type="number"
+                           value={editData.patientAge}
+                           onChange={(e) => setEditData(prev => ({ ...prev, patientAge: e.target.value }))}
+                           className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 w-20"
+                           min="0"
+                           max="150"
+                         />
+                       ) : (
+                         <span className="font-semibold text-gray-900">{selectedPatient.age} Years</span>
+                       )}
+                     </div>
+                   </div>
+                   <div className="space-y-3">
+                     <div className="flex justify-between">
+                       <span className="text-gray-700 font-medium">Gender:</span>
+                       {isEditing ? (
+                         <select
+                           value={editData.patientGender}
+                           onChange={(e) => setEditData(prev => ({ ...prev, patientGender: e.target.value as 'male' | 'female' | 'other' }))}
+                           className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                         >
+                           <option value="male">Male</option>
+                           <option value="female">Female</option>
+                           <option value="other">Other</option>
+                         </select>
+                       ) : (
+                         <span className="font-semibold text-gray-900">{selectedPatient.gender}</span>
+                       )}
+                     </div>
+                     <div className="flex justify-between">
+                       <span className="text-gray-700 font-medium">Sample ID:</span>
+                       {isEditing ? (
+                         <input
+                           type="text"
+                           value={editData.sampleId}
+                           onChange={(e) => setEditData(prev => ({ ...prev, sampleId: e.target.value }))}
+                           className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                         />
+                       ) : (
+                         <span className="font-semibold text-gray-900">{selectedTest?.sample_id || 'N/A'}</span>
+                       )}
+                     </div>
+                     <div className="flex justify-between">
+                       <span className="text-gray-700 font-medium">Collection Time:</span>
+                       {isEditing ? (
+                         <input
+                           type="time"
+                           value={editData.collectionTime}
+                           onChange={(e) => setEditData(prev => ({ ...prev, collectionTime: e.target.value }))}
+                           className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                         />
+                       ) : (
+                         <span className="font-semibold text-gray-900">{selectedTest?.collection_time || 'N/A'}</span>
+                       )}
+                     </div>
+                   </div>
+                   <div className="space-y-3">
+                     <div className="flex justify-between">
+                       <span className="text-gray-700 font-medium">Analysis Date:</span>
+                       <span className="font-semibold text-gray-900">{selectedTest?.analysis_date || 'N/A'}</span>
+                     </div>
+                     <div className="flex justify-between">
+                       <span className="text-gray-700 font-medium">Technician:</span>
+                       {isEditing ? (
+                         <input
+                           type="text"
+                           value={editData.technician}
+                           onChange={(e) => setEditData(prev => ({ ...prev, technician: e.target.value }))}
+                           className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                         />
+                       ) : (
+                         <span className="font-semibold text-gray-900">{selectedTest?.technician || 'N/A'}</span>
+                       )}
+                     </div>
+                     <div className="flex justify-between items-center mb-6">
+                       <span className="text-gray-700 font-medium">Status:</span>
+                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                         selectedTest?.status === 'pending' 
+                           ? 'bg-orange-100 text-orange-800 border border-orange-200'
+                           : selectedTest?.status === 'completed'
+                           ? 'bg-green-100 text-green-800 border border-green-200'
+                           : selectedTest?.status === 'in_progress'
+                           ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                           : selectedTest?.status === 'reviewed'
+                           ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                           : 'bg-gray-100 text-gray-800 border border-gray-200'
+                       }`}>
+                         {selectedTest?.status?.replace('_', ' ').toUpperCase() || 'N/A'}
+                       </span>
+                     </div>
+                   </div>
                   </div>
                   
-                  {/* Edit Button in Lower Right */}
+                  {/* Actions in lower right */}
                   <div className="absolute bottom-4 right-4">
                     {selectedPatient && (
-                      <div className="flex items-center space-x-5">
+                      <div className="flex items-center space-x-3">
+                        {selectedTest && (
+                          <>
+                            <button 
+                              onClick={handleValidateTest}
+                              disabled={selectedTest.status === 'reviewed'}
+                              className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${selectedTest.status === 'reviewed' ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
+                              title="Validate Test"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                              <span>Validate</span>
+                            </button>
+                            <button 
+                              onClick={handleDeleteTest}
+                              className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+                              title="Delete Test"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span>Delete</span>
+                            </button>
+                          </>
+                        )}
                         <button 
                           onClick={handleEditToggle}
                           className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
@@ -796,10 +1043,38 @@ export default function Report() {
                       </div>
                     )}
                   </div>
+
+                  {/* History toggle in lower left */}
+                  {selectedTest && (
+                    <div className="absolute bottom-4 left-4">
+                      <button
+                        onClick={() => setShowHistory((v) => !v)}
+                        className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
+                        title={showHistory ? 'Hide patient history' : 'Show patient history'}
+                      >
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+                        <span>{showHistory ? 'Hide History' : 'Show History'}</span>
+                      </button>
+                    </div>
+                  )}
                </div>
+              ) : (
+                null
+              )}
+ 
+               {/* Patient History (below header) */}
+               {showHistory && (
+                 <div className="mt-3 md:mt-4 mb-6 bg-white rounded-lg border border-gray-200 shadow-sm">
+                   <PatientTestHistory 
+                     selectedPatient={selectedPatient}
+                     selectedTest={selectedTest}
+                     onTestSelect={handleTestSelection}
+                   />
+                 </div>
+               )}
 
                                                                             {/* Microscopic Images */}
-                 <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
+                 <div className="bg-white rounded-lg p-6 shadow-sm mb-6 relative z-[40]">
                    <div className="flex items-center justify-between mb-4">
                      <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                        <Microscope className="h-5 w-5 mr-2 text-green-600" />
@@ -812,6 +1087,8 @@ export default function Report() {
                        )}
                      </h3>
                    </div>
+                   {/* When live, we render the feed as a full-screen overlay, so skip inline block */}
+                   {!liveStreamActive ? null : null}
                    
                    {/* Hidden file inputs */}
                    <input
@@ -846,11 +1123,6 @@ export default function Report() {
                       {/* Display captured microscopic images */}
                                             {selectedTest.microscopic_images && selectedTest.microscopic_images.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {/* Debug info */}
-                          <div className="col-span-full bg-yellow-100 p-2 mb-4 rounded">
-                            <p className="text-sm">Debug: Found {selectedTest.microscopic_images.length} images</p>
-                            <p className="text-xs text-gray-600">First image: {selectedTest.microscopic_images[0]?.substring(0, 50)}...</p>
-                          </div>
                           {selectedTest.microscopic_images.map((imageUrl, index) => (
                             <div key={index} className="space-y-3">
                               <div className="flex items-center justify-between">
@@ -886,99 +1158,9 @@ export default function Report() {
                               </div>
                               <div className="relative group">
                                 <div className="relative w-full h-80 rounded-lg border border-gray-200 shadow-lg overflow-hidden bg-black">
-                                  {/* Top Control Bar */}
-                                  <div className="absolute top-0 left-0 right-0 bg-black bg-opacity-70 text-white p-2 z-10">
-                                    <div className="flex items-center justify-between text-xs">
-                                      <div className="flex items-center space-x-4">
-                                        <div className="flex items-center space-x-2">
-                                          <span>🔍</span>
-                                          <span>4X</span>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                          <span>单位:</span>
-                                          <span>mm</span>
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center space-x-2">
-                                        <span>测量结果: 4444.4444</span>
-                                        <button className="p-1 hover:bg-white hover:bg-opacity-20 rounded">⚙️</button>
-                                        <button className="p-1 hover:bg-white hover:bg-opacity-20 rounded">📋</button>
-                                        <button className="p-1 hover:bg-white hover:bg-opacity-20 rounded">🎯</button>
-                                        <button className="p-1 hover:bg-white hover:bg-opacity-20 rounded">✕</button>
-                                      </div>
-                                    </div>
-                                  </div>
 
-                                  {/* Left Control Panel */}
-                                  <div className="absolute top-12 left-0 bg-black bg-opacity-70 text-white p-3 rounded-r-lg z-10">
-                                    <div className="space-y-3 text-xs">
-                                      <div>
-                                        <div className="flex justify-between mb-1">
-                                          <span>亮度</span>
-                                          <span>100</span>
-                                        </div>
-                                        <div className="w-24 h-1 bg-gray-600 rounded-full">
-                                          <div className="w-full h-1 bg-white rounded-full"></div>
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <div className="flex justify-between mb-1">
-                                          <span>对比度</span>
-                                          <span>50</span>
-                                        </div>
-                                        <div className="w-24 h-1 bg-gray-600 rounded-full">
-                                          <div className="w-12 h-1 bg-white rounded-full"></div>
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <div className="flex justify-between mb-1">
-                                          <span>锐度</span>
-                                          <span>50</span>
-                                        </div>
-                                        <div className="w-24 h-1 bg-gray-600 rounded-full">
-                                          <div className="w-12 h-1 bg-white rounded-full"></div>
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <div className="flex justify-between mb-1">
-                                          <span>曝光补偿</span>
-                                          <span>-0.0</span>
-                                        </div>
-                                        <div className="w-24 h-1 bg-gray-600 rounded-full">
-                                          <div className="w-6 h-1 bg-white rounded-full"></div>
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <div className="mb-2">白平衡</div>
-                                        <div className="space-y-1">
-                                          <div className="flex justify-between">
-                                            <span>R</span>
-                                            <span>50</span>
-                                          </div>
-                                          <div className="w-24 h-1 bg-gray-600 rounded-full">
-                                            <div className="w-12 h-1 bg-red-500 rounded-full"></div>
-                                          </div>
-                                          <div className="flex justify-between">
-                                            <span>G</span>
-                                            <span>50</span>
-                                          </div>
-                                          <div className="w-24 h-1 bg-gray-600 rounded-full">
-                                            <div className="w-12 h-1 bg-green-500 rounded-full"></div>
-                                          </div>
-                                          <div className="flex justify-between">
-                                            <span>B</span>
-                                            <span>50</span>
-                                          </div>
-                                          <div className="w-24 h-1 bg-gray-600 rounded-full">
-                                            <div className="w-12 h-1 bg-blue-500 rounded-full"></div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <button className="w-full bg-blue-600 text-white text-xs py-1 rounded hover:bg-blue-700">
-                                        恢复默认值
-                                      </button>
-                                    </div>
-                                  </div>
+
+
 
                                   {/* Main Image */}
                                   {imageUrl.startsWith('data:') ? (
@@ -1076,53 +1258,7 @@ export default function Report() {
                             </div>
                           ))}
                         </div>
-                      ) : (
-                        <div className="text-center py-12 text-gray-500">
-                          <div className="w-full h-64 rounded-lg border-2 border-dashed border-gray-300 bg-white flex items-center justify-center">
-                            <div className="text-center">
-                              <Microscope className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                              <p className="text-lg font-medium text-gray-600 mb-2">No microscopic images available</p>
-                              <p className="text-sm text-gray-500">Images will appear here when captured for this test</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Image capture and analyze buttons */}
-                      <div className="flex items-center justify-center space-x-4 pt-4">
-                        <button
-                          onClick={handleCameraCapture}
-                          disabled={selectedTest && (selectedTest.microscopic_images?.length || 0) >= 10}
-                          className={`flex items-center space-x-2 px-6 py-3 rounded-lg transition-colors shadow-sm ${
-                            selectedTest && (selectedTest.microscopic_images?.length || 0) >= 10
-                              ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                              : 'bg-green-600 text-white hover:bg-green-700'
-                          }`}
-                        >
-                          <Camera className="h-5 w-5" />
-                          <span className="font-medium">
-                            {selectedTest && (selectedTest.microscopic_images?.length || 0) >= 10
-                              ? 'Maximum images reached'
-                              : 'Open Camera'
-                            }
-                          </span>
-                        </button>
-                        
-                        <button
-                          onClick={() => setShowImageAnalysisModal(true)}
-                          disabled={!selectedTest}
-                          className={`flex items-center space-x-2 px-6 py-3 rounded-lg transition-colors shadow-sm ${
-                            !selectedTest
-                              ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                              : 'bg-blue-600 text-white hover:bg-blue-700'
-                          }`}
-                        >
-                          <Brain className="h-5 w-5" />
-                          <span className="font-medium">
-                            {!selectedTest ? 'Select a test first' : 'Analyze with AI'}
-                          </span>
-                        </button>
-                      </div>
+                      ) : null}
                     </div>
                   )}
                 </div>
@@ -1294,48 +1430,60 @@ export default function Report() {
                    </table>
                  </div>
                  
-                 {/* Current Test Results Summary */}
-                 <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                   <h4 className="text-lg font-semibold text-gray-900 mb-3">Current Test Results Summary</h4>
-                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                     <div className="text-center">
-                       <div className="text-2xl font-bold text-blue-600">{findings.length}</div>
-                       <div className="text-sm text-gray-600">Total Elements</div>
-                     </div>
-                     <div className="text-center">
-                       <div className="text-2xl font-bold text-orange-600">
-                         {findings.filter(f => f.status === 'abnormal' || f.status === 'critical').length}
-                       </div>
-                       <div className="text-sm text-gray-600">Abnormal</div>
-                     </div>
-                     <div className="text-center">
-                       <div className="text-2xl font-bold text-green-600">
-                         {findings.filter(f => f.status === 'normal').length}
-                       </div>
-                       <div className="text-sm text-gray-600">Normal</div>
-                     </div>
-                     <div className="text-center">
-                       <div className="text-2xl font-bold text-blue-600">
-                         {findings.length > 0 ? Math.round(findings.reduce((sum, f) => sum + f.accuracy, 0) / findings.length) : 0}%
-                       </div>
-                       <div className="text-sm text-gray-600">Avg Accuracy</div>
-                     </div>
-                   </div>
-                 </div>
+              
+  
                </div>
 
               {/* History */}
-              <PatientTestHistory 
-                selectedPatient={selectedPatient}
-                selectedTest={selectedTest}
-                onTestSelect={handleTestSelection}
-              />
+              {showHistory && (
+                <div className="relative z-[40]">
+                  <PatientTestHistory 
+                    selectedPatient={selectedPatient}
+                    selectedTest={selectedTest}
+                    onTestSelect={handleTestSelection}
+                  />
+                </div>
+              )}
             </>
           )}
         </div>
       </div>
        
-               {/* Image Modal */}
+               {/* Full-screen camera overlay (below header) */}
+      {liveStreamActive && (
+        <div className="fixed left-0 right-0 bottom-0 top-[72px] z-30 bg-black">
+          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-contain" />
+          {!mediaStream && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-sm text-white/80 bg-black/40 px-3 py-2 rounded">Initializing camera… Allow permissions if prompted.</div>
+            </div>
+          )}
+          
+          {/* Camera Controls - positioned above camera feed */}
+          <div className="absolute top-4 right-4 flex space-x-2 z-50">
+            <button
+              onClick={() => {
+                // For now, just show a notification since we need to implement direct capture
+                setNotificationMessage('Direct camera capture not yet implemented. Use the camera modal instead.')
+                setNotificationType('info')
+                setShowNotification(true)
+              }}
+              className="px-4 py-2 bg-white text-gray-800 rounded-lg shadow-lg hover:bg-gray-100 transition-colors border border-gray-200"
+            >
+              Take Photo
+            </button>
+            <button
+              onClick={stopLiveCamera}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 transition-colors"
+            >
+              Close Camera
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Image Modal */}
+      <div className="z-[9999]">
         <ImageModal
           isOpen={!!modalImage}
           onClose={() => setModalImage(null)}
@@ -1343,53 +1491,64 @@ export default function Report() {
           imageAlt={modalImage?.alt || ''}
           title={modalImage?.title || ''}
         />
+      </div>
 
         {/* New Patient Modal */}
         {showNewPatientModal && (
-          <NewPatientModal
-            isOpen={showNewPatientModal}
-            onClose={() => setShowNewPatientModal(false)}
-            onPatientCreated={handlePatientCreated}
-            currentDate={dateParam || new Date().toISOString().split('T')[0]}
-          />
+          <div className="z-[9999]">
+            <NewPatientModal
+              isOpen={showNewPatientModal}
+              onClose={() => setShowNewPatientModal(false)}
+              onPatientCreated={handlePatientCreated}
+              currentDate={dateParam || new Date().toISOString().split('T')[0]}
+            />
+          </div>
         )}
 
         {/* Image Analysis Modal */}
         {showImageAnalysisModal && (
-          <ImageAnalysisModal
-            isOpen={showImageAnalysisModal}
-            onClose={() => setShowImageAnalysisModal(false)}
-            onAnalysisComplete={handleAnalysisComplete}
-          />
+          <div className="z-[9999]">
+            <ImageAnalysisModal
+              isOpen={showImageAnalysisModal}
+              onClose={() => setShowImageAnalysisModal(false)}
+              onAnalysisComplete={handleAnalysisComplete}
+            />
+          </div>
         )}
 
         {/* Camera Capture Modal */}
-        <CameraCaptureModal
-          isOpen={showCamera}
-          onClose={() => setShowCamera(false)}
-          onCapture={handleImageCapture}
-        />
+        <div className="z-[9999]">
+          <CameraCaptureModal
+            isOpen={showCamera}
+            onClose={() => setShowCamera(false)}
+            onCapture={handleImageCapture}
+          />
+        </div>
 
         {/* Delete Confirmation Modal */}
-        <ConfirmationModal
-          isOpen={showDeleteConfirm}
-          onClose={() => setShowDeleteConfirm(false)}
-          onConfirm={confirmDeleteTest}
-          title="Delete Test"
-          message="Are you sure you want to delete this test? This action cannot be undone."
-          type="danger"
-          confirmText="Delete"
-          cancelText="Cancel"
-        />
+        <div className="z-[9999]">
+          <ConfirmationModal
+            isOpen={showDeleteConfirm}
+            onClose={() => setShowDeleteConfirm(false)}
+            onConfirm={confirmDeleteTest}
+            title="Delete Test"
+            message="Are you sure you want to delete this test? This action cannot be undone."
+            type="danger"
+            confirmText="Delete"
+            cancelText="Cancel"
+          />
+        </div>
 
         {/* Notification */}
         {showNotification && (
-          <Notification
-            message={notificationMessage}
-            type={notificationType}
-            onClose={() => setShowNotification(false)}
-            duration={4000}
-          />
+          <div className="fixed top-4 right-4 z-[9999]">
+            <Notification
+              message={notificationMessage}
+              type={notificationType}
+              onClose={() => setShowNotification(false)}
+              duration={4000}
+            />
+          </div>
         )}
 
       </div>
