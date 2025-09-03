@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { Patient, UrineTest } from '@/types/database'
+import { Patient, UrineTest, ResultStatus } from '@/types/database'
 
 // Patients
 export const getPatients = async (): Promise<Patient[]> => {
@@ -253,16 +253,16 @@ export const deleteTest = async (testId: string): Promise<void> => {
 }
 
 export const updateTestWithAnalysis = async (testId: string, analysis: { 
-  rbc: { count: string; unit: string; morphology: string; notes: string; status: string }; 
-  wbc: { count: string; unit: string; morphology: string; notes: string; status: string }; 
-  epithelial_cells: { count: string; unit: string; morphology: string; notes: string; status: string }; 
-  crystals: { count: string; unit: string; morphology: string; notes: string; status: string }; 
-  casts: { count: string; unit: string; morphology: string; notes: string; status: string }; 
-  bacteria: { count: string; unit: string; morphology: string; notes: string; status: string }; 
-  yeast: { count: string; unit: string; morphology: string; notes: string; status: string }; 
-  mucus: { count: string; unit: string; morphology: string; notes: string; status: string }; 
-  sperm: { count: string; unit: string; morphology: string; notes: string; status: string }; 
-  parasites: { count: string; unit: string; morphology: string; notes: string; status: string }; 
+  rbc: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
+  wbc: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
+  epithelial_cells: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
+  crystals: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
+  casts: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
+  bacteria: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
+  yeast: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
+  mucus: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
+  sperm: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
+  parasites: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
   overall_accuracy: number 
 }): Promise<UrineTest> => {
   const updates = {
