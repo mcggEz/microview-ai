@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useDashboard } from '@/hooks/useDashboard'
 import { updatePatient, updateTest, updateTestWithAnalysis, testDatabaseConnection, deleteTest, deleteImageFromTest, deleteImageFromStorage, addImageToTest, uploadImageToStorage, uploadBase64Image } from '@/lib/api'
@@ -601,6 +601,7 @@ export default function Report() {
   }
 
   return (
+    <Suspense fallback={null}>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 relative z-[60]">
@@ -1552,7 +1553,9 @@ export default function Report() {
         )}
 
       </div>
-    )
-  }
+    </div>
+    </Suspense>
+  )
+}
 
 
