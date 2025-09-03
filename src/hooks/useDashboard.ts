@@ -151,7 +151,12 @@ export const useDashboard = () => {
       let patientToUse = existingPatient
       if (!existingPatient) {
         console.log('Creating new patient with data:', patientData)
-        patientToUse = await createPatient(patientData)
+        patientToUse = await createPatient({
+          name: patientData.name,
+          age: Number(patientData.age) || 0,
+          gender: patientData.gender as any,
+          patient_id: patientData.patient_id,
+        })
         console.log('New patient created:', patientToUse)
       }
       
