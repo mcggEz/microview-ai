@@ -105,33 +105,33 @@ export default function Dashboard() {
 
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="flex flex-col h-full">
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-            <Calendar className="h-6 w-6 mr-2" /> Management Dashboard
+          <h1 className="text-lg font-bold text-gray-900 flex items-center">
+            <Calendar className="h-5 w-5 mr-2" /> Management Dashboard
           </h1>
                      <div className="flex items-center space-x-2">
-                       <button onClick={goPrev} className="p-2 rounded hover:bg-gray-100 border border-gray-200"><ChevronLeft className="h-5 w-5 text-gray-700" /></button>
+                       <button onClick={goPrev} className="p-1.5 rounded hover:bg-gray-100 border border-gray-200"><ChevronLeft className="h-4 w-4 text-gray-700" /></button>
                        
                        {/* Month Navigation Dropdown */}
                        <div className="relative month-dropdown">
                          <button
                            onClick={() => setShowMonthDropdown(!showMonthDropdown)}
-                           className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                           className="flex items-center space-x-1.5 px-2.5 py-1.5 text-gray-600 hover:text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-xs"
                          >
-                           <Calendar className="h-4 w-4" />
+                           <Calendar className="h-3 w-3" />
                            <span className="font-medium">{current.toLocaleString('default', { month: 'long' })} {current.getFullYear()}</span>
-                           <ChevronDown className={`h-4 w-4 text-black transition-transform ${showMonthDropdown ? 'rotate-180' : ''}`} />
+                           <ChevronDown className={`h-3 w-3 text-black transition-transform ${showMonthDropdown ? 'rotate-180' : ''}`} />
                          </button>
                          
                          {showMonthDropdown && (
-                           <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                           <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                              {/* Year Selection */}
                              <div className="border-b border-gray-200">
-                               <div className="px-4 py-2 bg-gray-50">
+                               <div className="px-3 py-1.5 bg-gray-50">
                                  <div className="flex items-center justify-between">
-                                   <span className="text-sm font-medium text-gray-700">Year</span>
+                                   <span className="text-xs font-medium text-gray-700">Year</span>
                                    <div className="flex items-center space-x-1">
                                      <button
                                        onClick={() => setCurrent(new Date(current.getFullYear() - 1, current.getMonth(), 1))}
@@ -139,7 +139,7 @@ export default function Dashboard() {
                                      >
                                        <ChevronLeft className="h-3 w-3 text-black" />
                                      </button>
-                                     <span className="text-sm font-semibold text-gray-900">{current.getFullYear()}</span>
+                                     <span className="text-xs font-semibold text-gray-900">{current.getFullYear()}</span>
                                      <button
                                        onClick={() => setCurrent(new Date(current.getFullYear() + 1, current.getMonth(), 1))}
                                        className="p-1 hover:bg-gray-200 rounded"
@@ -152,8 +152,8 @@ export default function Dashboard() {
                              </div>
                              
                              {/* Month Selection */}
-                             <div className="py-2">
-                               <div className="px-4 py-1 text-sm font-medium text-gray-700">Month</div>
+                             <div className="py-1.5">
+                               <div className="px-3 py-1 text-xs font-medium text-gray-700">Month</div>
                                {Array.from({ length: 12 }, (_, i) => {
                                  const month = new Date(current.getFullYear(), i, 1).toLocaleString('default', { month: 'long' })
                                  const isCurrentMonth = i === current.getMonth()
@@ -164,7 +164,7 @@ export default function Dashboard() {
                                        setCurrent(new Date(current.getFullYear(), i, 1))
                                        setShowMonthDropdown(false)
                                      }}
-                                     className={`w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors ${
+                                     className={`w-full px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100 transition-colors ${
                                        isCurrentMonth ? 'bg-blue-50 text-blue-700 font-medium' : ''
                                      }`}
                                    >
@@ -177,26 +177,24 @@ export default function Dashboard() {
                          )}
                        </div>
                        
-                       <button onClick={goNext} className="p-2 rounded hover:bg-gray-100 border border-gray-200"><ChevronRight className="h-5 w-5 text-gray-700" /></button>
+                       <button onClick={goNext} className="p-1.5 rounded hover:bg-gray-100 border border-gray-200"><ChevronRight className="h-4 w-4 text-gray-700" /></button>
              <button 
                onClick={loadCounts} 
-               className="p-2 rounded hover:bg-gray-100 border border-gray-200"
+               className="p-1.5 rounded hover:bg-gray-100 border border-gray-200"
                title="Refresh test counts"
              >
-               <RefreshCw className={`h-5 w-5 text-gray-700 ${loading ? 'animate-spin' : ''}`} />
+               <RefreshCw className={`h-4 w-4 text-gray-700 ${loading ? 'animate-spin' : ''}`} />
              </button>
            </div>
         </div>
       </div>
 
-             <div className="max-w-5xl mx-auto p-6">
-         {error && <div className="text-red-600 mb-4">{error}</div>}
+             <div className="max-w-6xl mx-auto p-3 flex-1 overflow-y-auto">
+         {error && <div className="text-red-600 mb-2 text-xs">{error}</div>}
          
-
-         
-         <div className="grid grid-cols-7 gap-2">
+         <div className="grid grid-cols-7 gap-3">
           {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
-            <div key={d} className="text-xs font-semibold text-gray-600 text-center">{d}</div>
+            <div key={d} className="text-sm font-semibold text-gray-600 text-center py-2">{d}</div>
           ))}
           {days.map((date, idx) => {
             const isEmpty = isNaN(date.getTime())
@@ -207,7 +205,7 @@ export default function Dashboard() {
                 key={idx}
                 disabled={isEmpty}
                 onClick={() => onSelectDate(date)}
-                className={`h-24 border rounded-lg flex flex-col items-center justify-center transition-all duration-200 ${
+                className={`h-24 min-w-[120px] border rounded-lg flex flex-col items-center justify-center transition-all duration-200 ${
                   isEmpty 
                     ? 'opacity-0 cursor-default' 
                     : count > 0 
@@ -217,11 +215,11 @@ export default function Dashboard() {
               >
                 {!isEmpty && (
                   <>
-                    <div className={`text-sm font-semibold ${count > 0 ? 'text-blue-700' : 'text-gray-900'} flex items-center space-x-1`}>
+                    <div className={`text-base font-semibold ${count > 0 ? 'text-blue-700' : 'text-gray-900'} flex items-center space-x-1`}>
                       <span>{date.getDate()}</span>
                       {count > 0 && <TestTube className="h-3 w-3 text-blue-600" />}
                     </div>
-                    <div className={`text-xs mt-1 px-2 py-1 rounded-full font-medium ${
+                    <div className={`text-sm mt-1 px-2 py-1 rounded-full font-medium ${
                       count > 0 
                         ? 'bg-blue-600 text-white shadow-sm' 
                         : 'bg-gray-100 text-gray-500'

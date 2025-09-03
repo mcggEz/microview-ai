@@ -53,7 +53,7 @@ export default function Report() {
   const [notificationMessage, setNotificationMessage] = useState('')
   const [notificationType, setNotificationType] = useState<'success' | 'error' | 'warning' | 'info'>('success')
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'in_progress' | 'reviewed'>('all')
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [showHeader, setShowHeader] = useState(true)
@@ -130,31 +130,21 @@ export default function Report() {
 
   const findings = useMemo(() => getMicroscopicFindings(), [selectedTest])
 
-  // Filter and search tests
+  // Search tests
   const filteredTests = useMemo(() => {
-    let filtered = tests
+    if (!searchQuery.trim()) return tests
 
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(test => test.status === statusFilter)
-    }
-
-    // Apply search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(test => {
-        const patient = patients.find(p => p.id === test.patient_id)
-        return (
-          patient?.name.toLowerCase().includes(query) ||
-          patient?.patient_id.toLowerCase().includes(query) ||
-          test.test_code.toLowerCase().includes(query) ||
-          test.sample_id?.toLowerCase().includes(query)
-        )
-      })
-    }
-
-    return filtered
-  }, [tests, patients, statusFilter, searchQuery])
+    const query = searchQuery.toLowerCase()
+    return tests.filter(test => {
+      const patient = patients.find(p => p.id === test.patient_id)
+      return (
+        patient?.name.toLowerCase().includes(query) ||
+        patient?.patient_id.toLowerCase().includes(query) ||
+        test.test_code.toLowerCase().includes(query) ||
+        test.sample_id?.toLowerCase().includes(query)
+      )
+    })
+  }, [tests, patients, searchQuery])
 
   // Initialize edit data when patient/test changes
   useEffect(() => {
@@ -610,31 +600,31 @@ export default function Report() {
 
   return (
     <Suspense fallback={null}>
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 relative z-[60]">
-        <div className="flex justify-between items-center">
+      <div className="bg-white border-b border-gray-200 px-3 md:px-4 py-2 md:py-3 relative z-[60]">
+        <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
           {/* Left side - Back button and test info */}
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center gap-2 md:gap-4 order-1">
             <button
               onClick={() => router.back()}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
+              className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 transition-colors"
             >
-              <ArrowLeft className="h-5 w-5" />
-              <span className="font-medium">Back</span>
+              <ArrowLeft className="h-4 w-4" />
+              <span className="text-sm font-medium">Back</span>
             </button>
             
-            <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-bold text-gray-900">Microscopic Report</h1>
-              <div className="text-lg font-mono font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+              <h1 className="text-sm md:text-base font-bold text-gray-900 leading-tight">Microscopic Report</h1>
+              <div className="text-xs md:text-sm font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 md:px-2.5 md:py-1 rounded w-fit">
                 {selectedTest?.test_code || 'N/A'}
               </div>
             </div>
           </div>
-
+ 
           {/* Center - Test navigation */}
           {selectedTest && (
-            <div className="flex items-center space-x-2">
+            <div className="hidden md:flex items-center space-x-2 order-2">
               <button
                 onClick={() => navigateToTest('prev')}
                 disabled={!canNavigateToTest('prev')}
@@ -655,10 +645,10 @@ export default function Report() {
           )}
 
           {/* Right side - Action buttons */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-2 md:gap-3 flex-nowrap overflow-x-auto whitespace-nowrap w-full md:w-auto justify-end order-3">
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className={`px-3 py-1.5 rounded-lg border transition-colors ${
+              className={`px-2 py-1 rounded border transition-colors ${
                 sidebarCollapsed 
                   ? 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100' 
                   : 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100'
@@ -667,59 +657,53 @@ export default function Report() {
             >
               {sidebarCollapsed ? (
                 <div className="flex items-center space-x-1">
-                  <ChevronRight className="h-4 w-4" />
-                  <span className="text-sm font-medium">Sidebar</span>
+                  <ChevronRight className="h-3 w-3" />
+                  <span className="text-xs font-medium hidden sm:inline">Sidebar</span>
                 </div>
               ) : (
                 <div className="flex items-center space-x-1">
-                  <ChevronLeft className="h-4 w-4" />
-                  <span className="text-sm font-medium">Sidebar</span>
+                  <ChevronLeft className="h-3 w-3" />
+                  <span className="text-xs font-medium hidden sm:inline">Sidebar</span>
                 </div>
               )}
             </button>
             
             <button
               onClick={handleNewPatient}
-              className="px-3 py-1.5 rounded-lg border border-green-300 bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center space-x-2"
+              className="px-2 py-1 rounded border border-green-300 bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center space-x-1"
               title="Add new test"
             >
-              <Plus className="h-4 w-4" />
-              <span>Add Test</span>
+              <Plus className="h-3 w-3" />
+              <span className="text-xs hidden sm:inline">Add Test</span>
             </button>
             
             <button
               onClick={() => setShowHeader((v) => !v)}
-              className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-800 shadow-sm hover:bg-gray-50"
+              className="px-2 py-1 rounded border border-gray-300 bg-white text-gray-800 shadow-sm hover:bg-gray-50"
               title={showHeader ? 'Hide report details' : 'Show report details'}
             >
-              {showHeader ? 'Hide Details' : 'Show Details'}
-            </button>
-            
-            <button
-              onClick={() => setShowHistory((v) => !v)}
-              className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-800 shadow-sm hover:bg-gray-50"
-              title={showHistory ? 'Hide patient history' : 'Show patient history'}
-            >
-              {showHistory ? 'Hide History' : 'Show History'}
+              <span className="text-xs hidden sm:inline">{showHeader ? 'Hide Details' : 'Show Details'}</span>
+              <span className="text-xs sm:hidden">Details</span>
             </button>
             
             <button 
               onClick={handleExport}
-              className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-800 shadow-sm hover:bg-gray-50"
+              className="flex items-center space-x-1 px-2 py-1 rounded border border-gray-300 bg-white text-gray-800 shadow-sm hover:bg-gray-50"
             >
-              <Download className="h-5 w-5" />
-              <span>Export</span>
+              <Download className="h-4 w-4" />
+              <span className="text-xs hidden sm:inline">Export</span>
             </button>
             
             <button
               onClick={() => (liveStreamActive ? stopLiveCamera() : startLiveCamera())}
-              className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg shadow-sm border transition-colors ${
+              className={`flex items-center space-x-1 px-2 py-1 rounded shadow-sm border transition-colors ${
                 liveStreamActive ? 'bg-red-600 text-white border-red-600 hover:bg-red-700' : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
               }`}
               title={liveStreamActive ? 'Stop Camera' : 'Open Camera'}
             >
-              <Camera className="h-5 w-5" />
-              <span>{liveStreamActive ? 'Stop Camera' : 'Open Camera'}</span>
+              <Camera className="h-3 w-3" />
+              <span className="text-xs hidden sm:inline">{liveStreamActive ? 'Stop Camera' : 'Open Camera'}</span>
+              <span className="text-xs sm:hidden">Camera</span>
             </button>
           </div>
         </div>
@@ -729,9 +713,9 @@ export default function Report() {
         {/* Left Sidebar */}
         <div className={`${sidebarCollapsed ? 'hidden' : 'w-80'} bg-white border-r border-gray-200 h-full overflow-y-auto transition-all duration-300 ease-in-out relative z-[55]`}>
           
-                    <div className={`${sidebarCollapsed ? 'px-2' : 'p-4'} transition-all duration-300`}>
+                    <div className={`${sidebarCollapsed ? 'px-2' : 'p-3'} transition-all duration-300`}>
             {/* Search and Filters */}
-            <div className={`${sidebarCollapsed ? 'mb-4' : 'mb-6'} ${sidebarCollapsed ? 'space-y-2' : 'space-y-4'}`}>
+            <div className={`${sidebarCollapsed ? 'mb-3' : 'mb-4'} ${sidebarCollapsed ? 'space-y-2' : 'space-y-3'}`}>
               {/* Search */}
               {!sidebarCollapsed && (
                 <div className="relative">
@@ -741,32 +725,16 @@ export default function Report() {
                     placeholder="Search patients, test codes..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black placeholder-gray-500"
+                    className="w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-xs text-black placeholder-gray-500"
                   />
                 </div>
               )}
 
-                           {/* Status Filter */}
-              {!sidebarCollapsed && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="reviewed">Reviewed</option>
-                  </select>
-                </div>
-              )}
+
 
               {/* Results Count */}
               {!sidebarCollapsed && (
-                <div className="text-sm text-gray-600">
+                <div className="text-xs text-gray-600">
                   {filteredTests.length} of {tests.length} tests
                 </div>
               )}
@@ -804,7 +772,7 @@ export default function Report() {
              </div>
            ) : (
              <>
-               <div className="space-y-2 mb-4">
+               <div className="space-y-1.5 mb-3">
                  {filteredTests.length === 0 ? (
                    <div className={`text-gray-500 ${sidebarCollapsed ? 'text-xs' : 'text-sm'} text-center ${sidebarCollapsed ? 'py-2' : 'py-4'}`}>
                      {sidebarCollapsed ? (
@@ -827,7 +795,7 @@ export default function Report() {
                              setSelectedTest(test)
                            }
                          }} 
-                         className={`${sidebarCollapsed ? 'p-2' : 'p-3'} rounded-lg cursor-pointer transition-colors ${
+                         className={`${sidebarCollapsed ? 'p-1.5' : 'p-2'} rounded-lg cursor-pointer transition-colors ${
                            selectedTest?.id === test.id 
                              ? 'bg-blue-100 border-l-4 border-blue-500' 
                              : 'bg-gray-100 hover:bg-gray-200'
@@ -844,8 +812,8 @@ export default function Report() {
                            </div>
                          ) : (
                            <>
-                             <div className="font-medium text-gray-900">{patient?.name || 'Unknown Patient'}</div>
-                             <div className="text-sm text-gray-600">Test: {test.test_code}</div>
+                             <div className="text-xs font-medium text-gray-900">{patient?.name || 'Unknown Patient'}</div>
+                             <div className="text-xs text-gray-600">Test: {test.test_code}</div>
                              <div className="text-xs text-gray-500">Status: {test.status}</div>
                            </>
                          )}
@@ -856,13 +824,13 @@ export default function Report() {
                </div>
                
                {/* New Test Button */}
-               <div className="border-t border-gray-200 pt-4">
+               <div className="border-t border-gray-200 pt-3">
                  <button
                    onClick={handleNewPatient}
-                   className={`w-full flex items-center justify-center ${sidebarCollapsed ? 'px-2 py-3' : 'px-4 py-3 space-x-2'} bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors`}
+                   className={`w-full flex items-center justify-center ${sidebarCollapsed ? 'px-2 py-2' : 'px-3 py-2 space-x-1.5'} bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors`}
                  >
                    <Plus className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-5 w-5'}`} />
-                   {!sidebarCollapsed && <span className="font-medium">Add New Test</span>}
+                   {!sidebarCollapsed && <span className="text-xs font-medium">Add New Test</span>}
                  </button>
                </div>
              </>
@@ -873,120 +841,205 @@ export default function Report() {
       
 
         {/* Main Content */}
-        <div className="flex-1 p-4 md:p-6 overflow-y-auto relative z-[35]" key={selectedPatient?.id || 'no-patient'}>
+        <div className="flex-1 p-2 md:p-3 overflow-y-auto relative" key={selectedPatient?.id || 'no-patient'}>
           {!selectedPatient ? (
             <div className="text-center py-12 text-gray-600">Select a patient or use the calendar</div>
           ) : (
             <>
-       
-          
-                         
+              {/* Live Camera (in-flow) */}
+              {liveStreamActive && (
+                <div className="relative w-full h-[calc(100vh-72px)] bg-black overflow-hidden -mx-4 md:-mx-6 -mt-4 md:-mt-6 mb-4">
+                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                  {!mediaStream && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-sm text-white/80 bg-black/40 px-3 py-2 rounded">Initializing camera… Allow permissions if prompted.</div>
+                    </div>
+                  )}
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
+                    <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md rounded-full px-2.5 py-1.5 border border-white/20 shadow-lg">
+                      <button
+                        onClick={() => {
+                          setNotificationMessage('Direct camera capture not yet implemented. Use the camera modal instead.')
+                          setNotificationType('info')
+                          setShowNotification(true)
+                        }}
+                        className="px-3 py-1.5 bg-white text-gray-800 rounded-full hover:bg-gray-100 text-xs font-medium"
+                      >
+                        Take Photo
+                      </button>
+                      <button
+                        onClick={stopLiveCamera}
+                        className="px-3 py-1.5 bg-red-600 text-white rounded-full hover:bg-red-700 text-xs font-medium"
+                      >
+                        Close Camera
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              
               {showHeader ? (
-              <div className="bg-white rounded-lg p-6 shadow-sm mb-6 relative z-[40]">
-                <div className="flex items-center justify-between mb-4">
-                   <h1 className="text-2xl font-bold text-center text-gray-900">Microscopic Urine Analysis Report - {selectedTest?.test_code || 'N/A'}</h1>
-                   <div className="w-24"></div>
+              <div className="bg-white rounded-lg p-3 shadow-sm mb-3 relative">
+                <div className="flex items-center justify-between mb-2">
+                   <h1 className="text-lg md:text-xl font-bold text-gray-900">Microscopic Urine Analysis Report - {selectedTest?.test_code || 'N/A'}</h1>
+                   <div className="flex items-center gap-2">
+                     <button
+                       onClick={() => setShowHistory((v) => !v)}
+                       className={`h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg transition-colors text-xs ${
+                         showHistory 
+                           ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' 
+                           : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                       }`}
+                       title={showHistory ? 'Hide patient history' : 'Show patient history'}
+                     >
+                       <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+                       <span>{showHistory ? 'Hide History' : 'Show History'}</span>
+                     </button>
+                     <button 
+                       onClick={handleEditToggle}
+                       className={`h-8 inline-flex items-center gap-1.5 px-2.5 rounded-md transition-colors text-xs ${
+                         isEditing 
+                           ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' 
+                           : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                       }`}
+                     >
+                       {isEditing ? <X className="h-3 w-3" /> : <Edit className="h-3 w-3" />}
+                       <span>{isEditing ? 'Cancel' : 'Edit'}</span>
+                     </button>
+                     {isEditing && (
+                       <button 
+                         onClick={handleSave}
+                         disabled={saving}
+                         className={`h-8 inline-flex items-center gap-1.5 bg-green-600 text-white px-2.5 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 text-xs`}
+                       >
+                         <Save className="h-3 w-3" />
+                         <span>{saving ? 'Saving...' : 'Save'}</span>
+                       </button>
+                     )}
+                     {selectedTest && (
+                       <>
+                         <button 
+                           onClick={handleDeleteTest}
+                           className={`h-8 inline-flex items-center gap-1.5 px-2.5 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors text-xs`}
+                           title="Delete Test"
+                         >
+                           <Trash2 className="h-3 w-3" />
+                           <span>Delete</span>
+                         </button>
+                         <button 
+                           onClick={handleValidateTest}
+                           disabled={selectedTest.status === 'reviewed'}
+                           className={`h-8 inline-flex items-center gap-1.5 px-2.5 rounded-md transition-colors text-xs ${selectedTest.status === 'reviewed' ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
+                           title="Verify Test"
+                         >
+                           <CheckCircle className="h-3 w-3" />
+                           <span>Verify</span>
+                         </button>
+                       </>
+                     )}
+                   </div>
                  </div>
-                                 <div className="grid grid-cols-3 gap-6 mb-6">
-                   <div className="space-y-3">
+                                 <div className="grid grid-cols-3 gap-4 mb-3">
+                   <div className="space-y-2">
                      <div className="flex justify-between">
-                       <span className="text-gray-700 font-medium">Name:</span>
+                       <span className="text-xs text-gray-700 font-medium">Name:</span>
                        {isEditing ? (
                          <input
                            type="text"
                            value={editData.patientName}
                            onChange={(e) => setEditData(prev => ({ ...prev, patientName: e.target.value }))}
-                           className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
                          />
                        ) : (
-                         <span className="font-semibold text-gray-900">{selectedPatient.name}</span>
+                         <span className="text-xs font-semibold text-gray-900">{selectedPatient.name}</span>
                        )}
                      </div>
                      <div className="flex justify-between">
-                       <span className="text-gray-700 font-medium">Patient ID:</span>
-                       <span className="font-semibold text-gray-900">{selectedPatient.patient_id}</span>
+                       <span className="text-xs text-gray-700 font-medium">Patient ID:</span>
+                       <span className="text-xs font-semibold text-gray-900">{selectedPatient.patient_id}</span>
                      </div>
                      <div className="flex justify-between">
-                       <span className="text-gray-700 font-medium">Age:</span>
+                       <span className="text-xs text-gray-700 font-medium">Age:</span>
                        {isEditing ? (
                          <input
                            type="number"
                            value={editData.patientAge}
                            onChange={(e) => setEditData(prev => ({ ...prev, patientAge: e.target.value }))}
-                           className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 w-20"
+                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500 w-16"
                            min="0"
                            max="150"
                          />
                        ) : (
-                         <span className="font-semibold text-gray-900">{selectedPatient.age} Years</span>
+                         <span className="text-xs font-semibold text-gray-900">{selectedPatient.age} Years</span>
                        )}
                      </div>
                    </div>
-                   <div className="space-y-3">
+                   <div className="space-y-2">
                      <div className="flex justify-between">
-                       <span className="text-gray-700 font-medium">Gender:</span>
+                       <span className="text-xs text-gray-700 font-medium">Gender:</span>
                        {isEditing ? (
                          <select
                            value={editData.patientGender}
                            onChange={(e) => setEditData(prev => ({ ...prev, patientGender: e.target.value as 'male' | 'female' | 'other' }))}
-                           className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
                          >
                            <option value="male">Male</option>
                            <option value="female">Female</option>
                            <option value="other">Other</option>
                          </select>
                        ) : (
-                         <span className="font-semibold text-gray-900">{selectedPatient.gender}</span>
+                         <span className="text-xs font-semibold text-gray-900">{selectedPatient.gender}</span>
                        )}
                      </div>
                      <div className="flex justify-between">
-                       <span className="text-gray-700 font-medium">Sample ID:</span>
+                       <span className="text-xs text-gray-700 font-medium">Sample ID:</span>
                        {isEditing ? (
                          <input
                            type="text"
                            value={editData.sampleId}
                            onChange={(e) => setEditData(prev => ({ ...prev, sampleId: e.target.value }))}
-                           className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
                          />
                        ) : (
-                         <span className="font-semibold text-gray-900">{selectedTest?.sample_id || 'N/A'}</span>
+                         <span className="text-xs font-semibold text-gray-900">{selectedTest?.sample_id || 'N/A'}</span>
                        )}
                      </div>
                      <div className="flex justify-between">
-                       <span className="text-gray-700 font-medium">Collection Time:</span>
+                       <span className="text-xs text-gray-700 font-medium">Collection Time:</span>
                        {isEditing ? (
                          <input
                            type="time"
                            value={editData.collectionTime}
                            onChange={(e) => setEditData(prev => ({ ...prev, collectionTime: e.target.value }))}
-                           className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
                          />
                        ) : (
-                         <span className="font-semibold text-gray-900">{selectedTest?.collection_time || 'N/A'}</span>
+                         <span className="text-xs font-semibold text-gray-900">{selectedTest?.collection_time || 'N/A'}</span>
                        )}
                      </div>
                    </div>
-                   <div className="space-y-3">
+                   <div className="space-y-2">
                      <div className="flex justify-between">
-                       <span className="text-gray-700 font-medium">Analysis Date:</span>
-                       <span className="font-semibold text-gray-900">{selectedTest?.analysis_date || 'N/A'}</span>
+                       <span className="text-xs text-gray-700 font-medium">Analysis Date:</span>
+                       <span className="text-xs font-semibold text-gray-900">{selectedTest?.analysis_date || 'N/A'}</span>
                      </div>
                      <div className="flex justify-between">
-                       <span className="text-gray-700 font-medium">Technician:</span>
+                       <span className="text-xs text-gray-700 font-medium">Technician:</span>
                        {isEditing ? (
                          <input
                            type="text"
                            value={editData.technician}
                            onChange={(e) => setEditData(prev => ({ ...prev, technician: e.target.value }))}
-                           className="font-semibold text-gray-900 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
                          />
                        ) : (
-                         <span className="font-semibold text-gray-900">{selectedTest?.technician || 'N/A'}</span>
+                         <span className="text-xs font-semibold text-gray-900">{selectedTest?.technician || 'N/A'}</span>
                        )}
                      </div>
-                     <div className="flex justify-between items-center mb-6">
-                       <span className="text-gray-700 font-medium">Status:</span>
-                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                     <div className="flex justify-between items-center">
+                       <span className="text-xs text-gray-700 font-medium">Status:</span>
+                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] md:text-xs font-semibold tracking-wide ${
                          selectedTest?.status === 'pending' 
                            ? 'bg-orange-100 text-orange-800 border border-orange-200'
                            : selectedTest?.status === 'completed'
@@ -1003,94 +1056,31 @@ export default function Report() {
                    </div>
                   </div>
                   
-                  {/* Actions in lower right */}
-                  <div className="absolute bottom-4 right-4">
-                    {selectedPatient && (
-                      <div className="flex items-center space-x-3">
-                        {selectedTest && (
-                          <>
-                            <button 
-                              onClick={handleValidateTest}
-                              disabled={selectedTest.status === 'reviewed'}
-                              className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${selectedTest.status === 'reviewed' ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
-                              title="Validate Test"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                              <span>Validate</span>
-                            </button>
-                            <button 
-                              onClick={handleDeleteTest}
-                              className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
-                              title="Delete Test"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span>Delete</span>
-                            </button>
-                          </>
-                        )}
-                        <button 
-                          onClick={handleEditToggle}
-                          className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
-                            isEditing 
-                              ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' 
-                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                          }`}
-                        >
-                          {isEditing ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
-                          <span>{isEditing ? 'Cancel' : 'Edit'}</span>
-                        </button>
-                        {isEditing && (
-                          <button 
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="flex items-center space-x-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-                          >
-                            <Save className="h-4 w-4" />
-                            <span>{saving ? 'Saving...' : 'Save'}</span>
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* History toggle in lower left */}
-                  {selectedTest && (
-                    <div className="absolute bottom-4 left-4">
-                      <button
-                        onClick={() => setShowHistory((v) => !v)}
-                        className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
-                        title={showHistory ? 'Hide patient history' : 'Show patient history'}
-                      >
-                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-                        <span>{showHistory ? 'Hide History' : 'Show History'}</span>
-                      </button>
+                  {/* Patient History (integrated within main card) */}
+                  {showHistory && (
+                    <div className="border-t border-gray-200 pt-3 mt-3">
+                      <PatientTestHistory 
+                        selectedPatient={selectedPatient}
+                        selectedTest={selectedTest}
+                        onTestSelect={handleTestSelection}
+                      />
                     </div>
                   )}
+
                </div>
               ) : (
                 null
               )}
- 
-               {/* Patient History (below header) */}
-               {showHistory && (
-                 <div className="mt-3 md:mt-4 mb-6 bg-white rounded-lg border border-gray-200 shadow-sm">
-                   <PatientTestHistory 
-                     selectedPatient={selectedPatient}
-                     selectedTest={selectedTest}
-                     onTestSelect={handleTestSelection}
-                   />
-                 </div>
-               )}
 
                                                                             {/* Microscopic Images */}
-                 <div className="bg-white rounded-lg p-6 shadow-sm mb-6 relative z-[40]">
-                   <div className="flex items-center justify-between mb-4">
-                     <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                       <Microscope className="h-5 w-5 mr-2 text-green-600" />
+                 <div className="bg-white rounded-lg p-3 shadow-sm mb-3 relative">
+                   <div className="flex items-center justify-between mb-2">
+                     <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                       <Microscope className="h-4 w-4 mr-2 text-green-600" />
                        Microscopic Images
-                       <span className="ml-2 text-sm text-gray-600 font-normal">- Sample Analysis</span>
+                       <span className="ml-2 text-xs text-gray-600 font-normal">- Sample Analysis</span>
                        {selectedTest && (
-                         <span className="ml-3 text-sm font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                         <span className="ml-3 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                            {selectedTest.microscopic_images?.length || 0}/10 images
                          </span>
                        )}
@@ -1128,12 +1118,12 @@ export default function Report() {
                      }}
                    />
                   {selectedTest && (
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                       {/* Display captured microscopic images */}
                                             {selectedTest.microscopic_images && selectedTest.microscopic_images.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {selectedTest.microscopic_images.map((imageUrl, index) => (
-                            <div key={index} className="space-y-3">
+                            <div key={index} className="space-y-2">
                               <div className="flex items-center justify-between">
                                 <h4 className="font-medium text-gray-900">
                                   Sample {index + 1}
@@ -1166,7 +1156,7 @@ export default function Report() {
                                 </button>
                               </div>
                               <div className="relative group">
-                                <div className="relative w-full h-80 rounded-lg border border-gray-200 shadow-lg overflow-hidden bg-black">
+                                <div className="relative w-full h-64 rounded-lg border border-gray-200 shadow-lg overflow-hidden bg-black">
 
 
 
@@ -1177,7 +1167,7 @@ export default function Report() {
                                     <img 
                                       src={imageUrl} 
                                       alt={`Microscopic image ${index + 1}`}
-                                      className="w-full h-full object-contain"
+                                      className="w-full h-full object-contain relative z-10"
                                       onError={(e) => {
                                         console.error('Image failed to load:', imageUrl)
                                         const target = e.target as HTMLImageElement
@@ -1202,7 +1192,7 @@ export default function Report() {
                                       alt={`Microscopic image ${index + 1}`}
                                       width={400}
                                       height={320}
-                                      className="w-full h-full object-contain"
+                                      className="w-full h-full object-contain relative z-10"
                                       unoptimized={imageUrl.startsWith('http')}
                                       onError={(e) => {
                                         console.error('Image failed to load:', imageUrl)
@@ -1223,8 +1213,8 @@ export default function Report() {
                                     />
                                   )}
 
-                                  {/* Measurement Overlay */}
-                                  <div className="absolute inset-0 pointer-events-none">
+                                  {/* Measurement Overlay (below image) */}
+                                  <div className="absolute inset-0 pointer-events-none z-0">
                                     <svg className="w-full h-full">
                                       <line 
                                         x1="10%" y1="10%" x2="90%" y2="90%" 
@@ -1245,8 +1235,8 @@ export default function Report() {
                                     </div>
                                   </div>
 
-                                  {/* Click to Enlarge Overlay */}
-                                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
+                                  {/* Click to Enlarge Overlay (below image) */}
+                                  <div className="absolute inset-0 z-0 pointer-events-none bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white bg-opacity-90 px-3 py-1 rounded-full text-sm font-medium text-gray-800 shadow-sm">
                                       Click to enlarge
                                     </div>
@@ -1273,25 +1263,25 @@ export default function Report() {
                 </div>
 
                {/* Strasinger Quantitation Table */}
-               <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
-                 <div className="flex items-center justify-between mb-4">
-                   <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                     <Microscope className="h-5 w-5 mr-2 text-green-600" />
+                               <div className="bg-white rounded-lg p-3 shadow-sm mb-3">
+                  <div className="flex items-center justify-between mb-2">
+                   <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                     <Microscope className="h-4 w-4 mr-2 text-green-600" />
                      Microscopic Quantitations (Strasinger)
-                     <span className="ml-2 text-sm text-gray-600 font-normal">- Clinical Reference Standards</span>
+                     <span className="ml-2 text-xs text-gray-600 font-normal">- Clinical Reference Standards</span>
                    </h3>
-                   <div className="flex items-center space-x-4 text-sm">
-                     <div className="flex items-center space-x-2">
+                   <div className="flex items-center space-x-3 text-xs">
+                     <div className="flex items-center space-x-1">
                        <span className="text-gray-600">Total Elements:</span>
                        <span className="font-semibold text-gray-900">{findings.length}</span>
                      </div>
-                     <div className="flex items-center space-x-2">
+                     <div className="flex items-center space-x-1">
                        <span className="text-gray-600">Abnormal:</span>
                        <span className="font-semibold text-orange-600">
                          {findings.filter(f => f.status === 'abnormal' || f.status === 'critical').length}
                        </span>
                      </div>
-                     <div className="flex items-center space-x-2">
+                     <div className="flex items-center space-x-1">
                        <span className="text-gray-600">Avg Accuracy:</span>
                        <span className="font-semibold text-blue-600">
                          {findings.length > 0 ? Math.round(findings.reduce((sum, f) => sum + f.accuracy, 0) / findings.length) : 0}%
@@ -1301,74 +1291,74 @@ export default function Report() {
                  </div>
                  
                  <div className="overflow-x-auto">
-                   <table className="w-full text-sm border border-gray-300">
+                   <table className="w-full text-xs border border-gray-300">
                      {/* Header */}
                      <thead>
                        <tr className="bg-blue-600 text-white">
-                         <th className="py-3 px-4 text-center font-bold text-lg" colSpan={7}>
+                         <th className="py-1.5 px-2 text-center font-bold text-sm" colSpan={7}>
                            MICROSCOPIC QUANTITATIONS (Strasinger)
                          </th>
                        </tr>
                        <tr className="bg-gray-100 border-b border-gray-300">
-                         <th className="py-3 px-4 text-left font-semibold text-gray-800 border-r border-gray-300">Item</th>
-                         <th className="py-3 px-4 text-center font-semibold text-gray-800 border-r border-gray-300">Quantitated</th>
-                         <th className="py-3 px-4 text-center font-semibold text-gray-800 border-r border-gray-300">None</th>
-                         <th className="py-3 px-4 text-center font-semibold text-gray-800 border-r border-gray-300">Rare</th>
-                         <th className="py-3 px-4 text-center font-semibold text-gray-800 border-r border-gray-300">Few</th>
-                         <th className="py-3 px-4 text-center font-semibold text-gray-800 border-r border-gray-300">Moderate</th>
-                         <th className="py-3 px-4 text-center font-semibold text-gray-800">Many</th>
+                         <th className="py-1.5 px-2 text-left font-semibold text-gray-800 border-r border-gray-300">Item</th>
+                         <th className="py-1.5 px-2 text-center font-semibold text-gray-800 border-r border-gray-300">Quantitated</th>
+                         <th className="py-1.5 px-2 text-center font-semibold text-gray-800 border-r border-gray-300">None</th>
+                         <th className="py-1.5 px-2 text-center font-semibold text-gray-800 border-r border-gray-300">Rare</th>
+                         <th className="py-1.5 px-2 text-center font-semibold text-gray-800 border-r border-gray-300">Few</th>
+                         <th className="py-1.5 px-2 text-center font-semibold text-gray-800 border-r border-gray-300">Moderate</th>
+                         <th className="py-1.5 px-2 text-center font-semibold text-gray-800">Many</th>
                        </tr>
                      </thead>
                      <tbody>
                        {/* Epithelial cells */}
                        <tr className="border-b border-gray-300">
-                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Epithelial cells</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">per LPF</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">0</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">0-5</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">5-20</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">20-100</td>
-                         <td className="py-3 px-4 text-center text-gray-700">&gt;100</td>
+                         <td className="py-1.5 px-2 font-medium text-gray-900 border-r border-gray-300">Epithelial cells</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">per LPF</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">0</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">0-5</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">5-20</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">20-100</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700">&gt;100</td>
                        </tr>
                        
                        {/* Crystals (normal) */}
                        <tr className="border-b border-gray-300">
-                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Crystals (normal)</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">per HPF</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">0</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">0-2</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">2-5</td>
-                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300">5-20</td>
-                         <td className="py-3 px-4 text-center text-gray-700">&gt;20</td>
+                         <td className="py-1.5 px-2 font-medium text-gray-900 border-r border-gray-300">Crystals (normal)</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">per HPF</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">0</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">0-2</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">2-5</td>
+                         <td className="py-1.5 px-2 text-center text-red-600 font-semibold border-r border-gray-300">5-20</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700">&gt;20</td>
                        </tr>
                        
                        {/* Bacteria */}
                        <tr className="border-b border-gray-300">
-                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Bacteria</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">per HPF</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">0</td>
-                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300">0-10</td>
-                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300">10-50</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">50-200</td>
-                         <td className="py-3 px-4 text-center text-gray-700">&gt;200</td>
+                         <td className="py-1.5 px-2 font-medium text-gray-900 border-r border-gray-300">Bacteria</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">per HPF</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">0</td>
+                         <td className="py-1.5 px-2 text-center text-red-600 font-semibold border-r border-gray-300">0-10</td>
+                         <td className="py-1.5 px-2 text-center text-red-600 font-semibold border-r border-gray-300">10-50</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">50-200</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700">&gt;200</td>
                        </tr>
                        
                        {/* Mucus threads */}
                        <tr className="border-b border-gray-300">
-                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Mucus threads</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">per LPF</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">0</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">0-1</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">1-3</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">3-10</td>
-                         <td className="py-3 px-4 text-center text-gray-700">&gt;10</td>
+                         <td className="py-1.5 px-2 font-medium text-gray-900 border-r border-gray-300">Mucus threads</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">per LPF</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">0</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">0-1</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">1-3</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">3-10</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700">&gt;10</td>
                        </tr>
                        
                        {/* Casts */}
                        <tr className="border-b border-gray-300">
-                         <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Casts</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">per LPF</td>
-                         <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300" colSpan={5}>
+                         <td className="py-1.5 px-2 font-medium text-gray-900 border-r border-gray-300">Casts</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">per LPF</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300" colSpan={5}>
                            Numerical ranges: 0-2, 2-5, 5-10, &gt;10
                          </td>
                        </tr>
@@ -1443,53 +1433,14 @@ export default function Report() {
   
                </div>
 
-              {/* History */}
-              {showHistory && (
-                <div className="relative z-[40]">
-                  <PatientTestHistory 
-                    selectedPatient={selectedPatient}
-                    selectedTest={selectedTest}
-                    onTestSelect={handleTestSelection}
-                  />
-                </div>
-              )}
+
             </>
           )}
         </div>
       </div>
        
                {/* Full-screen camera overlay (below header) */}
-      {liveStreamActive && (
-        <div className="fixed left-0 right-0 bottom-0 top-[72px] z-30 bg-black">
-          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-contain" />
-          {!mediaStream && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-sm text-white/80 bg-black/40 px-3 py-2 rounded">Initializing camera… Allow permissions if prompted.</div>
-            </div>
-          )}
-          
-          {/* Camera Controls - positioned above camera feed */}
-          <div className="absolute top-4 right-4 flex space-x-2 z-50">
-            <button
-              onClick={() => {
-                // For now, just show a notification since we need to implement direct capture
-                setNotificationMessage('Direct camera capture not yet implemented. Use the camera modal instead.')
-                setNotificationType('info')
-                setShowNotification(true)
-              }}
-              className="px-4 py-2 bg-white text-gray-800 rounded-lg shadow-lg hover:bg-gray-100 transition-colors border border-gray-200"
-            >
-              Take Photo
-            </button>
-            <button
-              onClick={stopLiveCamera}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 transition-colors"
-            >
-              Close Camera
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Removed as per edit hint */}
 
       {/* Image Modal */}
       <div className="z-[9999]">
