@@ -74,11 +74,11 @@ export default function CaptureDashboard() {
               <span>Microscopic Report</span>
             </button>
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/report')}
               className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
             >
               <LayoutGrid className="h-4 w-4" />
-              <span>Management</span>
+              <span>Report</span>
             </button>
           </div>
         </div>
@@ -155,13 +155,13 @@ export default function CaptureDashboard() {
         {/* Right Quick Nav (Management) */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-            <h2 className="font-semibold text-gray-900 mb-3">Management Dashboard</h2>
-            <p className="text-sm text-gray-600 mb-4">Calendar view, test management, and analytics.</p>
+            <h2 className="font-semibold text-gray-900 mb-3">Report</h2>
+            <p className="text-sm text-gray-600 mb-4">Review, validate, and manage test results.</p>
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/report')}
               className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-black"
             >
-              <LayoutGrid className="h-4 w-4" /> Go to Management
+              <LayoutGrid className="h-4 w-4" /> Go to Report
             </button>
           </div>
         </div>

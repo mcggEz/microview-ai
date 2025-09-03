@@ -89,6 +89,11 @@ export default function Report() {
       console.log('Report page: Loading data for date:', dateParam)
       setSelectedDate(dateParam)
       preloadByDate(dateParam)
+    } else {
+      // Set default to current date if no date param
+      const today = new Date().toISOString().split('T')[0]
+      setSelectedDate(today)
+      preloadByDate(today)
     }
   }, [dateParam, preloadByDate])
 
@@ -130,21 +135,34 @@ export default function Report() {
 
   const findings = useMemo(() => getMicroscopicFindings(), [selectedTest])
 
-  // Search tests
+  // Search and filter tests by date and search query
   const filteredTests = useMemo(() => {
-    if (!searchQuery.trim()) return tests
+    let filtered = tests
 
-    const query = searchQuery.toLowerCase()
-    return tests.filter(test => {
-      const patient = patients.find(p => p.id === test.patient_id)
-      return (
-        patient?.name.toLowerCase().includes(query) ||
-        patient?.patient_id.toLowerCase().includes(query) ||
-        test.test_code.toLowerCase().includes(query) ||
-        test.sample_id?.toLowerCase().includes(query)
-      )
-    })
-  }, [tests, patients, searchQuery])
+    // Filter by date first
+    if (selectedDate) {
+      filtered = filtered.filter(test => {
+        const testDate = test.analysis_date?.split('T')[0] || test.created_at?.split('T')[0]
+        return testDate === selectedDate
+      })
+    }
+
+    // Then filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(test => {
+        const patient = patients.find(p => p.id === test.patient_id)
+        return (
+          patient?.name.toLowerCase().includes(query) ||
+          patient?.patient_id.toLowerCase().includes(query) ||
+          test.test_code.toLowerCase().includes(query) ||
+          test.sample_id?.toLowerCase().includes(query)
+        )
+      })
+    }
+
+    return filtered
+  }, [tests, patients, searchQuery, selectedDate])
 
   // Initialize edit data when patient/test changes
   useEffect(() => {
@@ -607,15 +625,30 @@ export default function Report() {
           {/* Left side - Back button and test info */}
           <div className="flex items-center gap-2 md:gap-4 order-1">
             <button
-              onClick={() => router.back()}
-              className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 transition-colors"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className={`flex items-center space-x-1 px-2 py-1 rounded border transition-colors ${
+                sidebarCollapsed 
+                  ? 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100' 
+                  : 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100'
+              }`}
+              title={sidebarCollapsed ? 'Open Sidebar' : 'Close Sidebar'}
             >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="text-sm font-medium">Back</span>
+              {sidebarCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronLeft className="h-4 w-4" />
+              )}
+              <span className="text-sm font-medium">{sidebarCollapsed ? 'Open Sidebar' : 'Close Sidebar'}</span>
             </button>
             
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
               <h1 className="text-sm md:text-base font-bold text-gray-900 leading-tight">Microscopic Report</h1>
+              
+              {/* Date Display */}
+              <div className="text-xs text-gray-600">
+                <span>{selectedDate ? new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Today'}</span>
+              </div>
+              
               <div className="text-xs md:text-sm font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 md:px-2.5 md:py-1 rounded w-fit">
                 {selectedTest?.test_code || 'N/A'}
               </div>
@@ -646,27 +679,7 @@ export default function Report() {
 
           {/* Right side - Action buttons */}
           <div className="flex items-center gap-2 md:gap-3 flex-nowrap overflow-x-auto whitespace-nowrap w-full md:w-auto justify-end order-3">
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className={`px-2 py-1 rounded border transition-colors ${
-                sidebarCollapsed 
-                  ? 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100' 
-                  : 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100'
-              }`}
-              title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-            >
-              {sidebarCollapsed ? (
-                <div className="flex items-center space-x-1">
-                  <ChevronRight className="h-3 w-3" />
-                  <span className="text-xs font-medium hidden sm:inline">Sidebar</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-1">
-                  <ChevronLeft className="h-3 w-3" />
-                  <span className="text-xs font-medium hidden sm:inline">Sidebar</span>
-                </div>
-              )}
-            </button>
+
             
             <button
               onClick={handleNewPatient}
@@ -711,9 +724,32 @@ export default function Report() {
 
       <div className="flex h-[calc(100vh-72px)] overflow-hidden">
         {/* Left Sidebar */}
-        <div className={`${sidebarCollapsed ? 'hidden' : 'w-80'} bg-white border-r border-gray-200 h-full overflow-y-auto transition-all duration-300 ease-in-out relative z-[55]`}>
+        <div className={`${sidebarCollapsed ? 'hidden' : 'w-80'} bg-white border-r border-gray-200 h-full flex flex-col transition-all duration-300 ease-in-out relative z-[55]`}>
           
-                    <div className={`${sidebarCollapsed ? 'px-2' : 'p-3'} transition-all duration-300`}>
+          {/* Main Sidebar Content */}
+          <div className={`${sidebarCollapsed ? 'px-2' : 'p-3'} transition-all duration-300 flex-1 overflow-y-auto`}>
+
+            {/* Date Selection */}
+            {!sidebarCollapsed && (
+              <div className="mb-3">
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Select Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="date"
+                    value={selectedDate || new Date().toISOString().split('T')[0]}
+                    onChange={(e) => {
+                      setSelectedDate(e.target.value)
+                      if (e.target.value) {
+                        preloadByDate(e.target.value)
+                      }
+                    }}
+                    className="w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-xs text-black"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Search and Filters */}
             <div className={`${sidebarCollapsed ? 'mb-3' : 'mb-4'} ${sidebarCollapsed ? 'space-y-2' : 'space-y-3'}`}>
               {/* Search */}
@@ -735,7 +771,10 @@ export default function Report() {
               {/* Results Count */}
               {!sidebarCollapsed && (
                 <div className="text-xs text-gray-600">
-                  {filteredTests.length} of {tests.length} tests
+                  {selectedDate && (
+                    <span className="text-blue-600 font-medium">{new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                  )}
+                  <span className="text-gray-600"> • {filteredTests.length} of {tests.length} tests</span>
                 </div>
               )}
            </div>
@@ -833,12 +872,65 @@ export default function Report() {
                    {!sidebarCollapsed && <span className="text-xs font-medium">Add New Test</span>}
                  </button>
                </div>
+
+
+               <div className="border-t border-gray-200 pt-3 mt-3">
+                 <button
+                   onClick={() => {
+                     setNotificationMessage('Settings functionality coming soon!')
+                     setNotificationType('info')
+                     setShowNotification(true)
+                   }}
+                   className={`w-full flex items-center justify-center ${sidebarCollapsed ? 'px-2 py-2' : 'px-3 py-2 space-x-1.5'} bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors mb-2`}
+                 >
+                   <svg className={`${sidebarCollapsed ? 'h-4 w-4' : 'h-4 w-4'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                     <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.08a2 2 0 0 1 1 1.73v.51a2 2 0 0 1-1 1.73l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 1-1.73h.51a2 2 0 0 1 1 1.73l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.73v-.51a2 2 0 0 1 1-1.73l.15-.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-1 1.73v.18a2 2 0 0 1-2 2z"/>
+                     <circle cx="12" cy="12" r="3"/>
+                   </svg>
+                   {!sidebarCollapsed && <span className="text-xs font-medium">Settings</span>}
+                 </button>
+                 
+                 <button
+                   onClick={() => {
+                     setNotificationMessage('Logout functionality coming soon!')
+                     setNotificationType('info')
+                     setShowNotification(true)
+                   }}
+                   className={`w-full flex items-center justify-center ${sidebarCollapsed ? 'px-2 py-2' : 'px-3 py-2 space-x-1.5'} bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors`}
+                 >
+                   <svg className={`${sidebarCollapsed ? 'h-4 w-4' : 'h-4 w-4'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                     <polyline points="16,17 21,12 16,7"/>
+                     <line x1="21" y1="12" x2="9" y2="12"/>
+                   </svg>
+                   {!sidebarCollapsed && <span className="text-xs font-medium">Logout</span>}
+                 </button>
+               </div>
              </>
            )}
          </div>
-        </div>
 
-      
+          {/* Bottom Sidebar Buttons - Settings and Logout */}
+          <div className={`${sidebarCollapsed ? 'px-2' : 'p-3'} border-t border-gray-200 mt-auto`}>
+            
+            
+            <button
+              onClick={() => {
+                setNotificationMessage('Logout functionality coming soon!')
+                setNotificationType('info')
+                setShowNotification(true)
+              }}
+              className={`w-full flex items-center justify-center ${sidebarCollapsed ? 'px-2 py-2' : 'px-3 py-2 space-x-1.5'} bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors`}
+            >
+              <svg className={`${sidebarCollapsed ? 'h-4 w-4' : 'h-4 w-4'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16,17 21,12 16,7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              {!sidebarCollapsed && <span className="text-xs font-medium">Logout</span>}
+            </button>
+          </div>
+        </div>
 
         {/* Main Content */}
         <div className="flex-1 p-2 md:p-3 overflow-y-auto relative" key={selectedPatient?.id || 'no-patient'}>

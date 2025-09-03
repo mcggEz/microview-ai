@@ -27,15 +27,15 @@ GEMINI_API_KEY=your_gemini_api_key
 Note: Env files are ignored by git (see `.gitignore`). Do not commit secrets.
 
 3) Run the dev server
-```bash
+   ```bash
 npm run dev
-```
+   ```
 Open http://localhost:3000
 
 ### Supabase: Database and Migrations
 - Requires the Supabase CLI. Install from docs.
 - Login and link your project, then push migrations:
-```bash
+   ```bash
 npx supabase login
 npx supabase link
 npx supabase db push
@@ -46,7 +46,7 @@ Schema overview:
 
 ### App Structure
 - `src/app/page.tsx`: Marketing/landing page
-- `src/app/dashboard/page.tsx`: Management dashboard with calendar
+- `src/app/report/page.tsx`: Main report page with test management and analysis
 - `src/app/report/page.tsx`: Detailed report with patient sidebar, tests, images, edit and upload/capture buttons
 - `src/hooks/useDashboard.ts`: Data fetching and state for patients/tests
 - `src/lib/api.ts`: CRUD helpers for Supabase

@@ -155,7 +155,7 @@ export function useDesktopMotorControl(): DesktopMotorControl {
     }
 
     const handleMenuOpenDashboard = () => {
-      window.location.href = '/dashboard'
+              window.location.href = '/report'
     }
 
     const handleMenuHomeMotors = () => {
