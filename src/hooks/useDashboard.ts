@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getPatients, updatePatient, getTestsByPatient, getTestsByDate, createPatient, createTest } from '@/lib/api'
-import { Patient, UrineTest } from '@/types/database'
+import { Patient, UrineTest, ReportStatus } from '@/types/database'
 
 export const useDashboard = () => {
   const [patients, setPatients] = useState<Patient[]>([])
@@ -160,6 +160,11 @@ export const useDashboard = () => {
         console.log('New patient created:', patientToUse)
       }
       
+      // Ensure we have a valid patient object before proceeding
+      if (!patientToUse) {
+        throw new Error('Failed to resolve patient record')
+      }
+
       // Now create the test for this patient on the specific date
       console.log('Creating test for patient:', patientToUse.name, 'on date:', date)
       
@@ -203,7 +208,7 @@ export const useDashboard = () => {
         patient_id: patientToUse.id,
         test_code: generateTestCode(date, patientToUse.name, now),
         analysis_date: date,
-        status: 'pending',
+        status: 'pending' as ReportStatus,
         // Add minimal required fields
         collection_time: now.toTimeString().slice(0, 8), // Use actual current time
         technician: 'Lab Tech'
