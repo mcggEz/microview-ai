@@ -874,38 +874,7 @@ export default function Report() {
                </div>
 
 
-               <div className="border-t border-gray-200 pt-3 mt-3">
-                 <button
-                   onClick={() => {
-                     setNotificationMessage('Settings functionality coming soon!')
-                     setNotificationType('info')
-                     setShowNotification(true)
-                   }}
-                   className={`w-full flex items-center justify-center ${sidebarCollapsed ? 'px-2 py-2' : 'px-3 py-2 space-x-1.5'} bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors mb-2`}
-                 >
-                   <svg className={`${sidebarCollapsed ? 'h-4 w-4' : 'h-4 w-4'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                     <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.08a2 2 0 0 1 1 1.73v.51a2 2 0 0 1-1 1.73l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 1-1.73h.51a2 2 0 0 1 1 1.73l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.73v-.51a2 2 0 0 1 1-1.73l.15-.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-1 1.73v.18a2 2 0 0 1-2 2z"/>
-                     <circle cx="12" cy="12" r="3"/>
-                   </svg>
-                   {!sidebarCollapsed && <span className="text-xs font-medium">Settings</span>}
-                 </button>
-                 
-                 <button
-                   onClick={() => {
-                     setNotificationMessage('Logout functionality coming soon!')
-                     setNotificationType('info')
-                     setShowNotification(true)
-                   }}
-                   className={`w-full flex items-center justify-center ${sidebarCollapsed ? 'px-2 py-2' : 'px-3 py-2 space-x-1.5'} bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors`}
-                 >
-                   <svg className={`${sidebarCollapsed ? 'h-4 w-4' : 'h-4 w-4'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                     <polyline points="16,17 21,12 16,7"/>
-                     <line x1="21" y1="12" x2="9" y2="12"/>
-                   </svg>
-                   {!sidebarCollapsed && <span className="text-xs font-medium">Logout</span>}
-                 </button>
-               </div>
+               
              </>
            )}
          </div>
