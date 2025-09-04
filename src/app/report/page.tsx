@@ -909,32 +909,45 @@ export default function Report() {
             <>
               {/* Live Camera (in-flow) */}
               {liveStreamActive && (
-                <div className="relative w-full h-[calc(100vh-72px)] bg-black overflow-hidden -mx-4 md:-mx-6 -mt-4 md:-mt-6 mb-4">
-                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                  {!mediaStream && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-sm text-white/80 bg-black/40 px-3 py-2 rounded">Initializing camera… Allow permissions if prompted.</div>
+                <div className="flex-1 overflow-y-auto relative">
+                  {/* Camera overlay */}
+                  <div className="relative flex-1 h-[calc(100vh-72px)] bg-black overflow-hidden mb-4 rounded-md">
+                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                    {!mediaStream && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-sm text-white/80 bg-black/40 px-3 py-2 rounded">Initializing camera… Allow permissions if prompted.</div>
+                      </div>
+                    )}
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
+                      <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md rounded-full px-2.5 py-1.5 border border-white/20 shadow-lg">
+                        <button
+                          onClick={() => {
+                            setNotificationMessage('Direct camera capture not yet implemented. Use the camera modal instead.')
+                            setNotificationType('info')
+                            setShowNotification(true)
+                          }}
+                          className="px-3 py-1.5 bg-white text-gray-800 rounded-full hover:bg-gray-100 text-xs font-medium"
+                        >
+                          Take Photo
+                        </button>
+                        <button
+                          onClick={stopLiveCamera}
+                          className="px-3 py-1.5 bg-red-600 text-white rounded-full hover:bg-red-700 text-xs font-medium"
+                        >
+                          Close Camera
+                        </button>
+                      </div>
                     </div>
-                  )}
-                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
-                    <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md rounded-full px-2.5 py-1.5 border border-white/20 shadow-lg">
-                      <button
-                        onClick={() => {
-                          setNotificationMessage('Direct camera capture not yet implemented. Use the camera modal instead.')
-                          setNotificationType('info')
-                          setShowNotification(true)
-                        }}
-                        className="px-3 py-1.5 bg-white text-gray-800 rounded-full hover:bg-gray-100 text-xs font-medium"
-                      >
-                        Take Photo
-                      </button>
-                      <button
-                        onClick={stopLiveCamera}
-                        className="px-3 py-1.5 bg-red-600 text-white rounded-full hover:bg-red-700 text-xs font-medium"
-                      >
-                        Close Camera
-                      </button>
+                  </div>
+                  {/* Rest of your report content */}
+                  <div className="bg-white rounded-lg p-3 shadow-sm mb-3 relative">
+                    <div className="flex items-center justify-between mb-2">
+                      <h1 className="text-lg md:text-xl font-bold text-gray-900">Microscopic Urine Analysis Report - {selectedTest?.test_code || 'N/A'}</h1>
+                      <div className="flex items-center gap-2">
+                        {/* action buttons ... */}
+                      </div>
                     </div>
+                    {/* rest of your details ... */}
                   </div>
                 </div>
               )}
