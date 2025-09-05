@@ -71,6 +71,11 @@ export const useDashboard = () => {
       setLoading(true)
       setError(null)
       
+      // Validate date parameter
+      if (!date || date.trim() === '') {
+        throw new Error('Date parameter is required')
+      }
+      
       console.log('Preloading data for date:', date)
       
       // Clear all state first to prevent data bleeding
@@ -117,7 +122,12 @@ export const useDashboard = () => {
       
     } catch (err) {
       console.error('Error in preloadByDate:', err)
-      setError('Failed to load data for selected date')
+      console.error('Error details:', {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : undefined,
+        date: date
+      })
+      setError(`Failed to load data for selected date: ${err instanceof Error ? err.message : 'Unknown error'}`)
       // Clear state on error to prevent showing wrong data
       setSelectedPatient(null)
       setSelectedTest(null)

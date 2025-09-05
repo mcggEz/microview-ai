@@ -3,6 +3,13 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState, useMemo, useRef, Suspense } from 'react'
+
+// OpenCV.js type declaration
+declare global {
+  interface Window {
+    cv: any
+  }
+}
 import { useRouter } from 'next/navigation'
 import { useDashboard } from '@/hooks/useDashboard'
 import { updatePatient, updateTest, updateTestWithAnalysis, testDatabaseConnection, deleteTest, deleteImageFromTest, deleteImageFromStorage, addImageToTest, uploadImageToStorage, uploadBase64Image } from '@/lib/api'
@@ -46,8 +53,9 @@ export default function Report() {
   const [saving, setSaving] = useState(false)
   const [showNewPatientModal, setShowNewPatientModal] = useState(false)
   const [showImageAnalysisModal, setShowImageAnalysisModal] = useState(false)
-  const [showCamera, setShowCamera] = useState(false)
   const [capturedImage, setCapturedImage] = useState<string | null>(null) // Used in handleImageCapture - keeping for future use
+  const [capturedImages, setCapturedImages] = useState<string[]>([]) // Store multiple captured images
+  const [focusMode, setFocusMode] = useState<'field' | 'report'>('field') // Focus mode for UI
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState('')
@@ -60,6 +68,11 @@ export default function Report() {
   const [liveStreamActive, setLiveStreamActive] = useState(false)
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [scopeMask, setScopeMask] = useState(true)
+  const [overlayEnabled, setOverlayEnabled] = useState(false)
+  const [objectCount, setObjectCount] = useState(0)
+  const [opencvReady, setOpencvReady] = useState(false)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [dateParam, setDateParam] = useState<string | null>(null)
 
   useEffect(() => {
@@ -178,6 +191,17 @@ export default function Report() {
     }
   }, [selectedPatient, selectedTest])
 
+  // Auto-start camera on component mount
+  useEffect(() => {
+    startLiveCamera()
+    return () => {
+      // Cleanup on unmount
+      try {
+        mediaStream?.getTracks().forEach(t => t.stop())
+      } catch {}
+    }
+  }, [])
+
   // Start live camera
   const startLiveCamera = async () => {
     try {
@@ -215,13 +239,132 @@ export default function Report() {
     }
   }
 
-  // Stop live camera
-  const stopLiveCamera = () => {
+  // Capture image from camera
+  const captureImage = () => {
+    if (!videoRef.current || !mediaStream) return
+    
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    
+    canvas.width = videoRef.current.videoWidth
+    canvas.height = videoRef.current.videoHeight
+    ctx.drawImage(videoRef.current, 0, 0)
+    
+    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8)
+    setCapturedImages(prev => [...prev, imageDataUrl])
+    
+    setNotificationMessage('Image captured successfully!')
+    setNotificationType('success')
+    setShowNotification(true)
+  }
+
+  // Remove captured image
+  const removeCapturedImage = (index: number) => {
+    setCapturedImages(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // Image segmentation function
+  const performSegmentation = (videoElement: HTMLVideoElement, canvas: HTMLCanvasElement) => {
+    if (!opencvReady || !window.cv) return
+
     try {
-      mediaStream?.getTracks().forEach(t => t.stop())
-    } catch {}
-    setMediaStream(null)
-    setLiveStreamActive(false)
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      // Set canvas size to match video
+      canvas.width = videoElement.videoWidth
+      canvas.height = videoElement.videoHeight
+
+      // Draw current video frame to canvas
+      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height)
+
+      // Get image data
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      
+      // Create OpenCV Mat from image data
+      const src = window.cv.matFromImageData(imageData)
+      const gray = new window.cv.Mat()
+      const binary = new window.cv.Mat()
+      const contours = new window.cv.MatVector()
+      const hierarchy = new window.cv.Mat()
+
+      // Convert to grayscale
+      window.cv.cvtColor(src, gray, window.cv.COLOR_RGBA2GRAY)
+
+      // Apply Gaussian blur to reduce noise
+      const blurred = new window.cv.Mat()
+      window.cv.GaussianBlur(gray, blurred, new window.cv.Size(5, 5), 0)
+
+      // Apply adaptive threshold
+      window.cv.adaptiveThreshold(blurred, binary, 255, window.cv.ADAPTIVE_THRESH_GAUSSIAN_C, window.cv.THRESH_BINARY, 11, 2)
+
+      // Find contours
+      window.cv.findContours(binary, contours, hierarchy, window.cv.RETR_EXTERNAL, window.cv.CHAIN_APPROX_SIMPLE)
+
+      // Filter contours by area (remove very small objects)
+      const minArea = 50 // Minimum area threshold
+      let validContours = 0
+      const validContourIndices: number[] = []
+
+      for (let i = 0; i < contours.size(); i++) {
+        const contour = contours.get(i)
+        const area = window.cv.contourArea(contour)
+        if (area > minArea) {
+          validContours++
+          validContourIndices.push(i)
+        }
+        contour.delete()
+      }
+
+      // Update object count
+      setObjectCount(validContours)
+
+      // Clear canvas (keep it transparent)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+      // Set composite operation to overlay contours on video
+      ctx.globalCompositeOperation = 'source-over'
+
+      // Draw detected objects
+      ctx.strokeStyle = '#00ff00'
+      ctx.lineWidth = 2
+      ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
+
+      for (const index of validContourIndices) {
+        const contour = contours.get(index)
+        const points = []
+        
+        for (let j = 0; j < contour.rows; j++) {
+          const point = contour.data32S.subarray(j * 2, j * 2 + 2)
+          points.push({ x: point[0], y: point[1] })
+        }
+
+        if (points.length > 0) {
+          ctx.beginPath()
+          ctx.moveTo(points[0].x, points[0].y)
+          for (let k = 1; k < points.length; k++) {
+            ctx.lineTo(points[k].x, points[k].y)
+          }
+          ctx.closePath()
+          ctx.stroke()
+          ctx.fill()
+        }
+        
+        contour.delete()
+      }
+
+      // Clean up
+      src.delete()
+      gray.delete()
+      binary.delete()
+      blurred.delete()
+      contours.delete()
+      hierarchy.delete()
+
+    } catch (error) {
+      console.error('Segmentation error:', error)
+    }
   }
 
   // Ensure video element attaches to stream even if created later
@@ -242,6 +385,17 @@ export default function Report() {
     } catch {}
   }, [mediaStream, videoRef])
 
+
+
+  // Auto-start camera on mount (once)
+  const cameraStartedRef = useRef(false)
+  useEffect(() => {
+    if (cameraStartedRef.current) return
+    cameraStartedRef.current = true
+    startLiveCamera()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     return () => {
       // Cleanup on unmount
@@ -250,6 +404,54 @@ export default function Report() {
       } catch {}
     }
   }, [mediaStream])
+
+  // Load OpenCV.js
+  useEffect(() => {
+    const loadOpenCV = async () => {
+      if (typeof window !== 'undefined' && !window.cv) {
+        const script = document.createElement('script')
+        script.src = 'https://docs.opencv.org/4.8.0/opencv.js'
+        script.async = true
+        script.onload = () => {
+          window.cv['onRuntimeInitialized'] = () => {
+            console.log('OpenCV.js loaded successfully')
+            setOpencvReady(true)
+          }
+        }
+        document.head.appendChild(script)
+      } else if (window.cv) {
+        setOpencvReady(true)
+      }
+    }
+    
+    loadOpenCV()
+  }, [])
+
+  // Real-time segmentation loop
+  useEffect(() => {
+    if (!overlayEnabled || !opencvReady || !liveStreamActive || !videoRef.current || !canvasRef.current) {
+      return
+    }
+
+    let animationId: number
+    const video = videoRef.current
+    const canvas = canvasRef.current
+
+    const segmentLoop = () => {
+      if (video.readyState >= 2) { // HAVE_CURRENT_DATA
+        performSegmentation(video, canvas)
+      }
+      animationId = requestAnimationFrame(segmentLoop)
+    }
+
+    segmentLoop()
+
+    return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId)
+      }
+    }
+  }, [overlayEnabled, opencvReady, liveStreamActive, performSegmentation])
 
   const handleEditToggle = () => {
     if (isEditing) {
@@ -302,7 +504,7 @@ export default function Report() {
       }
 
       // Refresh data
-      await preloadByDate(dateParam || '')
+      await preloadByDate(dateParam || new Date().toISOString().split('T')[0])
       setIsEditing(false)
       setNotificationMessage('Changes saved successfully!')
       setNotificationType('success')
@@ -326,7 +528,8 @@ export default function Report() {
   // }
 
   const handleCameraCapture = () => {
-    setShowCamera(true)
+    // Camera is always active now, just capture image
+    captureImage()
   }
 
   const handleImageCapture = async (imageData: string) => {
@@ -690,33 +893,35 @@ export default function Report() {
               <span className="text-xs hidden sm:inline">Add Test</span>
             </button>
             
-            <button
-              onClick={() => setShowHeader((v) => !v)}
-              className="px-2 py-1 rounded border border-gray-300 bg-white text-gray-800 shadow-sm hover:bg-gray-50"
-              title={showHeader ? 'Hide report details' : 'Show report details'}
-            >
-              <span className="text-xs hidden sm:inline">{showHeader ? 'Hide Details' : 'Show Details'}</span>
-              <span className="text-xs sm:hidden">Details</span>
-            </button>
             
-            <button 
-              onClick={handleExport}
-              className="flex items-center space-x-1 px-2 py-1 rounded border border-gray-300 bg-white text-gray-800 shadow-sm hover:bg-gray-50"
-            >
-              <Download className="h-4 w-4" />
-              <span className="text-xs hidden sm:inline">Export</span>
-            </button>
             
             <button
-              onClick={() => (liveStreamActive ? stopLiveCamera() : startLiveCamera())}
+              onClick={() => {
+                setFocusMode('field')
+                document.getElementById('camera-field')?.scrollIntoView({ behavior: 'smooth' })
+              }}
               className={`flex items-center space-x-1 px-2 py-1 rounded shadow-sm border transition-colors ${
-                liveStreamActive ? 'bg-red-600 text-white border-red-600 hover:bg-red-700' : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
+                focusMode === 'field' ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
               }`}
-              title={liveStreamActive ? 'Stop Camera' : 'Open Camera'}
+              title="Focus on camera field"
             >
-              <Camera className="h-3 w-3" />
-              <span className="text-xs hidden sm:inline">{liveStreamActive ? 'Stop Camera' : 'Open Camera'}</span>
-              <span className="text-xs sm:hidden">Camera</span>
+              <Microscope className="h-3 w-3" />
+              <span className="text-xs hidden sm:inline">Focus Field</span>
+              <span className="text-xs sm:hidden">Field</span>
+            </button>
+            <button
+              onClick={() => {
+                setFocusMode('report')
+                document.getElementById('report-content')?.scrollIntoView({ behavior: 'smooth' })
+              }}
+              className={`flex items-center space-x-1 px-2 py-1 rounded shadow-sm border transition-colors ${
+                focusMode === 'report' ? 'bg-green-600 text-white border-green-600 hover:bg-green-700' : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
+              }`}
+              title="Focus on report"
+            >
+              <CheckCircle className="h-3 w-3" />
+              <span className="text-xs hidden sm:inline">Focus Report</span>
+              <span className="text-xs sm:hidden">Report</span>
             </button>
           </div>
         </div>
@@ -885,9 +1090,13 @@ export default function Report() {
             
             <button
               onClick={() => {
-                setNotificationMessage('Logout functionality coming soon!')
-                setNotificationType('info')
-                setShowNotification(true)
+                try {
+                  router.push('/')
+                } catch (e) {
+                  // Fallback
+                  // @ts-ignore
+                  window.location.href = '/'
+                }
               }}
               className={`w-full flex items-center justify-center ${sidebarCollapsed ? 'px-2 py-2' : 'px-3 py-2 space-x-1.5'} bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors`}
             >
@@ -902,59 +1111,146 @@ export default function Report() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-2 md:p-3 overflow-y-auto relative" key={selectedPatient?.id || 'no-patient'}>
+        <div className="flex-1 overflow-y-auto relative h-full" key={selectedPatient?.id || 'no-patient'}>
           {!selectedPatient ? (
             <div className="text-center py-12 text-gray-600">Select a patient or use the calendar</div>
           ) : (
             <>
-              {/* Live Camera (in-flow) */}
-              {liveStreamActive && (
-                <div className="flex-1 overflow-y-auto relative">
-                  {/* Camera overlay */}
-                  <div className="relative flex-1 h-[calc(100vh-72px)] bg-black overflow-hidden mb-4 rounded-md">
+              {/* Camera - Always visible with hover controls */}
+              <div id="camera-field" className="relative h-full bg-black overflow-hidden group">
+                {liveStreamActive && mediaStream ? (
+                  <>
                     <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                    {!mediaStream && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-sm text-white/80 bg-black/40 px-3 py-2 rounded">Initializing camera… Allow permissions if prompted.</div>
+                    
+                    {/* Microscope circular viewport mask */}
+                    {scopeMask && (
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          background:
+                            'radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.85) 49%, rgba(0,0,0,0.95) 55%)'
+                        }}
+                      />
+                    )}
+                    
+                    {/* Segmentation overlay */}
+                    {overlayEnabled && (
+                      <div className="absolute inset-0 pointer-events-none">
+                        {/* Canvas for segmentation results */}
+                        <canvas
+                          ref={canvasRef}
+                          className="absolute inset-0 w-full h-full"
+                          style={{ zIndex: 0 }}
+                        />
+                        
+                        {/* Object count display */}
+                        <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-2 rounded-lg backdrop-blur-sm">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                            <span className="text-sm font-medium">
+                              Objects: {objectCount}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Processing indicator */}
+                        {!opencvReady && (
+                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/70 text-white px-4 py-2 rounded-lg">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <span className="text-sm">Loading OpenCV...</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
-                      <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md rounded-full px-2.5 py-1.5 border border-white/20 shadow-lg">
+                  </>
+                ) : (
+                  /* Camera placeholder when not available */
+                  <div className="w-full h-full bg-black flex items-center justify-center">
+                    <div className="text-center">
+                      {!liveStreamActive ? (
                         <button
-                          onClick={() => {
-                            setNotificationMessage('Direct camera capture not yet implemented. Use the camera modal instead.')
-                            setNotificationType('info')
-                            setShowNotification(true)
-                          }}
-                          className="px-3 py-1.5 bg-white text-gray-800 rounded-full hover:bg-gray-100 text-xs font-medium"
+                          onClick={startLiveCamera}
+                          className="w-16 h-16 mx-auto mb-4 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center transition-colors cursor-pointer group"
                         >
-                          Take Photo
+                          <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
                         </button>
-                        <button
-                          onClick={stopLiveCamera}
-                          className="px-3 py-1.5 bg-red-600 text-white rounded-full hover:bg-red-700 text-xs font-medium"
-                        >
-                          Close Camera
-                        </button>
-                      </div>
+                      ) : (
+                        <div className="w-16 h-16 mx-auto mb-4 bg-gray-800 rounded-full flex items-center justify-center">
+                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      )}
+                      <p className="text-gray-400 text-sm">
+                        {!liveStreamActive ? 'Click camera icon to start' : 'Camera access denied or unavailable'}
+                      </p>
                     </div>
                   </div>
-                  {/* Rest of your report content */}
-                  <div className="bg-white rounded-lg p-3 shadow-sm mb-3 relative">
-                    <div className="flex items-center justify-between mb-2">
-                      <h1 className="text-lg md:text-xl font-bold text-gray-900">Microscopic Urine Analysis Report - {selectedTest?.test_code || 'N/A'}</h1>
-                      <div className="flex items-center gap-2">
-                        {/* action buttons ... */}
+                )}
+                
+                {/* Hover Controls - Only show when hovering over camera */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20" style={{ zIndex: 10 }}>
+                  {/* Top Controls */}
+                  <div className="absolute top-4 right-4 flex justify-end items-center gap-2">
+                    <button
+                      onClick={() => setOverlayEnabled(v => !v)}
+                      className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${overlayEnabled ? 'bg-green-600/90 text-white hover:bg-green-700/90' : 'bg-white/90 text-gray-800 hover:bg-white'}`}
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm font-medium">
+                        {overlayEnabled ? `Segmentation: ${objectCount} objects` : 'Segmentation: OFF'}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setScopeMask(v => !v)}
+                      className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${scopeMask ? 'bg-gray-900/90 text-white hover:bg-black/90' : 'bg-white/90 text-gray-800 hover:bg-white'}`}
+                    >
+                      <Microscope className="h-4 w-4" />
+                      <span className="text-sm font-medium">{scopeMask ? 'Scope: ON' : 'Scope: OFF'}</span>
+                    </button>
+                  </div>
+                  
+                  {/* Bottom Controls */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+                    <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md rounded-full px-6 py-3 border border-white/20 shadow-lg">
+                      <button
+                        onClick={captureImage}
+                        disabled={!liveStreamActive || !mediaStream}
+                        className="px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 text-sm font-medium flex items-center gap-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Capture Field
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Right Side Info */}
+                  <div className="absolute top-1/2 right-4 -translate-y-1/2">
+                    <div className="bg-black/60 backdrop-blur-md rounded-lg px-4 py-3 border border-white/20">
+                      <div className="text-white text-sm">
+                        <div className="font-medium">
+                          {liveStreamActive && mediaStream ? 'Live Camera Feed' : 'Camera Offline'}
+                        </div>
+                        <div className="text-white/70 text-xs mt-1">
+                          {capturedImages.length} images captured
+                        </div>
                       </div>
                     </div>
-                    {/* rest of your details ... */}
                   </div>
                 </div>
-              )}
+              </div>
 
-              
+              {/* Report Content */}
+           
+
               {showHeader ? (
-              <div className="bg-white rounded-lg p-3 shadow-sm mb-3 relative">
+              <div id="report-content" className="bg-white rounded-lg p-3 shadow-sm mb-3 relative">
                 <div className="flex items-center justify-between mb-2">
                    <h1 className="text-lg md:text-xl font-bold text-gray-900">Microscopic Urine Analysis Report - {selectedTest?.test_code || 'N/A'}</h1>
                    <div className="flex items-center gap-2">
@@ -1146,22 +1442,42 @@ export default function Report() {
                 null
               )}
 
-                                                                            {/* Microscopic Images */}
-                 <div className="bg-white rounded-lg p-3 shadow-sm mb-3 relative">
-                   <div className="flex items-center justify-between mb-2">
-                     <h3 className="text-sm font-semibold text-gray-900 flex items-center">
-                       <Microscope className="h-4 w-4 mr-2 text-green-600" />
-                       Microscopic Images
-                       <span className="ml-2 text-xs text-gray-600 font-normal">- Sample Analysis</span>
-                       {selectedTest && (
+                   {/* Microscopic Images Section */}
+                   <div className="bg-white rounded-lg p-3 shadow-sm mb-3">
+                     <div className="flex items-center justify-between mb-2">
+                       <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                         <Microscope className="h-4 w-4 mr-2 text-green-600" />
+                         Microscopic Images
+                         <span className="ml-2 text-xs text-gray-600 font-normal">- High Power Field (HPF) Analysis</span>
                          <span className="ml-3 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                           {selectedTest.microscopic_images?.length || 0}/10 images
+                           {capturedImages.length}/10 images
                          </span>
-                       )}
-                     </h3>
+                       </h3>
+                     </div>
                    </div>
-                   {/* When live, we render the feed as a full-screen overlay, so skip inline block */}
-                   {!liveStreamActive ? null : null}
+
+                   {/* Image Grid */}
+                   {capturedImages.length > 0 ? (
+                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
+                       {capturedImages.map((imageDataUrl, index) => (
+                         <div key={index} className="relative group">
+                           <img
+                             src={imageDataUrl}
+                             alt={`Captured image ${index + 1}`}
+                             className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
+                             onClick={() => setModalImage({ src: imageDataUrl, alt: `Captured image ${index + 1}`, title: `HPF Sample ${index + 1}` })}
+                           />
+                           <button
+                             onClick={() => removeCapturedImage(index)}
+                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                           >
+                             ×
+                           </button>
+                         </div>
+                       ))}
+                     </div>
+                   ) : null}
+                   
                    
                    {/* Hidden file inputs */}
                    <input
@@ -1334,7 +1650,6 @@ export default function Report() {
                       ) : null}
                     </div>
                   )}
-                </div>
 
                {/* Strasinger Quantitation Table */}
                                <div className="bg-white rounded-lg p-3 shadow-sm mb-3">
@@ -1513,8 +1828,11 @@ export default function Report() {
         </div>
       </div>
        
-               {/* Full-screen camera overlay (below header) */}
-      {/* Removed as per edit hint */}
+              
+
+      
+      
+           
 
       {/* Image Modal */}
       <div className="z-[9999]">
@@ -1550,14 +1868,6 @@ export default function Report() {
           </div>
         )}
 
-        {/* Camera Capture Modal */}
-        <div className="z-[9999]">
-          <CameraCaptureModal
-            isOpen={showCamera}
-            onClose={() => setShowCamera(false)}
-            onCapture={handleImageCapture}
-          />
-        </div>
 
         {/* Delete Confirmation Modal */}
         <div className="z-[9999]">
