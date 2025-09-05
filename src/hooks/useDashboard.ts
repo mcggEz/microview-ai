@@ -181,42 +181,30 @@ export const useDashboard = () => {
       // Get current time for both test code generation and collection time
       const now = new Date()
       
-      // Generate test code in format: YYYYMMDD-FL-XX
-      // Examples: 20241201-JD-14 (Dec 1, 2024, John Doe, 2 PM), 20241201-MX-09 (Dec 1, 2024, Mary X, 9 AM)
-      const generateTestCode = (date: string, patientName: string, currentTime: Date) => {
+      // Generate test code in format: YYYYMMDD-XX-XX-N (using time + tally)
+      // Examples: 20241201-14-30-1 (Dec 1, 2024, 2:30 PM, 1st test), 20241201-09-15-2 (Dec 1, 2024, 9:15 AM, 2nd test)
+      const generateTestCode = async (date: string, patientName: string, currentTime: Date) => {
         const dateStr = date.replace(/-/g, '') // Convert YYYY-MM-DD to YYYYMMDD
         
-        // Extract first letter of first and last name
-        const nameParts = patientName.trim().split(' ')
-        const firstName = nameParts[0] || ''
-        const lastName = nameParts[nameParts.length - 1] || ''
+        // Get hour and minute (24-hour format)
+        const hour = currentTime.getHours().toString().padStart(2, '0')
+        const minute = currentTime.getMinutes().toString().padStart(2, '0')
         
-        // Handle edge cases for names
-        let firstInitial = firstName.charAt(0).toUpperCase()
-        let lastInitial = lastName.charAt(0).toUpperCase()
+        // Get count of existing tests for this date and time
+        const timePrefix = `${dateStr}-${hour}-${minute}`
+        const existingTests = await getTestsByDate(date)
+        const testsAtSameTime = existingTests.filter(test => test.test_code.startsWith(timePrefix))
+        const tally = testsAtSameTime.length + 1
         
-        // If no last name, use first name twice or fallback to 'X'
-        if (!lastName || lastName === firstName) {
-          lastInitial = firstName.length > 1 ? firstName.charAt(1).toUpperCase() : 'X'
-        }
-        
-        // Fallback if no valid initials
-        if (!firstInitial || firstInitial === ' ') firstInitial = 'X'
-        if (!lastInitial || lastInitial === ' ') lastInitial = 'X'
-        
-        // Get last two digits of hour (24-hour format)
-        const hour = currentTime.getHours()
-        const hourStr = hour.toString().padStart(2, '0')
-        
-        const testCode = `${dateStr}-${firstInitial}${lastInitial}-${hourStr}`
-        console.log('Generated test code:', testCode, 'for patient:', patientName, 'at hour:', hour)
+        const testCode = `${timePrefix}-${tally}`
+        console.log('Generated test code:', testCode, 'for patient:', patientName, 'at time:', `${hour}:${minute}`, 'tally:', tally)
         
         return testCode
       }
       
       const testData = {
         patient_id: patientToUse.id,
-        test_code: generateTestCode(date, patientToUse.name, now),
+        test_code: await generateTestCode(date, patientToUse.name, now),
         analysis_date: date,
         status: 'pending' as ReportStatus,
         // Add minimal required fields

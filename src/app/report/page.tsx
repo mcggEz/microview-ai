@@ -16,7 +16,6 @@ import { updatePatient, updateTest, updateTestWithAnalysis, testDatabaseConnecti
 import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown, Upload, ChevronLeft, ChevronRight, Brain, Search, ArrowLeft } from 'lucide-react'
 import ImageModal from '@/components/ImageModal'
 import ImageAnalysisModal from '@/components/ImageAnalysisModal'
-import NewPatientModal from '@/components/NewPatientModal'
 import ConfirmationModal from '@/components/ConfirmationModal'
 import CameraCaptureModal from '@/components/CameraCaptureModal'
 import Notification from '@/components/Notification'
@@ -51,7 +50,6 @@ export default function Report() {
     technician: ''
   })
   const [saving, setSaving] = useState(false)
-  const [showNewPatientModal, setShowNewPatientModal] = useState(false)
   const [showImageAnalysisModal, setShowImageAnalysisModal] = useState(false)
   const [capturedImage, setCapturedImage] = useState<string | null>(null) // Used in handleImageCapture - keeping for future use
   const [capturedImages, setCapturedImages] = useState<string[]>([]) // Store multiple captured images
@@ -73,6 +71,9 @@ export default function Report() {
   const [objectCount, setObjectCount] = useState(0)
   const [opencvReady, setOpencvReady] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const [powerMode, setPowerMode] = useState<'high' | 'low'>('high')
+  const [highPowerImages, setHighPowerImages] = useState<string[]>([])
+  const [lowPowerImages, setLowPowerImages] = useState<string[]>([])
   const [dateParam, setDateParam] = useState<string | null>(null)
 
   useEffect(() => {
@@ -240,28 +241,104 @@ export default function Report() {
   }
 
   // Capture image from camera
-  const captureImage = () => {
-    if (!videoRef.current || !mediaStream) return
+  const captureImage = async () => {
+    if (!videoRef.current || !mediaStream || !selectedTest) {
+      setNotificationMessage('Please select a test first')
+      setNotificationType('error')
+      setShowNotification(true)
+      return
+    }
     
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    
-    canvas.width = videoRef.current.videoWidth
-    canvas.height = videoRef.current.videoHeight
-    ctx.drawImage(videoRef.current, 0, 0)
-    
-    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8)
-    setCapturedImages(prev => [...prev, imageDataUrl])
-    
-    setNotificationMessage('Image captured successfully!')
-    setNotificationType('success')
-    setShowNotification(true)
+    try {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      
+      canvas.width = videoRef.current.videoWidth
+      canvas.height = videoRef.current.videoHeight
+      ctx.drawImage(videoRef.current, 0, 0)
+      
+      // Convert canvas to blob
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob)
+        }, 'image/jpeg', 0.8)
+      })
+      
+      // Create a File object from the blob
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+      const filename = `hpf-${selectedTest.test_code}-${timestamp}.jpg`
+      const file = new File([blob], filename, { type: 'image/jpeg' })
+      
+      // Upload to Supabase storage
+      const imageUrl = await uploadImageToStorage(file, selectedTest.id, 'microscopic')
+      
+      if (imageUrl) {
+        // Add image to test record
+        await addImageToTest(selectedTest.id, imageUrl)
+        
+        // Update local state based on power mode
+        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8)
+        if (powerMode === 'high') {
+          setHighPowerImages(prev => [...prev, imageDataUrl])
+        } else {
+          setLowPowerImages(prev => [...prev, imageDataUrl])
+        }
+        
+        // Refresh test data
+        if (dateParam) {
+          await preloadByDate(dateParam)
+        }
+        
+        setNotificationMessage('Image captured and saved successfully!')
+        setNotificationType('success')
+        setShowNotification(true)
+      } else {
+        throw new Error('Failed to upload image')
+      }
+    } catch (error) {
+      console.error('Error capturing image:', error)
+      setNotificationMessage('Failed to capture and save image')
+      setNotificationType('error')
+      setShowNotification(true)
+    }
   }
 
   // Remove captured image
-  const removeCapturedImage = (index: number) => {
-    setCapturedImages(prev => prev.filter((_, i) => i !== index))
+  const removeCapturedImage = async (index: number, powerType: 'high' | 'low') => {
+    if (!selectedTest || !selectedTest.microscopic_images) return
+    
+    try {
+      const imageUrl = selectedTest.microscopic_images[index]
+      if (imageUrl) {
+        // Remove from Supabase storage
+        await deleteImageFromStorage(imageUrl)
+        
+        // Remove from test record
+        await deleteImageFromTest(selectedTest.id, imageUrl)
+        
+        // Update local state based on power type
+        if (powerType === 'high') {
+          setHighPowerImages(prev => prev.filter((_, i) => i !== index))
+        } else {
+          setLowPowerImages(prev => prev.filter((_, i) => i !== index))
+        }
+        
+        // Refresh test data
+        if (dateParam) {
+          await preloadByDate(dateParam)
+        }
+        
+        setNotificationMessage('Image deleted successfully!')
+        setNotificationType('success')
+        setShowNotification(true)
+      }
+    } catch (error) {
+      console.error('Error removing image:', error)
+      setNotificationMessage('Failed to delete image')
+      setNotificationType('error')
+      setShowNotification(true)
+    }
   }
 
   // Image segmentation function
@@ -453,6 +530,19 @@ export default function Report() {
     }
   }, [overlayEnabled, opencvReady, liveStreamActive, performSegmentation])
 
+  // Sync captured images with test's microscopic images
+  useEffect(() => {
+    if (selectedTest?.microscopic_images) {
+      // For now, we'll use the same array for both HPF and LPF
+      // In a real implementation, you might want separate fields in the database
+      setHighPowerImages(selectedTest.microscopic_images)
+      setLowPowerImages([]) // Initialize as empty for now
+    } else {
+      setHighPowerImages([])
+      setLowPowerImages([])
+    }
+  }, [selectedTest])
+
   const handleEditToggle = () => {
     if (isEditing) {
       // Cancel editing - reset to original data
@@ -519,8 +609,42 @@ export default function Report() {
     }
   }
 
-  const handleNewPatient = () => {
-    setShowNewPatientModal(true)
+  const handleNewPatient = async () => {
+    try {
+      // Generate test code using current time format: YYYYMMDD-XX-XX
+      const now = new Date()
+      const dateStr = (dateParam || new Date().toISOString().split('T')[0]).replace(/-/g, '')
+      const hour = now.getHours().toString().padStart(2, '0')
+      const minute = now.getMinutes().toString().padStart(2, '0')
+      const testCode = `${dateStr}-${hour}-${minute}`
+      
+      // Create minimal patient data with valid values
+      const patientData = {
+        name: 'Unknown Patient',
+        age: '0',
+        gender: 'other',
+        patient_id: `PAT-${Date.now()}`
+      }
+      
+      // Create patient with test for the current date
+      const result = await addPatientWithTest(patientData, dateParam || new Date().toISOString().split('T')[0])
+      
+      if (result.test && result.patient) {
+        setNotificationMessage(`✅ Success! New test "${result.test.test_code}" created successfully.`)
+        setNotificationType('success')
+        setShowNotification(true)
+        
+        // Refresh data to show the new test
+        if (dateParam) {
+          await preloadByDate(dateParam)
+        }
+      }
+    } catch (error) {
+      console.error('Error creating new test:', error)
+      setNotificationMessage('Failed to create new test')
+      setNotificationType('error')
+      setShowNotification(true)
+    }
   }
 
   // const handleImageAnalysis = () => {
@@ -668,7 +792,6 @@ export default function Report() {
         setShowNotification(true)
       }
       
-      setShowNewPatientModal(false)
     } catch (error) {
       console.error('Failed to create patient:', error)
       // Error handling is done in the hook
@@ -1197,6 +1320,15 @@ export default function Report() {
                   {/* Top Controls */}
                   <div className="absolute top-4 right-4 flex justify-end items-center gap-2">
                     <button
+                      onClick={() => setPowerMode(v => v === 'high' ? 'low' : 'high')}
+                      className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${powerMode === 'high' ? 'bg-blue-600/90 text-white hover:bg-blue-700/90' : 'bg-orange-600/90 text-white hover:bg-orange-700/90'}`}
+                    >
+                      <Microscope className="h-4 w-4" />
+                      <span className="text-sm font-medium">
+                        {powerMode === 'high' ? 'HPF' : 'LPF'}
+                      </span>
+                    </button>
+                    <button
                       onClick={() => setOverlayEnabled(v => !v)}
                       className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${overlayEnabled ? 'bg-green-600/90 text-white hover:bg-green-700/90' : 'bg-white/90 text-gray-800 hover:bg-white'}`}
                     >
@@ -1225,7 +1357,7 @@ export default function Report() {
                         className="px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 text-sm font-medium flex items-center gap-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
                       >
                         <Plus className="h-4 w-4" />
-                        Capture Field
+                        Capture {powerMode === 'high' ? 'HPF' : 'LPF'}
                       </button>
                     </div>
                   </div>
@@ -1238,7 +1370,8 @@ export default function Report() {
                           {liveStreamActive && mediaStream ? 'Live Camera Feed' : 'Camera Offline'}
                         </div>
                         <div className="text-white/70 text-xs mt-1">
-                          {capturedImages.length} images captured
+                          <div>HPF: {highPowerImages.length}/10</div>
+                          <div>LPF: {lowPowerImages.length}/10</div>
                         </div>
                       </div>
                     </div>
@@ -1442,33 +1575,85 @@ export default function Report() {
                 null
               )}
 
-                   {/* Microscopic Images Section */}
+                   {/* High Power Field Images Section */}
                    <div className="bg-white rounded-lg p-3 shadow-sm mb-3">
                      <div className="flex items-center justify-between mb-2">
                        <h3 className="text-sm font-semibold text-gray-900 flex items-center">
-                         <Microscope className="h-4 w-4 mr-2 text-green-600" />
-                         Microscopic Images
-                         <span className="ml-2 text-xs text-gray-600 font-normal">- High Power Field (HPF) Analysis</span>
-                         <span className="ml-3 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                           {capturedImages.length}/10 images
+                         <Microscope className="h-4 w-4 mr-2 text-blue-600" />
+                         High Power Field (HPF)
+                         <span className="ml-2 text-xs text-gray-600 font-normal">- Microscopic Analysis</span>
+                         <span className="ml-3 text-xs font-medium text-gray-500 bg-blue-100 px-2 py-0.5 rounded-full">
+                           {highPowerImages.length}/10 images
                          </span>
                        </h3>
                      </div>
                    </div>
 
-                   {/* Image Grid */}
-                   {capturedImages.length > 0 ? (
+                   {/* HPF Image Grid */}
+                   {highPowerImages.length > 0 ? (
                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
-                       {capturedImages.map((imageDataUrl, index) => (
+                       {highPowerImages.map((imageUrl, index) => (
                          <div key={index} className="relative group">
                            <img
-                             src={imageDataUrl}
-                             alt={`Captured image ${index + 1}`}
+                             src={imageUrl}
+                             alt={`HPF Sample ${index + 1}`}
                              className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
-                             onClick={() => setModalImage({ src: imageDataUrl, alt: `Captured image ${index + 1}`, title: `HPF Sample ${index + 1}` })}
+                             onClick={() => setModalImage({ 
+                               src: imageUrl, 
+                               alt: `HPF Sample ${index + 1}`, 
+                               title: `High Power Field Sample ${index + 1}` 
+                             })}
+                             onError={(e) => {
+                               console.error('Failed to load image:', imageUrl)
+                               e.currentTarget.style.display = 'none'
+                             }}
                            />
                            <button
-                             onClick={() => removeCapturedImage(index)}
+                             onClick={() => removeCapturedImage(index, 'high')}
+                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                           >
+                             ×
+                           </button>
+                         </div>
+                       ))}
+                     </div>
+                   ) : null}
+
+                   {/* Low Power Field Images Section */}
+                   <div className="bg-white rounded-lg p-3 shadow-sm mb-3">
+                     <div className="flex items-center justify-between mb-2">
+                       <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                         <Microscope className="h-4 w-4 mr-2 text-orange-600" />
+                         Low Power Field (LPF)
+                         <span className="ml-2 text-xs text-gray-600 font-normal">- Overview Analysis</span>
+                         <span className="ml-3 text-xs font-medium text-gray-500 bg-orange-100 px-2 py-0.5 rounded-full">
+                           {lowPowerImages.length}/10 images
+                         </span>
+                       </h3>
+                     </div>
+                   </div>
+
+                   {/* LPF Image Grid */}
+                   {lowPowerImages.length > 0 ? (
+                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
+                       {lowPowerImages.map((imageUrl, index) => (
+                         <div key={index} className="relative group">
+                           <img
+                             src={imageUrl}
+                             alt={`LPF Sample ${index + 1}`}
+                             className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
+                             onClick={() => setModalImage({ 
+                               src: imageUrl, 
+                               alt: `LPF Sample ${index + 1}`, 
+                               title: `Low Power Field Sample ${index + 1}` 
+                             })}
+                             onError={(e) => {
+                               console.error('Failed to load image:', imageUrl)
+                               e.currentTarget.style.display = 'none'
+                             }}
+                           />
+                           <button
+                             onClick={() => removeCapturedImage(index, 'low')}
                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
                            >
                              ×
@@ -1845,17 +2030,6 @@ export default function Report() {
         />
       </div>
 
-        {/* New Patient Modal */}
-        {showNewPatientModal && (
-          <div className="z-[9999]">
-            <NewPatientModal
-              isOpen={showNewPatientModal}
-              onClose={() => setShowNewPatientModal(false)}
-              onPatientCreated={handlePatientCreated}
-              currentDate={dateParam || new Date().toISOString().split('T')[0]}
-            />
-          </div>
-        )}
 
         {/* Image Analysis Modal */}
         {showImageAnalysisModal && (
