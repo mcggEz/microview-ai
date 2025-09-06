@@ -2,45 +2,6 @@ export type Gender = 'male' | 'female' | 'other'
 export type ReportStatus = 'pending' | 'in_progress' | 'completed' | 'reviewed'
 export type ResultStatus = 'normal' | 'abnormal' | 'critical'
 
-// Individual urinalysis field interface
-export interface UrinalysisField {
-  count: string
-  unit: string
-  morphology: string
-  notes: string
-  status: ResultStatus
-  accuracy: number
-}
-
-// Buckets for organizing urinalysis fields
-export interface UrinalysisBuckets {
-  // Blood cells
-  red_blood_cells: UrinalysisField
-  white_blood_cells: UrinalysisField
-  
-  // Cellular elements
-  epithelial_cells: UrinalysisField
-  
-  // Crystalline elements
-  crystals: UrinalysisField
-  
-  // Casts and formations
-  casts: UrinalysisField
-  
-  // Microorganisms
-  bacteria: UrinalysisField
-  yeast: UrinalysisField
-  
-  // Other elements
-  mucus: UrinalysisField
-  sperm: UrinalysisField
-  parasites: UrinalysisField
-  
-  // Additional elements (if needed)
-  other_elements?: UrinalysisField
-}
-
-export type UrinalysisBucketKey = keyof UrinalysisBuckets
 
 export interface Patient {
   id: string
@@ -62,76 +23,6 @@ export interface UrineTest {
   technician?: string
   status: ReportStatus
 
-  rbc_count?: string
-  rbc_unit?: string
-  rbc_morphology?: string
-  rbc_notes?: string
-  rbc_status?: ResultStatus
-  rbc_accuracy?: number
-
-  wbc_count?: string
-  wbc_unit?: string
-  wbc_morphology?: string
-  wbc_notes?: string
-  wbc_status?: ResultStatus
-  wbc_accuracy?: number
-
-  epithelial_cells_count?: string
-  epithelial_cells_unit?: string
-  epithelial_cells_morphology?: string
-  epithelial_cells_notes?: string
-  epithelial_cells_status?: ResultStatus
-  epithelial_cells_accuracy?: number
-
-  crystals_count?: string
-  crystals_unit?: string
-  crystals_morphology?: string
-  crystals_notes?: string
-  crystals_status?: ResultStatus
-  crystals_accuracy?: number
-
-  casts_count?: string
-  casts_unit?: string
-  casts_morphology?: string
-  casts_notes?: string
-  casts_status?: ResultStatus
-  casts_accuracy?: number
-
-  bacteria_count?: string
-  bacteria_unit?: string
-  bacteria_morphology?: string
-  bacteria_notes?: string
-  bacteria_status?: ResultStatus
-  bacteria_accuracy?: number
-
-  yeast_count?: string
-  yeast_unit?: string
-  yeast_morphology?: string
-  yeast_notes?: string
-  yeast_status?: ResultStatus
-  yeast_accuracy?: number
-
-  mucus_count?: string
-  mucus_unit?: string
-  mucus_morphology?: string
-  mucus_notes?: string
-  mucus_status?: ResultStatus
-  mucus_accuracy?: number
-
-  sperm_count?: string
-  sperm_unit?: string
-  sperm_morphology?: string
-  sperm_notes?: string
-  sperm_status?: ResultStatus
-  sperm_accuracy?: number
-
-  parasites_count?: string
-  parasites_unit?: string
-  parasites_morphology?: string
-  parasites_notes?: string
-  parasites_status?: ResultStatus
-  parasites_accuracy?: number
-
   // Image fields
   image_1_url?: string
   image_1_description?: string
@@ -147,6 +38,20 @@ export interface UrineTest {
   gross_images?: string[]
   hpf_images?: string[]
   lpf_images?: string[]
+
+  // AI-generated counts for Strasinger quantitation table
+  ai_epithelial_cells_count?: string
+  ai_crystals_normal_count?: string
+  ai_bacteria_count?: string
+  ai_mucus_threads_count?: string
+  ai_casts_count?: string
+  ai_rbcs_count?: string
+  ai_wbcs_count?: string
+  ai_squamous_epithelial_cells_count?: string
+  ai_transitional_epithelial_cells_count?: string
+  ai_renal_tubular_epithelial_cells_count?: string
+  ai_oval_fat_bodies_count?: string
+  ai_abnormal_crystals_casts_count?: string
 
   created_at: string
   updated_at: string

@@ -154,6 +154,28 @@ export const updateTest = async (id: string, updates: Partial<UrineTest>): Promi
   return data
 }
 
+export const updateAICounts = async (testId: string, aiCounts: {[key: string]: string}): Promise<UrineTest> => {
+  console.log('Updating AI counts for test:', testId, 'with data:', aiCounts)
+  
+  // Map the UI keys to database field names
+  const updates: Partial<UrineTest> = {
+    ai_epithelial_cells_count: aiCounts['Epithelial cells'],
+    ai_crystals_normal_count: aiCounts['Crystals (normal)'],
+    ai_bacteria_count: aiCounts['Bacteria'],
+    ai_mucus_threads_count: aiCounts['Mucus threads'],
+    ai_casts_count: aiCounts['Casts'],
+    ai_rbcs_count: aiCounts['RBCs'],
+    ai_wbcs_count: aiCounts['WBCs'],
+    ai_squamous_epithelial_cells_count: aiCounts['Squamous epithelial cells'],
+    ai_transitional_epithelial_cells_count: aiCounts['Transitional epithelial cells, yeasts, Trichomonas'],
+    ai_renal_tubular_epithelial_cells_count: aiCounts['Renal tubular epithelial cells'],
+    ai_oval_fat_bodies_count: aiCounts['Oval fat bodies'],
+    ai_abnormal_crystals_casts_count: aiCounts['Abnormal crystals, casts']
+  }
+  
+  return updateTest(testId, updates)
+}
+
 export const getTestsByDate = async (date: string): Promise<UrineTest[]> => {
   const { data, error } = await supabase
     .from('urine_tests')
@@ -309,93 +331,6 @@ export const deleteTest = async (testId: string): Promise<void> => {
   }
 }
 
-export const updateTestWithAnalysis = async (testId: string, analysis: { 
-  rbc: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
-  wbc: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
-  epithelial_cells: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
-  crystals: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
-  casts: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
-  bacteria: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
-  yeast: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
-  mucus: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
-  sperm: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
-  parasites: { count: string; unit: string; morphology: string; notes: string; status: ResultStatus }; 
-  overall_accuracy: number 
-}): Promise<UrineTest> => {
-  const updates = {
-    rbc_count: analysis.rbc.count,
-    rbc_unit: analysis.rbc.unit,
-    rbc_morphology: analysis.rbc.morphology,
-    rbc_notes: analysis.rbc.notes,
-    rbc_status: analysis.rbc.status,
-    rbc_accuracy: analysis.overall_accuracy,
-    
-    wbc_count: analysis.wbc.count,
-    wbc_unit: analysis.wbc.unit,
-    wbc_morphology: analysis.wbc.morphology,
-    wbc_notes: analysis.wbc.notes,
-    wbc_status: analysis.wbc.status,
-    wbc_accuracy: analysis.overall_accuracy,
-    
-    epithelial_cells_count: analysis.epithelial_cells.count,
-    epithelial_cells_unit: analysis.epithelial_cells.unit,
-    epithelial_cells_morphology: analysis.epithelial_cells.morphology,
-    epithelial_cells_notes: analysis.epithelial_cells.notes,
-    epithelial_cells_status: analysis.epithelial_cells.status,
-    epithelial_cells_accuracy: analysis.overall_accuracy,
-    
-    crystals_count: analysis.crystals.count,
-    crystals_unit: analysis.crystals.unit,
-    crystals_morphology: analysis.crystals.morphology,
-    crystals_notes: analysis.crystals.notes,
-    crystals_status: analysis.crystals.status,
-    crystals_accuracy: analysis.overall_accuracy,
-    
-    casts_count: analysis.casts.count,
-    casts_unit: analysis.casts.unit,
-    casts_morphology: analysis.casts.morphology,
-    casts_notes: analysis.casts.notes,
-    casts_status: analysis.casts.status,
-    casts_accuracy: analysis.overall_accuracy,
-    
-    bacteria_count: analysis.bacteria.count,
-    bacteria_unit: analysis.bacteria.unit,
-    bacteria_morphology: analysis.bacteria.morphology,
-    bacteria_notes: analysis.bacteria.notes,
-    bacteria_status: analysis.bacteria.status,
-    bacteria_accuracy: analysis.overall_accuracy,
-    
-    yeast_count: analysis.yeast.count,
-    yeast_unit: analysis.yeast.unit,
-    yeast_morphology: analysis.yeast.morphology,
-    yeast_notes: analysis.yeast.notes,
-    yeast_status: analysis.yeast.status,
-    yeast_accuracy: analysis.overall_accuracy,
-    
-    mucus_count: analysis.mucus.count,
-    mucus_unit: analysis.mucus.unit,
-    mucus_morphology: analysis.mucus.morphology,
-    mucus_notes: analysis.mucus.notes,
-    mucus_status: analysis.mucus.status,
-    mucus_accuracy: analysis.overall_accuracy,
-    
-    sperm_count: analysis.sperm.count,
-    sperm_unit: analysis.sperm.unit,
-    sperm_morphology: analysis.sperm.morphology,
-    sperm_notes: analysis.sperm.notes,
-    sperm_status: analysis.sperm.status,
-    sperm_accuracy: analysis.overall_accuracy,
-    
-    parasites_count: analysis.parasites.count,
-    parasites_unit: analysis.parasites.unit,
-    parasites_morphology: analysis.parasites.morphology,
-    parasites_notes: analysis.parasites.notes,
-    parasites_status: analysis.parasites.status,
-    parasites_accuracy: analysis.overall_accuracy,
-  }
-  
-  return await updateTest(testId, updates)
-}
 
 // Image Upload Functions
 export const uploadImageToStorage = async (file: File, testId: string, imageType: 'microscopic' | 'gross' = 'microscopic'): Promise<string> => {

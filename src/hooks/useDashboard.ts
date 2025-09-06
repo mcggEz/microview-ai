@@ -221,7 +221,20 @@ export const useDashboard = () => {
         status: 'pending' as ReportStatus,
         // Add minimal required fields
         collection_time: now.toTimeString().slice(0, 8), // Use actual current time
-        technician: 'Lab Tech'
+        technician: 'Lab Tech',
+        // Initialize AI counts with default values of 0
+        ai_epithelial_cells_count: '0 (None)',
+        ai_crystals_normal_count: '0 (None)',
+        ai_bacteria_count: '0 (None)',
+        ai_mucus_threads_count: '0 (None)',
+        ai_casts_count: '0 (None)',
+        ai_rbcs_count: '0 (None)',
+        ai_wbcs_count: '0 (None)',
+        ai_squamous_epithelial_cells_count: '0 (None)',
+        ai_transitional_epithelial_cells_count: '0 (None)',
+        ai_renal_tubular_epithelial_cells_count: '0 (None)',
+        ai_oval_fat_bodies_count: '0 (None)',
+        ai_abnormal_crystals_casts_count: '0 (None)'
       }
       
       console.log('Creating test with data:', testData)

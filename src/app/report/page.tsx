@@ -12,16 +12,14 @@ declare global {
 }
 import { useRouter } from 'next/navigation'
 import { useDashboard } from '@/hooks/useDashboard'
-import { updatePatient, updateTest, updateTestWithAnalysis, testDatabaseConnection, deleteTest, deleteImageFromTest, deleteImageFromStorage, addImageToTest, uploadImageToStorage, uploadBase64Image } from '@/lib/api'
+import { updatePatient, updateTest, testDatabaseConnection, deleteTest, deleteImageFromTest, deleteImageFromStorage, addImageToTest, uploadImageToStorage, uploadBase64Image, updateAICounts } from '@/lib/api'
 import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown, Upload, ChevronLeft, ChevronRight, Brain, Search, ArrowLeft } from 'lucide-react'
 import ImageModal from '@/components/ImageModal'
-import ImageAnalysisModal from '@/components/ImageAnalysisModal'
 import ConfirmationModal from '@/components/ConfirmationModal'
 import CameraCaptureModal from '@/components/CameraCaptureModal'
 import Notification from '@/components/Notification'
 import PatientTestHistory from '@/components/PatientTestHistory'
 import Image from 'next/image'
-import { UrinalysisResult } from '@/lib/gemini'
 import { UrineTest } from '@/types/database'
 
 interface MicroscopicFindings {
@@ -49,7 +47,6 @@ export default function Report() {
     technician: ''
   })
   const [saving, setSaving] = useState(false)
-  const [showImageAnalysisModal, setShowImageAnalysisModal] = useState(false)
   const [capturedImage, setCapturedImage] = useState<string | null>(null) // Used in handleImageCapture - keeping for future use
   const [capturedImages, setCapturedImages] = useState<string[]>([]) // Store multiple captured images
   const [focusMode, setFocusMode] = useState<'field' | 'report'>('field') // Focus mode for UI
@@ -68,11 +65,29 @@ export default function Report() {
   const [scopeMask, setScopeMask] = useState(true)
   const [overlayEnabled, setOverlayEnabled] = useState(false)
   const [objectCount, setObjectCount] = useState(0)
+  
+  // AI Count state for each sediment type
+  const [aiCounts, setAiCounts] = useState<{[key: string]: string}>({
+    'Epithelial cells': '0 (None)',
+    'Crystals (normal)': '0 (None)',
+    'Bacteria': '0 (None)',
+    'Mucus threads': '0 (None)',
+    'Casts': '0 (None)',
+    'RBCs': '0 (None)',
+    'WBCs': '0 (None)',
+    'Squamous epithelial cells': '0 (None)',
+    'Transitional epithelial cells, yeasts, Trichomonas': '0 (None)',
+    'Renal tubular epithelial cells': '0 (None)',
+    'Oval fat bodies': '0 (None)',
+    'Abnormal crystals, casts': '0 (None)'
+  })
   const [opencvReady, setOpencvReady] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const [powerMode, setPowerMode] = useState<'high' | 'low'>('high')
+  const [powerMode, setPowerMode] = useState<'high' | 'low'>('low')
   const [highPowerImages, setHighPowerImages] = useState<string[]>([])
   const [lowPowerImages, setLowPowerImages] = useState<string[]>([])
+  const [currentLPFIndex, setCurrentLPFIndex] = useState(0)
+  const [currentHPFIndex, setCurrentHPFIndex] = useState(0)
   const [dateParam, setDateParam] = useState<string | null>(null)
 
   const {
@@ -161,21 +176,6 @@ export default function Report() {
     }
   }, [tests, patients, selectedTest])
 
-  const getMicroscopicFindings = (): MicroscopicFindings[] => {
-    if (!selectedTest) return []
-    return [
-      { item: 'Red Blood Cells (RBC)', count: selectedTest.rbc_count || '0', unit: selectedTest.rbc_unit || '/HPF', morphology: selectedTest.rbc_morphology || 'Normal', notes: selectedTest.rbc_notes || '', status: selectedTest.rbc_status || 'normal', accuracy: selectedTest.rbc_accuracy || 0, isEditing: false },
-      { item: 'White Blood Cells (WBC)', count: selectedTest.wbc_count || '0', unit: selectedTest.wbc_unit || '/HPF', morphology: selectedTest.wbc_morphology || 'Normal', notes: selectedTest.wbc_notes || '', status: selectedTest.wbc_status || 'normal', accuracy: selectedTest.wbc_accuracy || 0, isEditing: false },
-      { item: 'Epithelial Cells', count: selectedTest.epithelial_cells_count || '0', unit: selectedTest.epithelial_cells_unit || '/HPF', morphology: selectedTest.epithelial_cells_morphology || 'Normal', notes: selectedTest.epithelial_cells_notes || '', status: selectedTest.epithelial_cells_status || 'normal', accuracy: selectedTest.epithelial_cells_accuracy || 0, isEditing: false },
-      { item: 'Crystals', count: selectedTest.crystals_count || '0', unit: selectedTest.crystals_unit || '/HPF', morphology: selectedTest.crystals_morphology || 'Normal', notes: selectedTest.crystals_notes || '', status: selectedTest.crystals_status || 'normal', accuracy: selectedTest.crystals_accuracy || 0, isEditing: false },
-      { item: 'Casts', count: selectedTest.casts_count || '0', unit: selectedTest.casts_unit || '/LPF', morphology: selectedTest.casts_morphology || 'Normal', notes: selectedTest.casts_notes || '', status: selectedTest.casts_status || 'normal', accuracy: selectedTest.casts_accuracy || 0, isEditing: false },
-      { item: 'Bacteria', count: selectedTest.bacteria_count || '0', unit: selectedTest.bacteria_unit || '/HPF', morphology: selectedTest.bacteria_morphology || 'Normal', notes: selectedTest.bacteria_notes || '', status: selectedTest.bacteria_status || 'normal', accuracy: selectedTest.bacteria_accuracy || 0, isEditing: false },
-      { item: 'Yeast', count: selectedTest.yeast_count || '0', unit: selectedTest.yeast_unit || '/HPF', morphology: selectedTest.yeast_morphology || 'Normal', notes: selectedTest.yeast_notes || '', status: selectedTest.yeast_status || 'normal', accuracy: selectedTest.yeast_accuracy || 0, isEditing: false },
-      { item: 'Mucus', count: selectedTest.mucus_count || '0', unit: selectedTest.mucus_unit || '/LPF', morphology: selectedTest.mucus_morphology || 'Normal', notes: selectedTest.mucus_notes || '', status: selectedTest.mucus_status || 'normal', accuracy: selectedTest.mucus_accuracy || 0, isEditing: false },
-      { item: 'Sperm', count: selectedTest.sperm_count || '0', unit: selectedTest.sperm_unit || '/HPF', morphology: selectedTest.sperm_morphology || 'Normal', notes: selectedTest.sperm_notes || '', status: selectedTest.sperm_status || 'normal', accuracy: selectedTest.sperm_accuracy || 0, isEditing: false },
-      { item: 'Parasites', count: selectedTest.parasites_count || '0', unit: selectedTest.parasites_unit || '/HPF', morphology: selectedTest.parasites_morphology || 'Normal', notes: selectedTest.parasites_notes || '', status: selectedTest.parasites_status || 'normal', accuracy: selectedTest.parasites_accuracy || 0, isEditing: false },
-    ]
-  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -197,7 +197,14 @@ export default function Report() {
   const [dummy, setDummy] = useState(0) // Used to trigger re-renders - keeping for future use
   const toggleEdit = () => setDummy(prev => prev + 1)
 
-  const findings = useMemo(() => getMicroscopicFindings(), [selectedTest])
+  // Calculate statistics from AI counts
+  const findings = useMemo(() => {
+    if (!selectedTest) return []
+    return Object.values(aiCounts).map(count => ({
+      count: count.split(' ')[0], // Extract number from "5 (Few)"
+      status: count.includes('None') ? 'normal' : count.includes('Rare') ? 'normal' : 'abnormal'
+    }))
+  }, [selectedTest, aiCounts])
 
   // Search and filter tests by date and search query
   const filteredTests = useMemo(() => {
@@ -297,6 +304,15 @@ export default function Report() {
       return
     }
     
+    // Check image limit based on current power mode
+    const currentImageCount = powerMode === 'high' ? highPowerImages.length : lowPowerImages.length
+    if (currentImageCount >= 10) {
+      setNotificationMessage(`Maximum of 10 ${powerMode === 'high' ? 'HPF' : 'LPF'} images reached. Please delete some images before adding more.`)
+      setNotificationType('error')
+      setShowNotification(true)
+      return
+    }
+    
     try {
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
@@ -334,14 +350,21 @@ export default function Report() {
           setLowPowerImages(prev => [...prev, imageDataUrl])
         }
         
+        // Check if we've reached 10 LPF images and auto-switch to HPF
+        if (powerMode === 'low' && lowPowerImages.length + 1 >= 10) {
+          setPowerMode('high')
+          setNotificationMessage(`✅ Captured LPF image ${lowPowerImages.length + 1}/10. Automatically switched to HPF mode for detailed analysis.`)
+          setNotificationType('success')
+        } else {
+          setNotificationMessage(`Image captured and saved successfully! (${currentImageCount + 1}/10 ${powerMode === 'high' ? 'HPF' : 'LPF'})`)
+          setNotificationType('success')
+        }
+        setShowNotification(true)
+        
         // Refresh test data
         if (dateParam) {
           await preloadByDate(dateParam)
         }
-        
-        setNotificationMessage('Image captured and saved successfully!')
-        setNotificationType('success')
-        setShowNotification(true)
       } else {
         throw new Error('Failed to upload image')
       }
@@ -594,7 +617,155 @@ export default function Report() {
       setHighPowerImages([])
       setLowPowerImages([])
     }
+    // Reset current indices when test changes
+    setCurrentHPFIndex(0)
+    setCurrentLPFIndex(0)
   }, [selectedTest])
+
+  // Load AI counts from database when test is selected
+  useEffect(() => {
+    if (selectedTest) {
+      setAiCounts({
+        'Epithelial cells': selectedTest.ai_epithelial_cells_count || '0 (None)',
+        'Crystals (normal)': selectedTest.ai_crystals_normal_count || '0 (None)',
+        'Bacteria': selectedTest.ai_bacteria_count || '0 (None)',
+        'Mucus threads': selectedTest.ai_mucus_threads_count || '0 (None)',
+        'Casts': selectedTest.ai_casts_count || '0 (None)',
+        'RBCs': selectedTest.ai_rbcs_count || '0 (None)',
+        'WBCs': selectedTest.ai_wbcs_count || '0 (None)',
+        'Squamous epithelial cells': selectedTest.ai_squamous_epithelial_cells_count || '0 (None)',
+        'Transitional epithelial cells, yeasts, Trichomonas': selectedTest.ai_transitional_epithelial_cells_count || '0 (None)',
+        'Renal tubular epithelial cells': selectedTest.ai_renal_tubular_epithelial_cells_count || '0 (None)',
+        'Oval fat bodies': selectedTest.ai_oval_fat_bodies_count || '0 (None)',
+        'Abnormal crystals, casts': selectedTest.ai_abnormal_crystals_casts_count || '0 (None)'
+      })
+    } else {
+      // Reset to default values when no test is selected
+      setAiCounts({
+        'Epithelial cells': '0 (None)',
+        'Crystals (normal)': '0 (None)',
+        'Bacteria': '0 (None)',
+        'Mucus threads': '0 (None)',
+        'Casts': '0 (None)',
+        'RBCs': '0 (None)',
+        'WBCs': '0 (None)',
+        'Squamous epithelial cells': '0 (None)',
+        'Transitional epithelial cells, yeasts, Trichomonas': '0 (None)',
+        'Renal tubular epithelial cells': '0 (None)',
+        'Oval fat bodies': '0 (None)',
+        'Abnormal crystals, casts': '0 (None)'
+      })
+    }
+  }, [selectedTest])
+
+  // Ensure camera stream is attached to video element when test changes
+  useEffect(() => {
+    if (mediaStream && videoRef.current && liveStreamActive) {
+      const videoElement = videoRef.current
+      // @ts-ignore - srcObject is supported in browsers
+      if (videoElement.srcObject !== mediaStream) {
+        videoElement.srcObject = mediaStream
+        videoElement.onloadedmetadata = async () => {
+          try { 
+            await videoElement.play() 
+          } catch (err) {
+            console.error('Failed to play video:', err)
+          }
+        }
+      }
+    }
+  }, [selectedTest, mediaStream, liveStreamActive])
+
+  // Generate dropdown options for AI counts based on Strasinger standards
+  const getAICountOptions = (item: string, quantitated: string): string[] => {
+    const options: string[] = []
+    
+    switch (item.toLowerCase()) {
+      case 'epithelial cells':
+        if (quantitated === 'per LPF') {
+          for (let i = 0; i <= 5; i++) options.push(`${i} (Rare)`)
+          for (let i = 6; i <= 20; i++) options.push(`${i} (Few)`)
+          for (let i = 21; i <= 100; i += 5) options.push(`${i} (Moderate)`)
+          options.push('>100 (Many)')
+        }
+        break
+      case 'crystals (normal)':
+        if (quantitated === 'per HPF') {
+          for (let i = 0; i <= 2; i++) options.push(`${i} (Rare)`)
+          for (let i = 3; i <= 5; i++) options.push(`${i} (Few)`)
+          for (let i = 6; i <= 20; i += 2) options.push(`${i} (Moderate)`)
+          options.push('>20 (Many)')
+        }
+        break
+      case 'bacteria':
+        if (quantitated === 'per HPF') {
+          for (let i = 0; i <= 10; i++) options.push(`${i} (Rare)`)
+          for (let i = 11; i <= 50; i += 5) options.push(`${i} (Few)`)
+          for (let i = 55; i <= 200; i += 15) options.push(`${i} (Moderate)`)
+          options.push('>200 (Many)')
+        }
+        break
+      case 'mucus threads':
+        if (quantitated === 'per LPF') {
+          for (let i = 0; i <= 1; i++) options.push(`${i} (Rare)`)
+          for (let i = 2; i <= 3; i++) options.push(`${i} (Few)`)
+          for (let i = 4; i <= 10; i++) options.push(`${i} (Moderate)`)
+          options.push('>10 (Many)')
+        }
+        break
+      case 'rbcs':
+      case 'wbcs':
+        if (quantitated === 'per HPF') {
+          for (let i = 0; i <= 2; i++) options.push(`${i} (None)`)
+          for (let i = 3; i <= 5; i++) options.push(`${i} (Rare)`)
+          for (let i = 6; i <= 10; i++) options.push(`${i} (Few)`)
+          for (let i = 11; i <= 25; i += 3) options.push(`${i} (Moderate)`)
+          for (let i = 28; i <= 50; i += 5) options.push(`${i} (Many)`)
+          options.push('>50 (Many)')
+        }
+        break
+      default:
+        // For items with descriptive ranges
+        const descriptiveItems = ['casts', 'squamous epithelial cells', 'transitional epithelial cells', 'renal tubular epithelial cells', 'oval fat bodies', 'abnormal crystals']
+        if (descriptiveItems.some(desc => item.toLowerCase().includes(desc))) {
+          options.push('0 (None)', '1-2 (Rare)', '3-5 (Few)', '6-10 (Moderate)', '>10 (Many)')
+        }
+        break
+    }
+    
+    return options.length > 0 ? options : ['0 (None)', '1-2 (Rare)', '3-5 (Few)', '6-10 (Moderate)', '>10 (Many)']
+  }
+
+  // Handle AI count change
+  const handleAICountChange = async (item: string, newValue: string) => {
+    // Update local state immediately for responsive UI
+    setAiCounts(prev => ({
+      ...prev,
+      [item]: newValue
+    }))
+
+    // Save to database if a test is selected
+    if (selectedTest) {
+      try {
+        const updatedCounts = {
+          ...aiCounts,
+          [item]: newValue
+        }
+        await updateAICounts(selectedTest.id, updatedCounts)
+        console.log('AI count updated successfully:', item, newValue)
+      } catch (error) {
+        console.error('Failed to update AI count:', error)
+        // Revert local state on error
+        setAiCounts(prev => ({
+          ...prev,
+          [item]: aiCounts[item] // Revert to previous value
+        }))
+        setNotificationMessage('Failed to save AI count. Please try again.')
+        setNotificationType('error')
+        setShowNotification(true)
+      }
+    }
+  }
 
   const handleEditToggle = () => {
     if (isEditing) {
@@ -800,21 +971,6 @@ export default function Report() {
     }
   }
 
-  const handleAnalysisComplete = async (result: UrinalysisResult) => {
-    if (selectedTest) {
-      try {
-        await updateTestWithAnalysis(selectedTest.id, result)
-        // Refresh the data to show updated results
-        if (dateParam) {
-          preloadByDate(dateParam)
-        }
-        alert('Analysis results saved successfully!')
-      } catch (error) {
-        console.error('Failed to save analysis:', error)
-        alert('Failed to save analysis results. Please try again.')
-      }
-    }
-  }
 
   const handlePatientCreated = async (patientData: { name: string; age: string; gender: string; patient_id: string }) => {
     try {
@@ -1277,7 +1433,14 @@ export default function Report() {
 
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto relative h-full" key={selectedPatient?.id || 'no-patient'}>
-          {!selectedPatient ? (
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <div className="text-gray-600">Loading test data...</div>
+              </div>
+            </div>
+          ) : !selectedPatient ? (
             <div className="text-center py-12 text-gray-600">Select a patient or use the calendar</div>
           ) : (
             <>
@@ -1367,7 +1530,7 @@ export default function Report() {
                     >
                       <Microscope className="h-4 w-4" />
                       <span className="text-sm font-medium">
-                        {powerMode === 'high' ? 'HPF' : 'LPF'}
+                        {powerMode === 'high' ? 'HPF' : 'LPF'} ({powerMode === 'high' ? highPowerImages.length : lowPowerImages.length}/10)
                       </span>
                     </button>
                     <button
@@ -1395,11 +1558,11 @@ export default function Report() {
                     <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md rounded-full px-6 py-3 border border-white/20 shadow-lg">
                       <button
                         onClick={captureImage}
-                        disabled={!liveStreamActive || !mediaStream}
+                        disabled={!liveStreamActive || !mediaStream || (powerMode === 'high' ? highPowerImages.length >= 10 : lowPowerImages.length >= 10)}
                         className="px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 text-sm font-medium flex items-center gap-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
                       >
                         <Plus className="h-4 w-4" />
-                        Capture {powerMode === 'high' ? 'HPF' : 'LPF'}
+                        Capture {powerMode === 'high' ? 'HPF' : 'LPF'} ({powerMode === 'high' ? highPowerImages.length : lowPowerImages.length}/10)
                       </button>
                     </div>
                   </div>
@@ -1412,9 +1575,18 @@ export default function Report() {
                           {liveStreamActive && mediaStream ? 'Live Camera Feed' : 'Camera Offline'}
                         </div>
                         <div className="text-white/70 text-xs mt-1">
-                          <div>HPF: {highPowerImages.length}/10</div>
-                          <div>LPF: {lowPowerImages.length}/10</div>
+                          <div className={`${powerMode === 'high' ? 'text-blue-300 font-semibold' : ''}`}>
+                            HPF: {highPowerImages.length}/10 {highPowerImages.length >= 10 ? '✓' : ''}
+                          </div>
+                          <div className={`${powerMode === 'low' ? 'text-orange-300 font-semibold' : ''}`}>
+                            LPF: {lowPowerImages.length}/10 {lowPowerImages.length >= 10 ? '✓' : ''}
+                          </div>
                         </div>
+                        {lowPowerImages.length >= 10 && highPowerImages.length >= 10 && (
+                          <div className="text-green-300 text-xs mt-1 font-semibold">
+                            All fields captured!
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1425,13 +1597,13 @@ export default function Report() {
            
 
               {showHeader ? (
-              <div id="report-content" className="bg-white rounded-lg p-3 shadow-sm mb-3 relative">
-                <div className="flex items-center justify-between mb-2">
-                   <h1 className="text-lg md:text-xl font-bold text-gray-900">Microscopic Urine Analysis Report - {selectedTest?.test_code || 'N/A'}</h1>
-                   <div className="flex items-center gap-2">
+              <div id="report-content" className="bg-white rounded-lg p-2 shadow-sm mb-2 relative">
+                <div className="flex items-center justify-between mb-1.5">
+                   <h1 className="text-sm md:text-base font-bold text-gray-900">Microscopic Urine Analysis Report - {selectedTest?.test_code || 'N/A'}</h1>
+                   <div className="flex items-center gap-1.5">
                      <button
                        onClick={() => setShowHistory((v) => !v)}
-                       className={`h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg transition-colors text-xs ${
+                       className={`h-6 inline-flex items-center gap-1 px-2 rounded transition-colors text-xs ${
                          showHistory 
                            ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' 
                            : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
@@ -1439,11 +1611,11 @@ export default function Report() {
                        title={showHistory ? 'Hide patient history' : 'Show patient history'}
                      >
                        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-                       <span>{showHistory ? 'Hide History' : 'Show History'}</span>
+                       <span>{showHistory ? 'Hide' : 'Show'}</span>
                      </button>
                      <button 
                        onClick={handleEditToggle}
-                       className={`h-8 inline-flex items-center gap-1.5 px-2.5 rounded-md transition-colors text-xs ${
+                       className={`h-6 inline-flex items-center gap-1 px-2 rounded transition-colors text-xs ${
                          isEditing 
                            ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' 
                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
@@ -1456,7 +1628,7 @@ export default function Report() {
                        <button 
                          onClick={handleSave}
                          disabled={saving}
-                         className={`h-8 inline-flex items-center gap-1.5 bg-green-600 text-white px-2.5 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 text-xs`}
+                         className={`h-6 inline-flex items-center gap-1 bg-green-600 text-white px-2 rounded hover:bg-green-700 transition-colors disabled:opacity-50 text-xs`}
                        >
                          <Save className="h-3 w-3" />
                          <span>{saving ? 'Saving...' : 'Save'}</span>
@@ -1466,7 +1638,7 @@ export default function Report() {
                        <>
                          <button 
                            onClick={handleDeleteTest}
-                           className={`h-8 inline-flex items-center gap-1.5 px-2.5 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors text-xs`}
+                           className={`h-6 inline-flex items-center gap-1 px-2 rounded bg-red-600 text-white hover:bg-red-700 transition-colors text-xs`}
                            title="Delete Test"
                          >
                            <Trash2 className="h-3 w-3" />
@@ -1475,7 +1647,7 @@ export default function Report() {
                          <button 
                            onClick={handleValidateTest}
                            disabled={selectedTest.status === 'reviewed'}
-                           className={`h-8 inline-flex items-center gap-1.5 px-2.5 rounded-md transition-colors text-xs ${selectedTest.status === 'reviewed' ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
+                           className={`h-6 inline-flex items-center gap-1 px-2 rounded transition-colors text-xs ${selectedTest.status === 'reviewed' ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
                            title="Verify Test"
                          >
                            <CheckCircle className="h-3 w-3" />
@@ -1485,8 +1657,8 @@ export default function Report() {
                      )}
                    </div>
                  </div>
-                                 <div className="grid grid-cols-3 gap-4 mb-3">
-                   <div className="space-y-2">
+                                 <div className="grid grid-cols-3 gap-3 mb-2">
+                   <div className="space-y-1">
                      <div className="flex justify-between">
                        <span className="text-xs text-gray-700 font-medium">Name:</span>
                        {isEditing ? (
@@ -1494,7 +1666,7 @@ export default function Report() {
                            type="text"
                            value={editData.patientName}
                            onChange={(e) => setEditData(prev => ({ ...prev, patientName: e.target.value }))}
-                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
                          />
                        ) : (
                          <span className="text-xs font-semibold text-gray-900">{selectedPatient.name}</span>
@@ -1511,7 +1683,7 @@ export default function Report() {
                            type="number"
                            value={editData.patientAge}
                            onChange={(e) => setEditData(prev => ({ ...prev, patientAge: e.target.value }))}
-                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500 w-16"
+                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500 w-14"
                            min="0"
                            max="150"
                          />
@@ -1520,14 +1692,14 @@ export default function Report() {
                        )}
                      </div>
                    </div>
-                   <div className="space-y-2">
+                   <div className="space-y-1">
                      <div className="flex justify-between">
                        <span className="text-xs text-gray-700 font-medium">Gender:</span>
                        {isEditing ? (
                          <select
                            value={editData.patientGender}
                            onChange={(e) => setEditData(prev => ({ ...prev, patientGender: e.target.value as 'male' | 'female' | 'other' }))}
-                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
                          >
                            <option value="male">Male</option>
                            <option value="female">Female</option>
@@ -1544,14 +1716,14 @@ export default function Report() {
                            type="time"
                            value={editData.collectionTime}
                            onChange={(e) => setEditData(prev => ({ ...prev, collectionTime: e.target.value }))}
-                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
                          />
                        ) : (
                          <span className="text-xs font-semibold text-gray-900">{selectedTest?.collection_time || 'N/A'}</span>
                        )}
                      </div>
                    </div>
-                   <div className="space-y-2">
+                   <div className="space-y-1">
                      <div className="flex justify-between">
                        <span className="text-xs text-gray-700 font-medium">Analysis Date:</span>
                        <span className="text-xs font-semibold text-gray-900">{selectedTest?.analysis_date || 'N/A'}</span>
@@ -1563,7 +1735,7 @@ export default function Report() {
                            type="text"
                            value={editData.technician}
                            onChange={(e) => setEditData(prev => ({ ...prev, technician: e.target.value }))}
-                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
                          />
                        ) : (
                          <span className="text-xs font-semibold text-gray-900">{selectedTest?.technician || 'N/A'}</span>
@@ -1571,7 +1743,7 @@ export default function Report() {
                      </div>
                      <div className="flex justify-between items-center">
                        <span className="text-xs text-gray-700 font-medium">Status:</span>
-                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] md:text-xs font-semibold tracking-wide ${
+                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide ${
                          selectedTest?.status === 'pending' 
                            ? 'bg-orange-100 text-orange-800 border border-orange-200'
                            : selectedTest?.status === 'completed'
@@ -1590,7 +1762,7 @@ export default function Report() {
                   
                   {/* Patient History (integrated within main card) */}
                   {showHistory && (
-                    <div className="border-t border-gray-200 pt-3 mt-3">
+                    <div className="border-t border-gray-200 pt-2 mt-2">
                       <PatientTestHistory 
                         selectedPatient={selectedPatient}
                         selectedTest={selectedTest}
@@ -1611,40 +1783,128 @@ export default function Report() {
                          <Microscope className="h-4 w-4 mr-2 text-orange-600" />
                          Low Power Field (LPF)
                          <span className="ml-2 text-xs text-gray-600 font-normal">- Overview Analysis</span>
-                         <span className="ml-3 text-xs font-medium text-gray-500 bg-orange-100 px-2 py-0.5 rounded-full">
-                           {lowPowerImages.length}/10 images
+                         <span className={`ml-3 text-xs font-medium px-2 py-0.5 rounded-full ${
+                           lowPowerImages.length >= 10 
+                             ? 'text-green-700 bg-green-100' 
+                             : lowPowerImages.length >= 7 
+                             ? 'text-yellow-700 bg-yellow-100' 
+                             : 'text-gray-500 bg-orange-100'
+                         }`}>
+                           {lowPowerImages.length}/10 images {lowPowerImages.length >= 10 ? '✓' : ''}
                          </span>
                        </h3>
                      </div>
                    </div>
 
-                   {/* LPF Image Grid */}
+                   {/* LPF Photo Gallery */}
                    {lowPowerImages.length > 0 ? (
-                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
-                       {lowPowerImages.map((imageUrl, index) => (
-                         <div key={index} className="relative group">
-                           <img
-                             src={imageUrl}
-                             alt={`LPF Sample ${index + 1}`}
-                             className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
-                             onClick={() => setModalImage({ 
-                               src: imageUrl, 
-                               alt: `LPF Sample ${index + 1}`, 
-                               title: `Low Power Field Sample ${index + 1}` 
-                             })}
-                             onError={(e) => {
-                               console.error('Failed to load image:', imageUrl)
-                               e.currentTarget.style.display = 'none'
-                             }}
-                           />
+                     <div className="bg-white rounded-lg border-2 border-gray-300 overflow-hidden mb-4">
+                       <div className="flex h-96">
+                         {/* Main Image Display */}
+                         <div className="flex-1 bg-gray-100 flex items-center justify-center relative">
+                           {lowPowerImages.length > 0 ? (
+                             <img
+                               src={lowPowerImages[currentLPFIndex]}
+                               alt="LPF Sample"
+                               className="max-w-full max-h-full object-contain"
+                               onError={(e) => {
+                                 console.error('Failed to load image:', lowPowerImages[currentLPFIndex])
+                                 e.currentTarget.style.display = 'none'
+                               }}
+                             />
+                           ) : (
+                             <div className="text-gray-500 text-center">
+                               <Microscope className="h-16 w-16 mx-auto mb-2 text-gray-400" />
+                               <p>No LPF images captured</p>
+                             </div>
+                           )}
+                           
+                           {/* Navigation Arrows */}
+                           {lowPowerImages.length > 1 && (
+                             <>
+                               <button 
+                                 onClick={() => setCurrentLPFIndex(prev => prev > 0 ? prev - 1 : lowPowerImages.length - 1)}
+                                 className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
+                               >
+                                 <ChevronLeft className="h-5 w-5" />
+                               </button>
+                               <button 
+                                 onClick={() => setCurrentLPFIndex(prev => prev < lowPowerImages.length - 1 ? prev + 1 : 0)}
+                                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
+                               >
+                                 <ChevronRight className="h-5 w-5" />
+                               </button>
+                             </>
+                           )}
+                           
+                           {/* Image Counter */}
+                           {lowPowerImages.length > 1 && (
+                             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
+                               {currentLPFIndex + 1} / {lowPowerImages.length}
+                             </div>
+                           )}
+                           
+                           {/* Delete Button */}
                            <button
-                             onClick={() => removeCapturedImage(index, 'low')}
-                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                             onClick={() => removeCapturedImage(currentLPFIndex, 'low')}
+                             className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                             title="Delete current image"
                            >
-                             ×
+                             <Trash2 className="h-4 w-4" />
                            </button>
                          </div>
-                       ))}
+                         
+                         {/* Sidebar - Sediment Description */}
+                         <div className="w-80 bg-white border-l-2 border-gray-300 p-3">
+                           <h4 className="font-semibold text-gray-900 mb-2 flex items-center text-sm">
+                             <Microscope className="h-3 w-3 mr-1 text-orange-600" />
+                             LPF Sediment Analysis
+                           </h4>
+                           
+                           <div className="space-y-2">
+                             {/* LPF Relevant Sediments - Compact */}
+                             <div className="bg-gray-50 p-2 rounded text-xs">
+                               <div className="flex justify-between items-center">
+                                 <span className="font-medium text-gray-700">Epithelial Cells</span>
+                                 <span className="font-semibold text-blue-600">{aiCounts['Epithelial cells']}</span>
+                               </div>
+                               <div className="text-gray-500 text-xs mt-0.5">per LPF</div>
+                             </div>
+                             
+                             <div className="bg-gray-50 p-2 rounded text-xs">
+                               <div className="flex justify-between items-center">
+                                 <span className="font-medium text-gray-700">Mucus Threads</span>
+                                 <span className="font-semibold text-blue-600">{aiCounts['Mucus threads']}</span>
+                               </div>
+                               <div className="text-gray-500 text-xs mt-0.5">per LPF</div>
+                             </div>
+                             
+                             <div className="bg-gray-50 p-2 rounded text-xs">
+                               <div className="flex justify-between items-center">
+                                 <span className="font-medium text-gray-700">Casts</span>
+                                 <span className="font-semibold text-blue-600">{aiCounts['Casts']}</span>
+                               </div>
+                               <div className="text-gray-500 text-xs mt-0.5">per LPF</div>
+                             </div>
+                             
+                             <div className="bg-gray-50 p-2 rounded text-xs">
+                               <div className="flex justify-between items-center">
+                                 <span className="font-medium text-gray-700">Squamous Epithelial</span>
+                                 <span className="font-semibold text-blue-600">{aiCounts['Squamous epithelial cells']}</span>
+                               </div>
+                               <div className="text-gray-500 text-xs mt-0.5">rare/few/moderate/many</div>
+                             </div>
+                             
+                             <div className="bg-gray-50 p-2 rounded text-xs">
+                               <div className="flex justify-between items-center">
+                                 <span className="font-medium text-gray-700">Abnormal Crystals</span>
+                                 <span className="font-semibold text-blue-600">{aiCounts['Abnormal crystals, casts']}</span>
+                               </div>
+                               <div className="text-gray-500 text-xs mt-0.5">avg per LPF</div>
+                             </div>
+                           </div>
+                         </div>
+                       </div>
                      </div>
                    ) : null}
 
@@ -1655,40 +1915,144 @@ export default function Report() {
                          <Microscope className="h-4 w-4 mr-2 text-blue-600" />
                          High Power Field (HPF)
                          <span className="ml-2 text-xs text-gray-600 font-normal">- Microscopic Analysis</span>
-                         <span className="ml-3 text-xs font-medium text-gray-500 bg-blue-100 px-2 py-0.5 rounded-full">
-                           {highPowerImages.length}/10 images
+                         <span className={`ml-3 text-xs font-medium px-2 py-0.5 rounded-full ${
+                           highPowerImages.length >= 10 
+                             ? 'text-green-700 bg-green-100' 
+                             : highPowerImages.length >= 7 
+                             ? 'text-yellow-700 bg-yellow-100' 
+                             : 'text-gray-500 bg-blue-100'
+                         }`}>
+                           {highPowerImages.length}/10 images {highPowerImages.length >= 10 ? '✓' : ''}
                          </span>
                        </h3>
                      </div>
                    </div>
 
-                   {/* HPF Image Grid */}
+                   {/* HPF Photo Gallery */}
                    {highPowerImages.length > 0 ? (
-                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
-                       {highPowerImages.map((imageUrl, index) => (
-                         <div key={index} className="relative group">
-                           <img
-                             src={imageUrl}
-                             alt={`HPF Sample ${index + 1}`}
-                             className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
-                             onClick={() => setModalImage({ 
-                               src: imageUrl, 
-                               alt: `HPF Sample ${index + 1}`, 
-                               title: `High Power Field Sample ${index + 1}` 
-                             })}
-                             onError={(e) => {
-                               console.error('Failed to load image:', imageUrl)
-                               e.currentTarget.style.display = 'none'
-                             }}
-                           />
+                     <div className="bg-white rounded-lg border-2 border-gray-300 overflow-hidden mb-4">
+                       <div className="flex h-96">
+                         {/* Main Image Display */}
+                         <div className="flex-1 bg-gray-100 flex items-center justify-center relative">
+                           {highPowerImages.length > 0 ? (
+                             <img
+                               src={highPowerImages[currentHPFIndex]}
+                               alt="HPF Sample"
+                               className="max-w-full max-h-full object-contain"
+                               onError={(e) => {
+                                 console.error('Failed to load image:', highPowerImages[currentHPFIndex])
+                                 e.currentTarget.style.display = 'none'
+                               }}
+                             />
+                           ) : (
+                             <div className="text-gray-500 text-center">
+                               <Microscope className="h-16 w-16 mx-auto mb-2 text-gray-400" />
+                               <p>No HPF images captured</p>
+                             </div>
+                           )}
+                           
+                           {/* Navigation Arrows */}
+                           {highPowerImages.length > 1 && (
+                             <>
+                               <button 
+                                 onClick={() => setCurrentHPFIndex(prev => prev > 0 ? prev - 1 : highPowerImages.length - 1)}
+                                 className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
+                               >
+                                 <ChevronLeft className="h-5 w-5" />
+                               </button>
+                               <button 
+                                 onClick={() => setCurrentHPFIndex(prev => prev < highPowerImages.length - 1 ? prev + 1 : 0)}
+                                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
+                               >
+                                 <ChevronRight className="h-5 w-5" />
+                               </button>
+                             </>
+                           )}
+                           
+                           {/* Image Counter */}
+                           {highPowerImages.length > 1 && (
+                             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
+                               {currentHPFIndex + 1} / {highPowerImages.length}
+                             </div>
+                           )}
+                           
+                           {/* Delete Button */}
                            <button
-                             onClick={() => removeCapturedImage(index, 'high')}
-                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                             onClick={() => removeCapturedImage(currentHPFIndex, 'high')}
+                             className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                             title="Delete current image"
                            >
-                             ×
+                             <Trash2 className="h-4 w-4" />
                            </button>
                          </div>
-                       ))}
+                         
+                         {/* Sidebar - Sediment Description */}
+                         <div className="w-80 bg-white border-l-2 border-gray-300 p-3">
+                           <h4 className="font-semibold text-gray-900 mb-2 flex items-center text-sm">
+                             <Microscope className="h-3 w-3 mr-1 text-blue-600" />
+                             HPF Sediment Analysis
+                           </h4>
+                           
+                           <div className="space-y-2">
+                             {/* HPF Relevant Sediments - Compact */}
+                             <div className="bg-gray-50 p-2 rounded text-xs">
+                               <div className="flex justify-between items-center">
+                                 <span className="font-medium text-gray-700">Crystals (Normal)</span>
+                                 <span className="font-semibold text-blue-600">{aiCounts['Crystals (normal)']}</span>
+                               </div>
+                               <div className="text-gray-500 text-xs mt-0.5">per HPF</div>
+                             </div>
+                             
+                             <div className="bg-gray-50 p-2 rounded text-xs">
+                               <div className="flex justify-between items-center">
+                                 <span className="font-medium text-gray-700">Bacteria</span>
+                                 <span className="font-semibold text-blue-600">{aiCounts['Bacteria']}</span>
+                               </div>
+                               <div className="text-gray-500 text-xs mt-0.5">per HPF</div>
+                             </div>
+                             
+                             <div className="bg-gray-50 p-2 rounded text-xs">
+                               <div className="flex justify-between items-center">
+                                 <span className="font-medium text-gray-700">RBCs</span>
+                                 <span className="font-semibold text-blue-600">{aiCounts['RBCs']}</span>
+                               </div>
+                               <div className="text-gray-500 text-xs mt-0.5">per HPF</div>
+                             </div>
+                             
+                             <div className="bg-gray-50 p-2 rounded text-xs">
+                               <div className="flex justify-between items-center">
+                                 <span className="font-medium text-gray-700">WBCs</span>
+                                 <span className="font-semibold text-blue-600">{aiCounts['WBCs']}</span>
+                               </div>
+                               <div className="text-gray-500 text-xs mt-0.5">per HPF</div>
+                             </div>
+                             
+                             <div className="bg-gray-50 p-2 rounded text-xs">
+                               <div className="flex justify-between items-center">
+                                 <span className="font-medium text-gray-700">Transitional/Yeasts/Trichomonas</span>
+                                 <span className="font-semibold text-blue-600">{aiCounts['Transitional epithelial cells, yeasts, Trichomonas']}</span>
+                               </div>
+                               <div className="text-gray-500 text-xs mt-0.5">rare/few/moderate/many</div>
+                             </div>
+                             
+                             <div className="bg-gray-50 p-2 rounded text-xs">
+                               <div className="flex justify-between items-center">
+                                 <span className="font-medium text-gray-700">Renal Tubular Epithelial</span>
+                                 <span className="font-semibold text-blue-600">{aiCounts['Renal tubular epithelial cells']}</span>
+                               </div>
+                               <div className="text-gray-500 text-xs mt-0.5">avg per 10 HPFs</div>
+                             </div>
+                             
+                             <div className="bg-gray-50 p-2 rounded text-xs">
+                               <div className="flex justify-between items-center">
+                                 <span className="font-medium text-gray-700">Oval Fat Bodies</span>
+                                 <span className="font-semibold text-blue-600">{aiCounts['Oval fat bodies']}</span>
+                               </div>
+                               <div className="text-gray-500 text-xs mt-0.5">avg per HPF</div>
+                             </div>
+                           </div>
+                         </div>
+                       </div>
                      </div>
                    ) : null}
                    
@@ -1873,24 +2237,6 @@ export default function Report() {
                      Microscopic Quantitations (Strasinger)
                      <span className="ml-2 text-xs text-gray-600 font-normal">- Clinical Reference Standards</span>
                    </h3>
-                   <div className="flex items-center space-x-3 text-xs">
-                     <div className="flex items-center space-x-1">
-                       <span className="text-gray-600">Total Elements:</span>
-                       <span className="font-semibold text-gray-900">{findings.length}</span>
-                     </div>
-                     <div className="flex items-center space-x-1">
-                       <span className="text-gray-600">Abnormal:</span>
-                       <span className="font-semibold text-orange-600">
-                         {findings.filter(f => f.status === 'abnormal' || f.status === 'critical').length}
-                       </span>
-                     </div>
-                     <div className="flex items-center space-x-1">
-                       <span className="text-gray-600">Avg Accuracy:</span>
-                       <span className="font-semibold text-blue-600">
-                         {findings.length > 0 ? Math.round(findings.reduce((sum, f) => sum + f.accuracy, 0) / findings.length) : 0}%
-                       </span>
-                     </div>
-                   </div>
                  </div>
                  
                  <div className="overflow-x-auto">
@@ -1898,7 +2244,7 @@ export default function Report() {
                      {/* Header */}
                      <thead>
                        <tr className="bg-blue-600 text-white">
-                         <th className="py-1.5 px-2 text-center font-bold text-sm" colSpan={7}>
+                         <th className="py-1.5 px-2 text-center font-bold text-sm" colSpan={8}>
                            MICROSCOPIC QUANTITATIONS (Strasinger)
                          </th>
                        </tr>
@@ -1909,7 +2255,8 @@ export default function Report() {
                          <th className="py-1.5 px-2 text-center font-semibold text-gray-800 border-r border-gray-300">Rare</th>
                          <th className="py-1.5 px-2 text-center font-semibold text-gray-800 border-r border-gray-300">Few</th>
                          <th className="py-1.5 px-2 text-center font-semibold text-gray-800 border-r border-gray-300">Moderate</th>
-                         <th className="py-1.5 px-2 text-center font-semibold text-gray-800">Many</th>
+                         <th className="py-1.5 px-2 text-center font-semibold text-gray-800 border-r border-gray-300">Many</th>
+                         <th className="py-1.5 px-2 text-center font-semibold text-gray-800">AI Count</th>
                        </tr>
                      </thead>
                      <tbody>
@@ -1921,7 +2268,18 @@ export default function Report() {
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">0-5</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">5-20</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">20-100</td>
-                         <td className="py-1.5 px-2 text-center text-gray-700">&gt;100</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">&gt;100</td>
+                         <td className="py-1.5 px-2 text-center border-r border-gray-300">
+                           <select 
+                             value={aiCounts['Epithelial cells']} 
+                             onChange={(e) => handleAICountChange('Epithelial cells', e.target.value)}
+                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
+                           >
+                             {getAICountOptions('Epithelial cells', 'per LPF').map(option => (
+                               <option key={option} value={option}>{option}</option>
+                             ))}
+                           </select>
+                         </td>
                        </tr>
                        
                        {/* Crystals (normal) */}
@@ -1932,7 +2290,18 @@ export default function Report() {
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">0-2</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">2-5</td>
                          <td className="py-1.5 px-2 text-center text-red-600 font-semibold border-r border-gray-300">5-20</td>
-                         <td className="py-1.5 px-2 text-center text-gray-700">&gt;20</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">&gt;20</td>
+                         <td className="py-1.5 px-2 text-center border-r border-gray-300">
+                           <select 
+                             value={aiCounts['Crystals (normal)']} 
+                             onChange={(e) => handleAICountChange('Crystals (normal)', e.target.value)}
+                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
+                           >
+                             {getAICountOptions('Crystals (normal)', 'per HPF').map(option => (
+                               <option key={option} value={option}>{option}</option>
+                             ))}
+                           </select>
+                         </td>
                        </tr>
                        
                        {/* Bacteria */}
@@ -1943,7 +2312,18 @@ export default function Report() {
                          <td className="py-1.5 px-2 text-center text-red-600 font-semibold border-r border-gray-300">0-10</td>
                          <td className="py-1.5 px-2 text-center text-red-600 font-semibold border-r border-gray-300">10-50</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">50-200</td>
-                         <td className="py-1.5 px-2 text-center text-gray-700">&gt;200</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">&gt;200</td>
+                         <td className="py-1.5 px-2 text-center border-r border-gray-300">
+                           <select 
+                             value={aiCounts['Bacteria']} 
+                             onChange={(e) => handleAICountChange('Bacteria', e.target.value)}
+                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
+                           >
+                             {getAICountOptions('Bacteria', 'per HPF').map(option => (
+                               <option key={option} value={option}>{option}</option>
+                             ))}
+                           </select>
+                         </td>
                        </tr>
                        
                        {/* Mucus threads */}
@@ -1954,7 +2334,18 @@ export default function Report() {
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">0-1</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">1-3</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">3-10</td>
-                         <td className="py-1.5 px-2 text-center text-gray-700">&gt;10</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">&gt;10</td>
+                         <td className="py-1.5 px-2 text-center border-r border-gray-300">
+                           <select 
+                             value={aiCounts['Mucus threads']} 
+                             onChange={(e) => handleAICountChange('Mucus threads', e.target.value)}
+                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
+                           >
+                             {getAICountOptions('Mucus threads', 'per LPF').map(option => (
+                               <option key={option} value={option}>{option}</option>
+                             ))}
+                           </select>
+                         </td>
                        </tr>
                        
                        {/* Casts */}
@@ -1963,6 +2354,17 @@ export default function Report() {
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">per LPF</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300" colSpan={5}>
                            Numerical ranges: 0-2, 2-5, 5-10, &gt;10
+                         </td>
+                         <td className="py-1.5 px-2 text-center border-r border-gray-300">
+                           <select 
+                             value={aiCounts['Casts']} 
+                             onChange={(e) => handleAICountChange('Casts', e.target.value)}
+                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
+                           >
+                             {getAICountOptions('Casts', 'per LPF').map(option => (
+                               <option key={option} value={option}>{option}</option>
+                             ))}
+                           </select>
                          </td>
                        </tr>
                        
@@ -1973,6 +2375,17 @@ export default function Report() {
                          <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300" colSpan={5}>
                            Numerical ranges: 0-2, 2-5, 5-10, 10-25, 25-50, 50-100, &gt;100
                          </td>
+                         <td className="py-3 px-4 text-center border-r border-gray-300">
+                           <select 
+                             value={aiCounts['RBCs']} 
+                             onChange={(e) => handleAICountChange('RBCs', e.target.value)}
+                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
+                           >
+                             {getAICountOptions('RBCs', 'per HPF').map(option => (
+                               <option key={option} value={option}>{option}</option>
+                             ))}
+                           </select>
+                         </td>
                        </tr>
                        
                        {/* WBCs */}
@@ -1981,6 +2394,17 @@ export default function Report() {
                          <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">per HPF</td>
                          <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300" colSpan={5}>
                            Numerical ranges: 0-2, 2-5, 5-10, 10-25, 25-50, 50-100, &gt;100
+                         </td>
+                         <td className="py-3 px-4 text-center border-r border-gray-300">
+                           <select 
+                             value={aiCounts['WBCs']} 
+                             onChange={(e) => handleAICountChange('WBCs', e.target.value)}
+                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
+                           >
+                             {getAICountOptions('WBCs', 'per HPF').map(option => (
+                               <option key={option} value={option}>{option}</option>
+                             ))}
+                           </select>
                          </td>
                        </tr>
                        
@@ -1991,6 +2415,17 @@ export default function Report() {
                          <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
                            Rare, few, moderate or many per LPF
                          </td>
+                         <td className="py-3 px-4 text-center border-r border-gray-300">
+                           <select 
+                             value={aiCounts['Squamous epithelial cells']} 
+                             onChange={(e) => handleAICountChange('Squamous epithelial cells', e.target.value)}
+                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
+                           >
+                             {getAICountOptions('Squamous epithelial cells', 'per LPF').map(option => (
+                               <option key={option} value={option}>{option}</option>
+                             ))}
+                           </select>
+                         </td>
                        </tr>
                        
                        {/* Transitional epithelial cells, yeasts, Trichomonas */}
@@ -1999,6 +2434,17 @@ export default function Report() {
                          <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300"></td>
                          <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
                            Rare, few, moderate, or many per HPF
+                         </td>
+                         <td className="py-3 px-4 text-center border-r border-gray-300">
+                           <select 
+                             value={aiCounts['Transitional epithelial cells, yeasts, Trichomonas']} 
+                             onChange={(e) => handleAICountChange('Transitional epithelial cells, yeasts, Trichomonas', e.target.value)}
+                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
+                           >
+                             {getAICountOptions('Transitional epithelial cells, yeasts, Trichomonas', 'per HPF').map(option => (
+                               <option key={option} value={option}>{option}</option>
+                             ))}
+                           </select>
                          </td>
                        </tr>
                        
@@ -2009,6 +2455,17 @@ export default function Report() {
                          <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
                            Average number per 10 HPFs
                          </td>
+                         <td className="py-3 px-4 text-center border-r border-gray-300">
+                           <select 
+                             value={aiCounts['Renal tubular epithelial cells']} 
+                             onChange={(e) => handleAICountChange('Renal tubular epithelial cells', e.target.value)}
+                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
+                           >
+                             {getAICountOptions('Renal tubular epithelial cells', 'per 10 HPFs').map(option => (
+                               <option key={option} value={option}>{option}</option>
+                             ))}
+                           </select>
+                         </td>
                        </tr>
                        
                        {/* Oval fat bodies */}
@@ -2018,6 +2475,17 @@ export default function Report() {
                          <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
                            Average number per HPF
                          </td>
+                         <td className="py-3 px-4 text-center border-r border-gray-300">
+                           <select 
+                             value={aiCounts['Oval fat bodies']} 
+                             onChange={(e) => handleAICountChange('Oval fat bodies', e.target.value)}
+                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
+                           >
+                             {getAICountOptions('Oval fat bodies', 'per HPF').map(option => (
+                               <option key={option} value={option}>{option}</option>
+                             ))}
+                           </select>
+                         </td>
                        </tr>
                        
                        {/* Abnormal crystals, casts */}
@@ -2026,6 +2494,17 @@ export default function Report() {
                          <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300"></td>
                          <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
                            Average number per LPF
+                         </td>
+                         <td className="py-3 px-4 text-center border-r border-gray-300">
+                           <select 
+                             value={aiCounts['Abnormal crystals, casts']} 
+                             onChange={(e) => handleAICountChange('Abnormal crystals, casts', e.target.value)}
+                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
+                           >
+                             {getAICountOptions('Abnormal crystals, casts', 'per LPF').map(option => (
+                               <option key={option} value={option}>{option}</option>
+                             ))}
+                           </select>
                          </td>
                        </tr>
                      </tbody>
@@ -2060,16 +2539,6 @@ export default function Report() {
       </div>
 
 
-        {/* Image Analysis Modal */}
-        {showImageAnalysisModal && (
-          <div className="z-[9999]">
-            <ImageAnalysisModal
-              isOpen={showImageAnalysisModal}
-              onClose={() => setShowImageAnalysisModal(false)}
-              onAnalysisComplete={handleAnalysisComplete}
-            />
-          </div>
-        )}
 
 
         {/* Delete Confirmation Modal */}
