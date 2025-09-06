@@ -45,7 +45,6 @@ export default function Report() {
     patientName: '',
     patientAge: '',
     patientGender: 'male' as 'male' | 'female' | 'other',
-    sampleId: '',
     collectionTime: '',
     technician: ''
   })
@@ -76,13 +75,6 @@ export default function Report() {
   const [lowPowerImages, setLowPowerImages] = useState<string[]>([])
   const [dateParam, setDateParam] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const sp = new URLSearchParams(window.location.search)
-      setDateParam(sp.get('date'))
-    }
-  }, [])
-
   const {
     patients,
     selectedPatient,
@@ -98,6 +90,19 @@ export default function Report() {
     addPatientWithTest
   } = useDashboard()
 
+  // Function to generate shareable URL for current test
+  const getShareableUrl = () => {
+    if (selectedTest && typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      url.searchParams.set('test', selectedTest.id)
+      if (dateParam) {
+        url.searchParams.set('date', dateParam)
+      }
+      return url.toString()
+    }
+    return window.location.href
+  }
+
   useEffect(() => {
     if (dateParam) {
       console.log('Report page: Loading data for date:', dateParam)
@@ -110,6 +115,51 @@ export default function Report() {
       preloadByDate(today)
     }
   }, [dateParam, preloadByDate])
+
+  // Initialize date parameter from URL
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search)
+      setDateParam(sp.get('date'))
+    }
+  }, [])
+
+  // Update URL when test is selected
+  useEffect(() => {
+    if (selectedTest && typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      url.searchParams.set('test', selectedTest.id)
+      // Keep the date parameter if it exists
+      if (dateParam) {
+        url.searchParams.set('date', dateParam)
+      }
+      // Update URL without page reload
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [selectedTest, dateParam])
+
+  // Select test from URL parameter when tests are loaded
+  useEffect(() => {
+    if (tests.length > 0 && typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const testIdFromUrl = urlParams.get('test')
+      
+      if (testIdFromUrl) {
+        // Find the test with the ID from URL
+        const testFromUrl = tests.find(test => test.id === testIdFromUrl)
+        if (testFromUrl && testFromUrl.id !== selectedTest?.id) {
+          console.log('Selecting test from URL:', testFromUrl.test_code)
+          setSelectedTest(testFromUrl)
+          
+          // Also set the patient for this test
+          const testPatient = patients.find(p => p.id === testFromUrl.patient_id)
+          if (testPatient) {
+            setSelectedPatient(testPatient)
+          }
+        }
+      }
+    }
+  }, [tests, patients, selectedTest])
 
   const getMicroscopicFindings = (): MicroscopicFindings[] => {
     if (!selectedTest) return []
@@ -169,8 +219,7 @@ export default function Report() {
         return (
           patient?.name.toLowerCase().includes(query) ||
           patient?.patient_id.toLowerCase().includes(query) ||
-          test.test_code.toLowerCase().includes(query) ||
-          test.sample_id?.toLowerCase().includes(query)
+          test.test_code.toLowerCase().includes(query)
         )
       })
     }
@@ -185,7 +234,6 @@ export default function Report() {
         patientName: selectedPatient.name,
         patientAge: selectedPatient.age.toString(),
         patientGender: selectedPatient.gender,
-        sampleId: selectedTest.sample_id || '',
         collectionTime: selectedTest.collection_time || '',
         technician: selectedTest.technician || ''
       })
@@ -267,15 +315,16 @@ export default function Report() {
       
       // Create a File object from the blob
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-      const filename = `hpf-${selectedTest.test_code}-${timestamp}.jpg`
+      const powerType = powerMode === 'high' ? 'hpf' : 'lpf'
+      const filename = `${powerType}-${selectedTest.test_code}-${timestamp}.jpg`
       const file = new File([blob], filename, { type: 'image/jpeg' })
       
       // Upload to Supabase storage
       const imageUrl = await uploadImageToStorage(file, selectedTest.id, 'microscopic')
       
       if (imageUrl) {
-        // Add image to test record
-        await addImageToTest(selectedTest.id, imageUrl)
+        // Add image to test record with correct power type
+        await addImageToTest(selectedTest.id, imageUrl, powerType)
         
         // Update local state based on power mode
         const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8)
@@ -306,16 +355,20 @@ export default function Report() {
 
   // Remove captured image
   const removeCapturedImage = async (index: number, powerType: 'high' | 'low') => {
-    if (!selectedTest || !selectedTest.microscopic_images) return
+    if (!selectedTest) return
     
     try {
-      const imageUrl = selectedTest.microscopic_images[index]
+      // Get the correct image array based on power type
+      const imageArray = powerType === 'high' ? highPowerImages : lowPowerImages
+      const imageUrl = imageArray[index]
+      
       if (imageUrl) {
         // Remove from Supabase storage
         await deleteImageFromStorage(imageUrl)
         
-        // Remove from test record
-        await deleteImageFromTest(selectedTest.id, imageUrl)
+        // Remove from test record with correct power type
+        const dbPowerType = powerType === 'high' ? 'hpf' : 'lpf'
+        await deleteImageFromTest(selectedTest.id, imageUrl, dbPowerType)
         
         // Update local state based on power type
         if (powerType === 'high') {
@@ -530,13 +583,13 @@ export default function Report() {
     }
   }, [overlayEnabled, opencvReady, liveStreamActive, performSegmentation])
 
-  // Sync captured images with test's microscopic images
+  // Sync captured images with test's HPF and LPF images
   useEffect(() => {
-    if (selectedTest?.microscopic_images) {
-      // For now, we'll use the same array for both HPF and LPF
-      // In a real implementation, you might want separate fields in the database
-      setHighPowerImages(selectedTest.microscopic_images)
-      setLowPowerImages([]) // Initialize as empty for now
+    if (selectedTest) {
+      // Sync HPF images from database
+      setHighPowerImages(selectedTest.hpf_images || [])
+      // Sync LPF images from database
+      setLowPowerImages(selectedTest.lpf_images || [])
     } else {
       setHighPowerImages([])
       setLowPowerImages([])
@@ -551,7 +604,6 @@ export default function Report() {
           patientName: selectedPatient.name,
           patientAge: selectedPatient.age.toString(),
           patientGender: selectedPatient.gender,
-          sampleId: selectedTest.sample_id || '',
           collectionTime: selectedTest.collection_time || '',
           technician: selectedTest.technician || ''
         })
@@ -563,7 +615,6 @@ export default function Report() {
           patientName: selectedPatient.name,
           patientAge: selectedPatient.age.toString(),
           patientGender: selectedPatient.gender,
-          sampleId: selectedTest.sample_id || '',
           collectionTime: selectedTest.collection_time || '',
           technician: selectedTest.technician || ''
         })
@@ -587,7 +638,6 @@ export default function Report() {
       // Update test data if available
       if (selectedTest) {
         await updateTest(selectedTest.id, {
-          sample_id: editData.sampleId,
           collection_time: editData.collectionTime,
           technician: editData.technician
         })
@@ -968,16 +1018,19 @@ export default function Report() {
             </button>
             
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-              <h1 className="text-sm md:text-base font-bold text-gray-900 leading-tight">Microscopic Report</h1>
+              <h1 className="text-sm md:text-base font-bold text-gray-900 leading-tight">Microscopy Urinalysis Report</h1>
               
               {/* Date Display */}
               <div className="text-xs text-gray-600">
                 <span>{selectedDate ? new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Today'}</span>
               </div>
               
-              <div className="text-xs md:text-sm font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 md:px-2.5 md:py-1 rounded w-fit">
-                {selectedTest?.test_code || 'N/A'}
-              </div>
+              {/* Test Code Display */}
+              {selectedTest && (
+                <div className="text-xs md:text-sm font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 md:px-2.5 md:py-1 rounded w-fit">
+                  {selectedTest.test_code}
+                </div>
+              )}
             </div>
           </div>
  
@@ -1169,18 +1222,17 @@ export default function Report() {
                          }`}
                        >
                          {sidebarCollapsed ? (
-                           <div className="text-center" title={`${patient?.name || 'Unknown Patient'} - ${test.test_code} - ${test.status}`}>
+                           <div className="text-center" title={`${test.test_code} - ${test.status}`}>
                              <div className="text-xs font-medium text-gray-900 truncate">
-                               {patient?.name?.charAt(0) || 'U'}
+                               {test.test_code?.split('-')[2] || 'XX'}
                              </div>
                              <div className="text-xs text-gray-500 mt-1">
-                               {test.test_code?.split('-')[2] || 'XX'}
+                               {test.status?.charAt(0) || 'P'}
                              </div>
                            </div>
                          ) : (
                            <>
-                             <div className="text-xs font-medium text-gray-900">{patient?.name || 'Unknown Patient'}</div>
-                             <div className="text-xs text-gray-600">Test: {test.test_code}</div>
+                             <div className="text-xs font-medium text-gray-900">Test: {test.test_code}</div>
                              <div className="text-xs text-gray-500">Status: {test.status}</div>
                            </>
                          )}
@@ -1190,16 +1242,6 @@ export default function Report() {
                  )}
                </div>
                
-               {/* New Test Button */}
-               <div className="border-t border-gray-200 pt-3">
-                 <button
-                   onClick={handleNewPatient}
-                   className={`w-full flex items-center justify-center ${sidebarCollapsed ? 'px-2 py-2' : 'px-3 py-2 space-x-1.5'} bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors`}
-                 >
-                   <Plus className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-5 w-5'}`} />
-                   {!sidebarCollapsed && <span className="text-xs font-medium">Add New Test</span>}
-                 </button>
-               </div>
 
 
                
@@ -1316,7 +1358,7 @@ export default function Report() {
                 )}
                 
                 {/* Hover Controls - Only show when hovering over camera */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20" style={{ zIndex: 10 }}>
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20 z-10">
                   {/* Top Controls */}
                   <div className="absolute top-4 right-4 flex justify-end items-center gap-2">
                     <button
@@ -1496,19 +1538,6 @@ export default function Report() {
                        )}
                      </div>
                      <div className="flex justify-between">
-                       <span className="text-xs text-gray-700 font-medium">Sample ID:</span>
-                       {isEditing ? (
-                         <input
-                           type="text"
-                           value={editData.sampleId}
-                           onChange={(e) => setEditData(prev => ({ ...prev, sampleId: e.target.value }))}
-                           className="text-xs font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                         />
-                       ) : (
-                         <span className="text-xs font-semibold text-gray-900">{selectedTest?.sample_id || 'N/A'}</span>
-                       )}
-                     </div>
-                     <div className="flex justify-between">
                        <span className="text-xs text-gray-700 font-medium">Collection Time:</span>
                        {isEditing ? (
                          <input
@@ -1575,50 +1604,6 @@ export default function Report() {
                 null
               )}
 
-                   {/* High Power Field Images Section */}
-                   <div className="bg-white rounded-lg p-3 shadow-sm mb-3">
-                     <div className="flex items-center justify-between mb-2">
-                       <h3 className="text-sm font-semibold text-gray-900 flex items-center">
-                         <Microscope className="h-4 w-4 mr-2 text-blue-600" />
-                         High Power Field (HPF)
-                         <span className="ml-2 text-xs text-gray-600 font-normal">- Microscopic Analysis</span>
-                         <span className="ml-3 text-xs font-medium text-gray-500 bg-blue-100 px-2 py-0.5 rounded-full">
-                           {highPowerImages.length}/10 images
-                         </span>
-                       </h3>
-                     </div>
-                   </div>
-
-                   {/* HPF Image Grid */}
-                   {highPowerImages.length > 0 ? (
-                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
-                       {highPowerImages.map((imageUrl, index) => (
-                         <div key={index} className="relative group">
-                           <img
-                             src={imageUrl}
-                             alt={`HPF Sample ${index + 1}`}
-                             className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
-                             onClick={() => setModalImage({ 
-                               src: imageUrl, 
-                               alt: `HPF Sample ${index + 1}`, 
-                               title: `High Power Field Sample ${index + 1}` 
-                             })}
-                             onError={(e) => {
-                               console.error('Failed to load image:', imageUrl)
-                               e.currentTarget.style.display = 'none'
-                             }}
-                           />
-                           <button
-                             onClick={() => removeCapturedImage(index, 'high')}
-                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                           >
-                             ×
-                           </button>
-                         </div>
-                       ))}
-                     </div>
-                   ) : null}
-
                    {/* Low Power Field Images Section */}
                    <div className="bg-white rounded-lg p-3 shadow-sm mb-3">
                      <div className="flex items-center justify-between mb-2">
@@ -1654,6 +1639,50 @@ export default function Report() {
                            />
                            <button
                              onClick={() => removeCapturedImage(index, 'low')}
+                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                           >
+                             ×
+                           </button>
+                         </div>
+                       ))}
+                     </div>
+                   ) : null}
+
+                   {/* High Power Field Images Section */}
+                   <div className="bg-white rounded-lg p-3 shadow-sm mb-3">
+                     <div className="flex items-center justify-between mb-2">
+                       <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                         <Microscope className="h-4 w-4 mr-2 text-blue-600" />
+                         High Power Field (HPF)
+                         <span className="ml-2 text-xs text-gray-600 font-normal">- Microscopic Analysis</span>
+                         <span className="ml-3 text-xs font-medium text-gray-500 bg-blue-100 px-2 py-0.5 rounded-full">
+                           {highPowerImages.length}/10 images
+                         </span>
+                       </h3>
+                     </div>
+                   </div>
+
+                   {/* HPF Image Grid */}
+                   {highPowerImages.length > 0 ? (
+                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
+                       {highPowerImages.map((imageUrl, index) => (
+                         <div key={index} className="relative group">
+                           <img
+                             src={imageUrl}
+                             alt={`HPF Sample ${index + 1}`}
+                             className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
+                             onClick={() => setModalImage({ 
+                               src: imageUrl, 
+                               alt: `HPF Sample ${index + 1}`, 
+                               title: `High Power Field Sample ${index + 1}` 
+                             })}
+                             onError={(e) => {
+                               console.error('Failed to load image:', imageUrl)
+                               e.currentTarget.style.display = 'none'
+                             }}
+                           />
+                           <button
+                             onClick={() => removeCapturedImage(index, 'high')}
                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
                            >
                              ×

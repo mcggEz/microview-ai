@@ -57,7 +57,6 @@ export interface UrineTest {
   test_code: string
   patient_id: string
 
-  sample_id?: string
   collection_time?: string
   analysis_date: string
   technician?: string
@@ -146,6 +145,8 @@ export interface UrineTest {
   // Dynamic image arrays
   microscopic_images?: string[]
   gross_images?: string[]
+  hpf_images?: string[]
+  lpf_images?: string[]
 
   created_at: string
   updated_at: string

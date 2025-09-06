@@ -181,8 +181,8 @@ export const useDashboard = () => {
       // Get current time for both test code generation and collection time
       const now = new Date()
       
-      // Generate test code in format: YYYYMMDD-XX-XX-N (using time + tally)
-      // Examples: 20241201-14-30-1 (Dec 1, 2024, 2:30 PM, 1st test), 20241201-09-15-2 (Dec 1, 2024, 9:15 AM, 2nd test)
+      // Generate test code in format: YYYYMMDD-XX-XX-N (using time + day-based tally)
+      // Examples: 20241201-14-30-1 (Dec 1, 2024, 2:30 PM, 1st test of day), 20241201-09-15-2 (Dec 1, 2024, 9:15 AM, 2nd test of day)
       const generateTestCode = async (date: string, patientName: string, currentTime: Date) => {
         const dateStr = date.replace(/-/g, '') // Convert YYYY-MM-DD to YYYYMMDD
         
@@ -190,14 +190,26 @@ export const useDashboard = () => {
         const hour = currentTime.getHours().toString().padStart(2, '0')
         const minute = currentTime.getMinutes().toString().padStart(2, '0')
         
-        // Get count of existing tests for this date and time
-        const timePrefix = `${dateStr}-${hour}-${minute}`
+        // Get count of existing tests for this date (day-based counting for last digit)
         const existingTests = await getTestsByDate(date)
-        const testsAtSameTime = existingTests.filter(test => test.test_code.startsWith(timePrefix))
-        const tally = testsAtSameTime.length + 1
+        const testsForDate = existingTests.filter(test => test.test_code.startsWith(dateStr))
         
-        const testCode = `${timePrefix}-${tally}`
-        console.log('Generated test code:', testCode, 'for patient:', patientName, 'at time:', `${hour}:${minute}`, 'tally:', tally)
+        // Extract the last digit from existing test codes and find the highest number
+        let maxTally = 0
+        testsForDate.forEach(test => {
+          const parts = test.test_code.split('-')
+          if (parts.length >= 4) {
+            const lastDigit = parseInt(parts[3])
+            if (!isNaN(lastDigit) && lastDigit > maxTally) {
+              maxTally = lastDigit
+            }
+          }
+        })
+        
+        const dayTally = maxTally + 1
+        
+        const testCode = `${dateStr}-${hour}-${minute}-${dayTally}`
+        console.log('Generated test code:', testCode, 'for patient:', patientName, 'at time:', `${hour}:${minute}`, 'day tally:', dayTally)
         
         return testCode
       }

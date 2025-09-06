@@ -124,7 +124,6 @@ export default function PatientTestHistory({
                 <th className="text-left py-2 font-semibold text-gray-800">Test Code</th>
                 <th className="text-left py-2 font-semibold text-gray-800">Date</th>
                 <th className="text-left py-2 font-semibold text-gray-800">Status</th>
-                <th className="text-left py-2 font-semibold text-gray-800">Sample ID</th>
                 <th className="text-left py-2 font-semibold text-gray-800">Action</th>
               </tr>
             </thead>
@@ -145,9 +144,6 @@ export default function PatientTestHistory({
                     <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(test.status)}`}>
                       {test.status.replace('_', ' ')}
                     </span>
-                  </td>
-                  <td className="py-2 text-gray-700">
-                    {test.sample_id || 'N/A'}
                   </td>
                   <td className="py-2">
                     <button 

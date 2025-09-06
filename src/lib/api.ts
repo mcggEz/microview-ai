@@ -61,12 +61,29 @@ export const updatePatient = async (id: string, updates: Partial<Patient>): Prom
 }
 
 export const deletePatient = async (id: string): Promise<void> => {
-  const { error } = await supabase
-    .from('patients')
-    .delete()
-    .eq('id', id)
+  try {
+    // First check if patient has any tests
+    const hasTests = await checkPatientHasTests(id)
+    if (hasTests) {
+      throw new Error('Cannot delete patient with existing tests. Please delete all tests first.')
+    }
 
-  if (error) throw error
+    // If no tests, safe to delete the patient
+    const { error } = await supabase
+      .from('patients')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Supabase error deleting patient:', error)
+      throw error
+    }
+    
+    console.log('Patient deleted successfully')
+  } catch (error) {
+    console.error('Error deleting patient:', error)
+    throw error
+  }
 }
 
 export const checkPatientHasTests = async (patientId: string): Promise<boolean> => {
@@ -142,7 +159,7 @@ export const getTestsByDate = async (date: string): Promise<UrineTest[]> => {
     .from('urine_tests')
     .select('*')
     .eq('analysis_date', date)
-    .order('patient_id', { ascending: true })
+    .order('created_at', { ascending: false })
 
   if (error) throw error
   return data || []
@@ -239,17 +256,57 @@ export const checkTableStructure = async (tableName: string) => {
 export const deleteTest = async (testId: string): Promise<void> => {
   console.log('Deleting test:', testId)
   
-  const { error } = await supabase
-    .from('urine_tests')
-    .delete()
-    .eq('id', testId)
+  try {
+    // First, get the test to retrieve all image URLs
+    const test = await getTest(testId)
+    if (!test) {
+      throw new Error('Test not found')
+    }
 
-  if (error) {
-    console.error('Supabase error deleting test:', error)
+    // Collect all image URLs from all image fields
+    const allImageUrls: string[] = []
+    
+    // Add images from all image arrays
+    if (test.microscopic_images) allImageUrls.push(...test.microscopic_images)
+    if (test.gross_images) allImageUrls.push(...test.gross_images)
+    if (test.hpf_images) allImageUrls.push(...test.hpf_images)
+    if (test.lpf_images) allImageUrls.push(...test.lpf_images)
+    
+    // Add individual image fields
+    if (test.image_1_url) allImageUrls.push(test.image_1_url)
+    if (test.image_2_url) allImageUrls.push(test.image_2_url)
+    if (test.image_3_url) allImageUrls.push(test.image_3_url)
+    if (test.image_4_url) allImageUrls.push(test.image_4_url)
+
+    console.log(`Found ${allImageUrls.length} images to delete for test ${testId}`)
+
+    // Delete all images from storage
+    for (const imageUrl of allImageUrls) {
+      try {
+        await deleteImageFromStorage(imageUrl)
+        console.log(`Deleted image: ${imageUrl}`)
+      } catch (error) {
+        console.warn(`Failed to delete image ${imageUrl}:`, error)
+        // Continue with other images even if one fails
+      }
+    }
+
+    // Finally, delete the test record
+    const { error } = await supabase
+      .from('urine_tests')
+      .delete()
+      .eq('id', testId)
+
+    if (error) {
+      console.error('Supabase error deleting test:', error)
+      throw error
+    }
+    
+    console.log('Test and all associated images deleted successfully')
+  } catch (error) {
+    console.error('Error deleting test:', error)
     throw error
   }
-  
-  console.log('Test deleted successfully')
 }
 
 export const updateTestWithAnalysis = async (testId: string, analysis: { 
@@ -392,7 +449,7 @@ export const uploadBase64Image = async (base64Data: string, testId: string, imag
   }
 }
 
-export const addImageToTest = async (testId: string, imageUrl: string, imageType: 'microscopic' | 'gross' = 'microscopic'): Promise<UrineTest> => {
+export const addImageToTest = async (testId: string, imageUrl: string, imageType: 'microscopic' | 'gross' | 'hpf' | 'lpf' = 'microscopic'): Promise<UrineTest> => {
   try {
     // Get current test to see existing images
     const currentTest = await getTest(testId)
@@ -407,10 +464,18 @@ export const addImageToTest = async (testId: string, imageUrl: string, imageType
       // Add to microscopic images array or create new array
       const currentImages = currentTest.microscopic_images || []
       updates.microscopic_images = [...currentImages, imageUrl]
-    } else {
+    } else if (imageType === 'gross') {
       // Add to gross images array or create new array
       const currentImages = currentTest.gross_images || []
       updates.gross_images = [...currentImages, imageUrl]
+    } else if (imageType === 'hpf') {
+      // Add to HPF images array or create new array
+      const currentImages = currentTest.hpf_images || []
+      updates.hpf_images = [...currentImages, imageUrl]
+    } else if (imageType === 'lpf') {
+      // Add to LPF images array or create new array
+      const currentImages = currentTest.lpf_images || []
+      updates.lpf_images = [...currentImages, imageUrl]
     }
 
     return await updateTest(testId, updates)
@@ -420,7 +485,7 @@ export const addImageToTest = async (testId: string, imageUrl: string, imageType
   }
 }
 
-export const deleteImageFromTest = async (testId: string, imageUrl: string, imageType: 'microscopic' | 'gross' = 'microscopic'): Promise<UrineTest> => {
+export const deleteImageFromTest = async (testId: string, imageUrl: string, imageType: 'microscopic' | 'gross' | 'hpf' | 'lpf' = 'microscopic'): Promise<UrineTest> => {
   try {
     // Get current test
     const currentTest = await getTest(testId)
@@ -434,9 +499,15 @@ export const deleteImageFromTest = async (testId: string, imageUrl: string, imag
     if (imageType === 'microscopic') {
       const currentImages = currentTest.microscopic_images || []
       updates.microscopic_images = currentImages.filter(img => img !== imageUrl)
-    } else {
+    } else if (imageType === 'gross') {
       const currentImages = currentTest.gross_images || []
       updates.gross_images = currentImages.filter(img => img !== imageUrl)
+    } else if (imageType === 'hpf') {
+      const currentImages = currentTest.hpf_images || []
+      updates.hpf_images = currentImages.filter(img => img !== imageUrl)
+    } else if (imageType === 'lpf') {
+      const currentImages = currentTest.lpf_images || []
+      updates.lpf_images = currentImages.filter(img => img !== imageUrl)
     }
 
     return await updateTest(testId, updates)
