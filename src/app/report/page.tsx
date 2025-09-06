@@ -930,6 +930,10 @@ export default function Report() {
     if (!selectedTest) return
     try {
       await updateTest(selectedTest.id, { status: 'reviewed' as any })
+      
+      // Update the selectedTest state to reflect the new status
+      setSelectedTest(prev => prev ? { ...prev, status: 'reviewed' } : null)
+      
       if (dateParam) {
         await preloadByDate(dateParam)
       }
@@ -1255,6 +1259,23 @@ export default function Report() {
               <span className="text-xs hidden sm:inline">Focus Report</span>
               <span className="text-xs sm:hidden">Report</span>
             </button>
+            
+            {/* Verify button moved from report header */}
+            {selectedTest && (
+              <button 
+                onClick={handleValidateTest}
+                disabled={selectedTest.status === 'reviewed'}
+                className={`flex items-center space-x-1 px-2 py-1 rounded shadow-sm border transition-colors ${
+                  selectedTest.status === 'reviewed' 
+                    ? 'bg-gray-200 text-gray-500 border-gray-200 cursor-not-allowed' 
+                    : 'bg-green-600 text-white border-green-600 hover:bg-green-700'
+                }`}
+                title="Verify Test"
+              >
+                <CheckCircle className="h-3 w-3" />
+                <span className="text-xs hidden sm:inline">Verify</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1635,25 +1656,14 @@ export default function Report() {
                        </button>
                      )}
                      {selectedTest && (
-                       <>
-                         <button 
-                           onClick={handleDeleteTest}
-                           className={`h-6 inline-flex items-center gap-1 px-2 rounded bg-red-600 text-white hover:bg-red-700 transition-colors text-xs`}
-                           title="Delete Test"
-                         >
-                           <Trash2 className="h-3 w-3" />
-                           <span>Delete</span>
-                         </button>
-                         <button 
-                           onClick={handleValidateTest}
-                           disabled={selectedTest.status === 'reviewed'}
-                           className={`h-6 inline-flex items-center gap-1 px-2 rounded transition-colors text-xs ${selectedTest.status === 'reviewed' ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
-                           title="Verify Test"
-                         >
-                           <CheckCircle className="h-3 w-3" />
-                           <span>Verify</span>
-                         </button>
-                       </>
+                       <button 
+                         onClick={handleDeleteTest}
+                         className="h-6 inline-flex items-center gap-1 px-2 rounded bg-red-600 text-white hover:bg-red-700 transition-colors text-xs"
+                         title="Delete Test"
+                       >
+                         <Trash2 className="h-3 w-3" />
+                         <span>Delete</span>
+                       </button>
                      )}
                    </div>
                  </div>
@@ -1766,6 +1776,7 @@ export default function Report() {
                       <PatientTestHistory 
                         selectedPatient={selectedPatient}
                         selectedTest={selectedTest}
+                        patientTests={selectedPatient ? tests.filter(test => test.patient_id === selectedPatient.id) : []}
                         onTestSelect={handleTestSelection}
                       />
                     </div>

@@ -1,47 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { getTestsByPatient } from '@/lib/api'
+import React from 'react'
 import { Patient, UrineTest } from '@/types/database'
 import { Clock, FileText } from 'lucide-react'
 
 interface PatientTestHistoryProps {
   selectedPatient: Patient | null
   selectedTest: UrineTest | null
+  patientTests: UrineTest[]
   onTestSelect: (test: UrineTest) => void
 }
 
 export default function PatientTestHistory({ 
   selectedPatient, 
   selectedTest, 
+  patientTests,
   onTestSelect 
 }: PatientTestHistoryProps) {
-  const [patientTests, setPatientTests] = useState<UrineTest[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (selectedPatient) {
-      loadPatientTests(selectedPatient.id)
-    } else {
-      setPatientTests([])
-    }
-  }, [selectedPatient])
-
-  const loadPatientTests = async (patientId: string) => {
-    try {
-      setLoading(true)
-      setError(null)
-      const tests = await getTestsByPatient(patientId)
-      setPatientTests(tests)
-    } catch (err) {
-      console.error('Error loading patient tests:', err)
-      setError('Failed to load patient test history')
-      setPatientTests([])
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -95,22 +70,7 @@ export default function PatientTestHistory({
       </div>
 
       {/* Test History Content */}
-      {loading ? (
-        <div className="text-center py-6">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-xs text-gray-600 mt-2">Loading test history...</p>
-        </div>
-      ) : error ? (
-        <div className="text-center py-6 text-red-600">
-          <p className="text-xs">{error}</p>
-          <button 
-            onClick={() => selectedPatient && loadPatientTests(selectedPatient.id)}
-            className="mt-2 text-blue-600 hover:text-blue-800 text-xs underline"
-          >
-            Try again
-          </button>
-        </div>
-      ) : patientTests.length === 0 ? (
+      {patientTests.length === 0 ? (
         <div className="text-center py-6 text-gray-500">
           <Clock className="h-8 w-8 mx-auto mb-3 text-gray-400" />
           <p className="text-sm font-medium text-gray-600 mb-1">No test history found</p>

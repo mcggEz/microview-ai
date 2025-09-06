@@ -1,6 +1,7 @@
 export type Gender = 'male' | 'female' | 'other'
 export type ReportStatus = 'pending' | 'in_progress' | 'completed' | 'reviewed'
 export type ResultStatus = 'normal' | 'abnormal' | 'critical'
+export type PowerMode = 'LPF' | 'HPF'
 
 
 export interface Patient {
@@ -53,6 +54,33 @@ export interface UrineTest {
   ai_oval_fat_bodies_count?: string
   ai_abnormal_crystals_casts_count?: string
 
+  created_at: string
+  updated_at: string
+}
+
+export interface SedimentAnalysis {
+  id: string
+  test_id: string
+  power_mode: PowerMode
+  field_index: number
+  region_index: number
+  
+  // LPF sediment types
+  epithelial_cells: string
+  mucus_threads: string
+  casts: string
+  squamous_epithelial: string
+  abnormal_crystals: string
+  
+  // HPF sediment types
+  crystals_normal: string
+  bacteria: string
+  rbcs: string
+  wbcs: string
+  transitional_yeasts_trichomonas: string
+  renal_tubular_epithelial: string
+  oval_fat_bodies: string
+  
   created_at: string
   updated_at: string
 }

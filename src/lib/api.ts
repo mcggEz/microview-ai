@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { Patient, UrineTest, ResultStatus } from '@/types/database'
+import { Patient, UrineTest, ResultStatus, SedimentAnalysis, PowerMode } from '@/types/database'
 
 // Patients
 export const getPatients = async (): Promise<Patient[]> => {
@@ -473,4 +473,123 @@ export const deleteImageFromStorage = async (imageUrl: string): Promise<void> =>
     console.error('Failed to delete image from storage:', error)
     throw error
   }
+}
+
+// Sediment Analysis
+export const getSedimentAnalysis = async (testId: string, powerMode: PowerMode): Promise<SedimentAnalysis[]> => {
+  console.log(`Fetching sediment analysis for test ${testId}, power mode ${powerMode}`)
+  
+  const { data, error } = await supabase
+    .from('sediment_analysis')
+    .select('*')
+    .eq('test_id', testId)
+    .eq('power_mode', powerMode)
+    .order('field_index', { ascending: true })
+    .order('region_index', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching sediment analysis:', error)
+    throw error
+  }
+  
+  console.log('Sediment analysis fetched successfully:', data?.length || 0, 'records')
+  return data || []
+}
+
+export const getSedimentAnalysisByField = async (
+  testId: string, 
+  powerMode: PowerMode, 
+  fieldIndex: number
+): Promise<SedimentAnalysis[]> => {
+  console.log(`Fetching sediment analysis for test ${testId}, ${powerMode} field ${fieldIndex}`)
+  
+  const { data, error } = await supabase
+    .from('sediment_analysis')
+    .select('*')
+    .eq('test_id', testId)
+    .eq('power_mode', powerMode)
+    .eq('field_index', fieldIndex)
+    .order('region_index', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching sediment analysis by field:', error)
+    throw error
+  }
+  
+  console.log('Sediment analysis by field fetched successfully:', data?.length || 0, 'records')
+  return data || []
+}
+
+export const createSedimentAnalysis = async (
+  sedimentData: Omit<SedimentAnalysis, 'id' | 'created_at' | 'updated_at'>
+): Promise<SedimentAnalysis> => {
+  console.log('Creating sediment analysis with data:', sedimentData)
+  
+  const { data, error } = await supabase
+    .from('sediment_analysis')
+    .insert(sedimentData)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Supabase error creating sediment analysis:', error)
+    throw error
+  }
+  
+  console.log('Sediment analysis created successfully:', data)
+  return data
+}
+
+export const updateSedimentAnalysis = async (
+  id: string, 
+  updates: Partial<Omit<SedimentAnalysis, 'id' | 'test_id' | 'power_mode' | 'field_index' | 'region_index' | 'created_at' | 'updated_at'>>
+): Promise<SedimentAnalysis> => {
+  console.log(`Updating sediment analysis ${id} with data:`, updates)
+  
+  const { data, error } = await supabase
+    .from('sediment_analysis')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Supabase error updating sediment analysis:', error)
+    throw error
+  }
+  
+  console.log('Sediment analysis updated successfully:', data)
+  return data
+}
+
+export const deleteSedimentAnalysis = async (id: string): Promise<void> => {
+  console.log(`Deleting sediment analysis ${id}`)
+  
+  const { error } = await supabase
+    .from('sediment_analysis')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.error('Supabase error deleting sediment analysis:', error)
+    throw error
+  }
+  
+  console.log('Sediment analysis deleted successfully')
+}
+
+export const deleteSedimentAnalysisByTest = async (testId: string): Promise<void> => {
+  console.log(`Deleting all sediment analysis for test ${testId}`)
+  
+  const { error } = await supabase
+    .from('sediment_analysis')
+    .delete()
+    .eq('test_id', testId)
+
+  if (error) {
+    console.error('Supabase error deleting sediment analysis by test:', error)
+    throw error
+  }
+  
+  console.log('All sediment analysis deleted successfully for test')
 }
