@@ -1801,17 +1801,19 @@ export default function Report() {
                      <div className="bg-white rounded-lg border-2 border-gray-300 overflow-hidden mb-4">
                        <div className="flex h-96">
                          {/* Main Image Display */}
-                         <div className="flex-1 bg-gray-100 flex items-center justify-center relative">
+                         <div className="w-96 bg-gray-100 flex items-center justify-center relative p-2">
                            {lowPowerImages.length > 0 ? (
-                             <img
-                               src={lowPowerImages[currentLPFIndex]}
-                               alt="LPF Sample"
-                               className="max-w-full max-h-full object-contain"
-                               onError={(e) => {
-                                 console.error('Failed to load image:', lowPowerImages[currentLPFIndex])
-                                 e.currentTarget.style.display = 'none'
-                               }}
-                             />
+                             <div className="relative">
+                               <img
+                                 src={lowPowerImages[currentLPFIndex]}
+                                 alt="LPF Sample"
+                                 className="max-w-full max-h-full object-contain rounded-lg"
+                                 onError={(e) => {
+                                   console.error('Failed to load image:', lowPowerImages[currentLPFIndex])
+                                   e.currentTarget.style.display = 'none'
+                                 }}
+                               />
+                             </div>
                            ) : (
                              <div className="text-gray-500 text-center">
                                <Microscope className="h-16 w-16 mx-auto mb-2 text-gray-400" />
@@ -1855,53 +1857,68 @@ export default function Report() {
                          </div>
                          
                          {/* Sidebar - Sediment Description */}
-                         <div className="w-80 bg-white border-l-2 border-gray-300 p-3">
-                           <h4 className="font-semibold text-gray-900 mb-2 flex items-center text-sm">
+                         <div className="flex-1 bg-white border-l-2 border-gray-300 p-3">
+                           <h4 className="font-semibold text-gray-900 mb-3 flex items-center text-sm">
                              <Microscope className="h-3 w-3 mr-1 text-orange-600" />
                              LPF Sediment Analysis
                            </h4>
                            
-                           <div className="space-y-2">
-                             {/* LPF Relevant Sediments - Compact */}
-                             <div className="bg-gray-50 p-2 rounded text-xs">
-                               <div className="flex justify-between items-center">
-                                 <span className="font-medium text-gray-700">Epithelial Cells</span>
-                                 <span className="font-semibold text-blue-600">{aiCounts['Epithelial cells']}</span>
-                               </div>
-                               <div className="text-gray-500 text-xs mt-0.5">per LPF</div>
-                             </div>
-                             
-                             <div className="bg-gray-50 p-2 rounded text-xs">
-                               <div className="flex justify-between items-center">
-                                 <span className="font-medium text-gray-700">Mucus Threads</span>
-                                 <span className="font-semibold text-blue-600">{aiCounts['Mucus threads']}</span>
-                               </div>
-                               <div className="text-gray-500 text-xs mt-0.5">per LPF</div>
-                             </div>
-                             
-                             <div className="bg-gray-50 p-2 rounded text-xs">
-                               <div className="flex justify-between items-center">
-                                 <span className="font-medium text-gray-700">Casts</span>
-                                 <span className="font-semibold text-blue-600">{aiCounts['Casts']}</span>
-                               </div>
-                               <div className="text-gray-500 text-xs mt-0.5">per LPF</div>
-                             </div>
-                             
-                             <div className="bg-gray-50 p-2 rounded text-xs">
-                               <div className="flex justify-between items-center">
-                                 <span className="font-medium text-gray-700">Squamous Epithelial</span>
-                                 <span className="font-semibold text-blue-600">{aiCounts['Squamous epithelial cells']}</span>
-                               </div>
-                               <div className="text-gray-500 text-xs mt-0.5">rare/few/moderate/many</div>
-                             </div>
-                             
-                             <div className="bg-gray-50 p-2 rounded text-xs">
-                               <div className="flex justify-between items-center">
-                                 <span className="font-medium text-gray-700">Abnormal Crystals</span>
-                                 <span className="font-semibold text-blue-600">{aiCounts['Abnormal crystals, casts']}</span>
-                               </div>
-                               <div className="text-gray-500 text-xs mt-0.5">avg per LPF</div>
-                             </div>
+                           {/* Field-based Sediment Analysis Table */}
+                           <div className="overflow-x-auto">
+                             <table className="w-full text-xs">
+                               <thead>
+                                 <tr className="border-b border-gray-200">
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Epithelial Cells</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Mucus Threads</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Casts</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Squamous Epithelial</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Abnormal Crystals</th>
+                                 </tr>
+                               </thead>
+                               <tbody className="text-xs">
+                                 {lowPowerImages.length > 0 ? (
+                                   // Show cropped regions for the currently viewed LPF image only
+                                   (() => {
+                                     const croppedRegions = [1, 2, 3]; // This will be dynamic when cropping is implemented
+                                     return croppedRegions.map((regionIndex) => (
+                                       <tr key={`${currentLPFIndex}-${regionIndex}`} className="border-b border-gray-100 hover:bg-gray-50">
+                                         <td className="text-center py-2 px-2">
+                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
+                                             None
+                                           </div>
+                                         </td>
+                                         <td className="text-center py-2 px-2">
+                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
+                                             None
+                                           </div>
+                                         </td>
+                                         <td className="text-center py-2 px-2">
+                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
+                                             None
+                                           </div>
+                                         </td>
+                                         <td className="text-center py-2 px-2">
+                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
+                                             None
+                                           </div>
+                                         </td>
+                                         <td className="text-center py-2 px-2">
+                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
+                                             None
+                                           </div>
+                                         </td>
+                                       </tr>
+                                     ));
+                                   })()
+                                 ) : (
+                                   <tr>
+                                     <td colSpan={5} className="text-center py-4 text-gray-500 text-xs">
+                                       No LPF images captured yet
+                                     </td>
+                                   </tr>
+                                 )}
+                               </tbody>
+                             </table>
                            </div>
                          </div>
                        </div>
@@ -1933,17 +1950,19 @@ export default function Report() {
                      <div className="bg-white rounded-lg border-2 border-gray-300 overflow-hidden mb-4">
                        <div className="flex h-96">
                          {/* Main Image Display */}
-                         <div className="flex-1 bg-gray-100 flex items-center justify-center relative">
+                         <div className="w-96 bg-gray-100 flex items-center justify-center relative p-2">
                            {highPowerImages.length > 0 ? (
-                             <img
-                               src={highPowerImages[currentHPFIndex]}
-                               alt="HPF Sample"
-                               className="max-w-full max-h-full object-contain"
-                               onError={(e) => {
-                                 console.error('Failed to load image:', highPowerImages[currentHPFIndex])
-                                 e.currentTarget.style.display = 'none'
-                               }}
-                             />
+                             <div className="relative">
+                               <img
+                                 src={highPowerImages[currentHPFIndex]}
+                                 alt="HPF Sample"
+                                 className="max-w-full max-h-full object-contain rounded-lg"
+                                 onError={(e) => {
+                                   console.error('Failed to load image:', highPowerImages[currentHPFIndex])
+                                   e.currentTarget.style.display = 'none'
+                                 }}
+                               />
+                             </div>
                            ) : (
                              <div className="text-gray-500 text-center">
                                <Microscope className="h-16 w-16 mx-auto mb-2 text-gray-400" />
@@ -1987,69 +2006,80 @@ export default function Report() {
                          </div>
                          
                          {/* Sidebar - Sediment Description */}
-                         <div className="w-80 bg-white border-l-2 border-gray-300 p-3">
-                           <h4 className="font-semibold text-gray-900 mb-2 flex items-center text-sm">
+                         <div className="flex-1 bg-white border-l-2 border-gray-300 p-3">
+                           <h4 className="font-semibold text-gray-900 mb-3 flex items-center text-sm">
                              <Microscope className="h-3 w-3 mr-1 text-blue-600" />
                              HPF Sediment Analysis
                            </h4>
                            
-                           <div className="space-y-2">
-                             {/* HPF Relevant Sediments - Compact */}
-                             <div className="bg-gray-50 p-2 rounded text-xs">
-                               <div className="flex justify-between items-center">
-                                 <span className="font-medium text-gray-700">Crystals (Normal)</span>
-                                 <span className="font-semibold text-blue-600">{aiCounts['Crystals (normal)']}</span>
-                               </div>
-                               <div className="text-gray-500 text-xs mt-0.5">per HPF</div>
-                             </div>
-                             
-                             <div className="bg-gray-50 p-2 rounded text-xs">
-                               <div className="flex justify-between items-center">
-                                 <span className="font-medium text-gray-700">Bacteria</span>
-                                 <span className="font-semibold text-blue-600">{aiCounts['Bacteria']}</span>
-                               </div>
-                               <div className="text-gray-500 text-xs mt-0.5">per HPF</div>
-                             </div>
-                             
-                             <div className="bg-gray-50 p-2 rounded text-xs">
-                               <div className="flex justify-between items-center">
-                                 <span className="font-medium text-gray-700">RBCs</span>
-                                 <span className="font-semibold text-blue-600">{aiCounts['RBCs']}</span>
-                               </div>
-                               <div className="text-gray-500 text-xs mt-0.5">per HPF</div>
-                             </div>
-                             
-                             <div className="bg-gray-50 p-2 rounded text-xs">
-                               <div className="flex justify-between items-center">
-                                 <span className="font-medium text-gray-700">WBCs</span>
-                                 <span className="font-semibold text-blue-600">{aiCounts['WBCs']}</span>
-                               </div>
-                               <div className="text-gray-500 text-xs mt-0.5">per HPF</div>
-                             </div>
-                             
-                             <div className="bg-gray-50 p-2 rounded text-xs">
-                               <div className="flex justify-between items-center">
-                                 <span className="font-medium text-gray-700">Transitional/Yeasts/Trichomonas</span>
-                                 <span className="font-semibold text-blue-600">{aiCounts['Transitional epithelial cells, yeasts, Trichomonas']}</span>
-                               </div>
-                               <div className="text-gray-500 text-xs mt-0.5">rare/few/moderate/many</div>
-                             </div>
-                             
-                             <div className="bg-gray-50 p-2 rounded text-xs">
-                               <div className="flex justify-between items-center">
-                                 <span className="font-medium text-gray-700">Renal Tubular Epithelial</span>
-                                 <span className="font-semibold text-blue-600">{aiCounts['Renal tubular epithelial cells']}</span>
-                               </div>
-                               <div className="text-gray-500 text-xs mt-0.5">avg per 10 HPFs</div>
-                             </div>
-                             
-                             <div className="bg-gray-50 p-2 rounded text-xs">
-                               <div className="flex justify-between items-center">
-                                 <span className="font-medium text-gray-700">Oval Fat Bodies</span>
-                                 <span className="font-semibold text-blue-600">{aiCounts['Oval fat bodies']}</span>
-                               </div>
-                               <div className="text-gray-500 text-xs mt-0.5">avg per HPF</div>
-                             </div>
+                           {/* Field-based Sediment Analysis Table */}
+                           <div className="overflow-x-auto">
+                             <table className="w-full text-xs">
+                               <thead>
+                                 <tr className="border-b border-gray-200">
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Crystals (Normal)</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Bacteria</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">RBCs</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">WBCs</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Transitional/Yeasts/Trichomonas</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Renal Tubular Epithelial</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Oval Fat Bodies</th>
+                                 </tr>
+                               </thead>
+                               <tbody className="text-xs">
+                                 {highPowerImages.length > 0 ? (
+                                   // Show cropped regions for the currently viewed HPF image only
+                                   (() => {
+                                     const croppedRegions = [1, 2, 3]; // This will be dynamic when cropping is implemented
+                                     return croppedRegions.map((regionIndex) => (
+                                       <tr key={`${currentHPFIndex}-${regionIndex}`} className="border-b border-gray-100 hover:bg-gray-50">
+                                         <td className="text-center py-2 px-2">
+                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
+                                             None
+                                           </div>
+                                         </td>
+                                         <td className="text-center py-2 px-2">
+                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
+                                             None
+                                           </div>
+                                         </td>
+                                         <td className="text-center py-2 px-2">
+                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
+                                             None
+                                           </div>
+                                         </td>
+                                         <td className="text-center py-2 px-2">
+                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
+                                             None
+                                           </div>
+                                         </td>
+                                         <td className="text-center py-2 px-2">
+                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
+                                             None
+                                           </div>
+                                         </td>
+                                         <td className="text-center py-2 px-2">
+                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
+                                             None
+                                           </div>
+                                         </td>
+                                         <td className="text-center py-2 px-2">
+                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
+                                             None
+                                           </div>
+                                         </td>
+                                       </tr>
+                                     ));
+                                   })()
+                                 ) : (
+                                   <tr>
+                                     <td colSpan={7} className="text-center py-4 text-gray-500 text-xs">
+                                       No HPF images captured yet
+                                     </td>
+                                   </tr>
+                                 )}
+                               </tbody>
+                             </table>
                            </div>
                          </div>
                        </div>
