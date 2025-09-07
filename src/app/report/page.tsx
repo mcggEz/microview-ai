@@ -13,6 +13,7 @@ declare global {
 import { useRouter } from 'next/navigation'
 import { useDashboard } from '@/hooks/useDashboard'
 import { updatePatient, updateTest, testDatabaseConnection, deleteTest, deleteImageFromTest, deleteImageFromStorage, addImageToTest, uploadImageToStorage, uploadBase64Image, updateAICounts } from '@/lib/api'
+import { loadOpenCV, isOpenCVReady } from '@/lib/opencv-loader'
 import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown, Upload, ChevronLeft, ChevronRight, Brain, Search, ArrowLeft } from 'lucide-react'
 import ImageModal from '@/components/ImageModal'
 import ConfirmationModal from '@/components/ConfirmationModal'
@@ -65,6 +66,12 @@ export default function Report() {
   const [scopeMask, setScopeMask] = useState(true)
   const [overlayEnabled, setOverlayEnabled] = useState(false)
   const [objectCount, setObjectCount] = useState(0)
+  
+  // AI Segmentation states
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [segmentationResults, setSegmentationResults] = useState<any>(null)
+  const [croppedSegments, setCroppedSegments] = useState<any[]>([])
+  const [isAddingTestImage, setIsAddingTestImage] = useState(false)
   
   // AI Count state for each sediment type
   const [aiCounts, setAiCounts] = useState<{[key: string]: string}>({
@@ -419,7 +426,7 @@ export default function Report() {
 
   // Image segmentation function
   const performSegmentation = (videoElement: HTMLVideoElement, canvas: HTMLCanvasElement) => {
-    if (!opencvReady || !window.cv) return
+    if (!opencvReady || !window.cv || !isOpenCVReady()) return
 
     try {
       const ctx = canvas.getContext('2d')
@@ -558,26 +565,29 @@ export default function Report() {
     }
   }, [mediaStream])
 
-  // Load OpenCV.js
+  // Load OpenCV.js using the utility
   useEffect(() => {
-    const loadOpenCV = async () => {
-      if (typeof window !== 'undefined' && !window.cv) {
-        const script = document.createElement('script')
-        script.src = 'https://docs.opencv.org/4.8.0/opencv.js'
-        script.async = true
-        script.onload = () => {
-          window.cv['onRuntimeInitialized'] = () => {
-            console.log('OpenCV.js loaded successfully')
-            setOpencvReady(true)
-          }
+    let isMounted = true
+    
+    const initializeOpenCV = async () => {
+      try {
+        await loadOpenCV()
+        if (isMounted) {
+          setOpencvReady(true)
         }
-        document.head.appendChild(script)
-      } else if (window.cv) {
-        setOpencvReady(true)
+      } catch (error) {
+        console.error('Failed to load OpenCV:', error)
+        if (isMounted) {
+          setOpencvReady(false)
+        }
       }
     }
     
-    loadOpenCV()
+    initializeOpenCV()
+    
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   // Real-time segmentation loop
@@ -608,19 +618,19 @@ export default function Report() {
 
   // Sync captured images with test's HPF and LPF images
   useEffect(() => {
-    if (selectedTest) {
+    if (selectedTest && !isAddingTestImage) {
       // Sync HPF images from database
       setHighPowerImages(selectedTest.hpf_images || [])
       // Sync LPF images from database
       setLowPowerImages(selectedTest.lpf_images || [])
-    } else {
+    } else if (!selectedTest) {
       setHighPowerImages([])
       setLowPowerImages([])
     }
     // Reset current indices when test changes
     setCurrentHPFIndex(0)
     setCurrentLPFIndex(0)
-  }, [selectedTest])
+  }, [selectedTest, isAddingTestImage])
 
   // Load AI counts from database when test is selected
   useEffect(() => {
@@ -877,6 +887,300 @@ export default function Report() {
     captureImage()
   }
 
+  // Test function to use test1.jpg for AI analysis
+  const handleTestImageAnalysis = async () => {
+    if (!selectedTest) {
+      setNotificationMessage('No test selected. Please select a test first.')
+      setNotificationType('error')
+      setShowNotification(true)
+      return
+    }
+
+    try {
+      setIsAnalyzing(true)
+      setIsAddingTestImage(true)
+      setNotificationMessage('Loading test image for AI analysis...')
+      setNotificationType('info')
+      setShowNotification(true)
+
+      // Fetch the test image
+      const response = await fetch('/test1.jpg')
+      const blob = await response.blob()
+      const file = new File([blob], 'test1.jpg', { type: 'image/jpeg' })
+
+      // Convert to base64 for display
+      const reader = new FileReader()
+      reader.onload = async () => {
+        const imageDataUrl = reader.result as string
+        
+        // Upload the test image to Supabase Storage
+        const imageUrl = await uploadImageToStorage(file, selectedTest.id, 'microscopic')
+        
+        // Add the image URL to the test record with correct power type
+        const powerType = powerMode === 'high' ? 'hpf' : 'lpf'
+        await addImageToTest(selectedTest.id, imageUrl, powerType)
+        
+        // AI Analysis
+        try {
+          setNotificationMessage('Analyzing test image with AI...')
+          setNotificationType('info')
+          setShowNotification(true)
+          
+          const analysisResults = await analyzeImageWithAI(file)
+          setSegmentationResults(analysisResults)
+          processImageSegments(analysisResults.segments, imageDataUrl)
+          
+          setNotificationMessage(`Test image analyzed successfully! Found ${analysisResults.segments.length} sediments. Added to ${powerMode.toUpperCase()} mode.`)
+          setNotificationType('success')
+        } catch (aiError) {
+          console.warn('AI analysis failed, but image was saved:', aiError)
+          setNotificationMessage(`Test image saved successfully! (AI analysis failed: ${aiError}) Added to ${powerMode.toUpperCase()} mode.`)
+          setNotificationType('warning')
+        }
+        
+        // Update local state to show the image immediately
+        if (powerMode === 'high') {
+          setHighPowerImages(prev => [...prev, imageDataUrl])
+        } else {
+          setLowPowerImages(prev => [...prev, imageDataUrl])
+        }
+        
+        // Don't refresh data immediately to preserve local state
+        // The image will be visible right away from local state update
+        
+        setShowNotification(true)
+      }
+      reader.readAsDataURL(blob)
+      
+    } catch (error) {
+      console.error('Error processing test image:', error)
+      setNotificationMessage('Failed to process test image. Please try again.')
+      setNotificationType('error')
+      setShowNotification(true)
+    } finally {
+      setIsAnalyzing(false)
+      setIsAddingTestImage(false)
+    }
+  }
+
+  // Utility to encode file to Base64
+  const encodeFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => {
+        if (reader.result && typeof reader.result === 'string') {
+          resolve(reader.result.split(',')[1])
+        } else {
+          reject(new Error('Failed to read file as base64'))
+        }
+      }
+      reader.onerror = (err) => reject(err)
+    })
+  }
+
+  // Function to perform image cropping and classification
+  const processImageSegments = (segments: any[], imageUrl: string) => {
+    console.log('Processing segments:', segments)
+    console.log('Image URL:', imageUrl)
+    console.log('Current power mode:', powerMode)
+    
+    const img = new window.Image()
+    img.src = imageUrl
+
+    img.onload = () => {
+      const newCroppedSegments: any[] = []
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+
+      if (!ctx) return
+
+      segments.forEach((segment, index) => {
+        console.log(`Processing segment ${index}:`, segment)
+        // Set canvas dimensions to the size of the cropped segment
+        canvas.width = segment.width
+        canvas.height = segment.height
+
+        // Draw the cropped portion of the original image onto the canvas
+        ctx.drawImage(
+          img,
+          segment.x,
+          segment.y,
+          segment.width,
+          segment.height,
+          0,
+          0,
+          segment.width,
+          segment.height
+        )
+
+        // Get the cropped image data as a data URL and store it
+        const croppedImageUrl = canvas.toDataURL('image/png')
+        const segmentData = {
+          id: `${powerMode === 'high' ? 'HPF' : 'LPF'}-${currentLPFIndex || currentHPFIndex}-${index}`,
+          url: croppedImageUrl,
+          classification: segment.classification,
+          coordinates: {
+            x: segment.x,
+            y: segment.y,
+            width: segment.width,
+            height: segment.height
+          },
+          powerMode: powerMode === 'high' ? 'HPF' : 'LPF'
+        }
+        
+        console.log('Created segment data:', segmentData)
+        newCroppedSegments.push(segmentData)
+      })
+      
+      console.log('All new cropped segments:', newCroppedSegments)
+      setCroppedSegments(prev => {
+        const updated = [...prev, ...newCroppedSegments]
+        console.log('Updated cropped segments:', updated)
+        return updated
+      })
+    }
+  }
+
+  // AI Image Analysis using Gemini API
+  const analyzeImageWithAI = async (imageFile: File): Promise<any> => {
+    const base64ImageData = await encodeFileToBase64(imageFile)
+
+    const systemPrompt = `You are a specialized AI for urinalysis microscopic image analysis. Your task is to identify and classify formed elements in urine samples according to standard urinalysis protocols.
+
+    CRITICAL INSTRUCTIONS:
+    1. **Respond in JSON ONLY** - Your response MUST be a single valid JSON object
+    2. **Use 'segments' array** - The JSON must contain a 'segments' array with detected elements
+    3. **Standard Classifications** - Use ONLY these exact classification names:
+    
+    FOR LOW POWER FIELD (LPF) ANALYSIS:
+    - "Epithelial Cell" (any epithelial cell type)
+    - "Mucus Thread" 
+    - "Cast" (any cast type)
+    - "Squamous Epithelial Cell"
+    - "Abnormal Crystal" (any pathological crystal)
+    
+    FOR HIGH POWER FIELD (HPF) ANALYSIS:
+    - "Normal Crystal" (calcium oxalate, uric acid, etc.)
+    - "Bacteria"
+    - "Red Blood Cell" or "RBC"
+    - "White Blood Cell" or "WBC" 
+    - "Transitional Epithelial Cell"
+    - "Yeast"
+    - "Trichomonas"
+    - "Renal Tubular Epithelial Cell"
+    - "Oval Fat Body"
+    
+    4. **Segment Structure** - Each segment object MUST have:
+    - 'x': integer x-coordinate (top-left corner)
+    - 'y': integer y-coordinate (top-left corner) 
+    - 'width': integer width of bounding box
+    - 'height': integer height of bounding box
+    - 'classification': string using EXACT names above
+    
+    5. **Detection Guidelines**:
+    - Only detect clearly visible, distinct elements
+    - Avoid overlapping or ambiguous regions
+    - Minimum bounding box size: 10x10 pixels
+    - Maximum 20 segments per image to avoid noise
+    `
+
+    const userPrompt = "Analyze this microscopic urine sample image. Identify all visible formed elements and provide precise bounding box coordinates with standard urinalysis classifications. Return only valid JSON with the 'segments' array."
+
+    const payload = {
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: userPrompt },
+            {
+              inlineData: {
+                mimeType: imageFile.type,
+                data: base64ImageData,
+              },
+            },
+          ],
+        },
+      ],
+      systemInstruction: {
+        parts: [{ text: systemPrompt }],
+      },
+      generationConfig: {
+        responseMimeType: "application/json",
+      }
+    }
+
+    // Note: You'll need to add your Gemini API key here
+    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`
+
+    const delay = (ms: number) => new Promise(res => setTimeout(res, ms))
+    const maxRetries = 3
+    let attempt = 0
+
+    while (attempt < maxRetries) {
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+
+        if (!response.ok) {
+          if (response.status === 429 && attempt < maxRetries - 1) {
+            const retryAfter = response.headers.get('Retry-After')
+            const delayTime = retryAfter ? parseInt(retryAfter, 10) * 1000 : (1 << attempt) * 1000
+            console.warn(`Rate limit exceeded. Retrying in ${delayTime}ms...`)
+            await delay(delayTime)
+            attempt++
+            continue
+          }
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const result = await response.json()
+        const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text
+
+        // Debug: Log the raw response
+        console.log('Gemini API Response:', result)
+        console.log('Extracted JSON Text:', jsonText)
+
+        if (jsonText) {
+          try {
+            const parsedResult = JSON.parse(jsonText)
+            console.log('Parsed Result:', parsedResult)
+            
+            if (parsedResult.segments && Array.isArray(parsedResult.segments)) {
+              console.log('Segments found:', parsedResult.segments.length)
+              return parsedResult
+            } else {
+              console.error('Invalid segments structure:', parsedResult)
+              throw new Error("Analysis failed: Invalid JSON structure from model.")
+            }
+          } catch (parseError) {
+            console.error('JSON Parse Error:', parseError)
+            console.error('Raw JSON Text:', jsonText)
+            throw new Error("Analysis failed: Could not parse JSON response.")
+          }
+        } else {
+          console.error('No JSON text in response:', result)
+          throw new Error("Analysis failed. No JSON data was generated.")
+        }
+      } catch (e) {
+        if (attempt < maxRetries - 1) {
+          const delayTime = (1 << attempt) * 1000
+          console.error(`Attempt ${attempt + 1} failed:`, e)
+          console.warn(`Retrying in ${delayTime}ms...`)
+          await delay(delayTime)
+          attempt++
+        } else {
+          console.error("All attempts to analyze the image failed.", e)
+          throw new Error("Failed to analyze the image. Please try again.")
+        }
+      }
+    }
+  }
+
   const handleImageCapture = async (imageData: string) => {
     if (!selectedTest) {
       setNotificationMessage('No test selected. Please select a test first.')
@@ -895,6 +1199,7 @@ export default function Report() {
     }
 
     try {
+      setIsAnalyzing(true)
       setNotificationMessage('Uploading image...')
       setNotificationType('info')
       setShowNotification(true)
@@ -905,19 +1210,42 @@ export default function Report() {
       // Add the image URL to the test record
       await addImageToTest(selectedTest.id, imageUrl, 'microscopic')
       
+      // AI Analysis
+      try {
+        setNotificationMessage('Analyzing image with AI...')
+        setNotificationType('info')
+        setShowNotification(true)
+        
+        // Convert base64 to File for AI analysis
+        const response = await fetch(imageData)
+        const blob = await response.blob()
+        const file = new File([blob], `captured-image-${Date.now()}.jpg`, { type: 'image/jpeg' })
+        
+        const analysisResults = await analyzeImageWithAI(file)
+        setSegmentationResults(analysisResults)
+        processImageSegments(analysisResults.segments, imageData)
+        
+        setNotificationMessage(`Image captured, saved, and analyzed successfully! Found ${analysisResults.segments.length} sediments. (${currentImageCount + 1}/10)`)
+        setNotificationType('success')
+      } catch (aiError) {
+        console.warn('AI analysis failed, but image was saved:', aiError)
+        setNotificationMessage(`Image captured and saved successfully! (AI analysis failed) (${currentImageCount + 1}/10)`)
+        setNotificationType('warning')
+      }
+      
       // Refresh the data to show the new image
       if (dateParam) {
         await preloadByDate(dateParam)
       }
       
-      setNotificationMessage(`Image captured and saved successfully! (${currentImageCount + 1}/10)`)
-      setNotificationType('success')
       setShowNotification(true)
     } catch (error) {
       console.error('Error saving captured image:', error)
       setNotificationMessage('Failed to save image. Please try again.')
       setNotificationType('error')
       setShowNotification(true)
+    } finally {
+      setIsAnalyzing(false)
     }
   }
 
@@ -1519,14 +1847,36 @@ export default function Report() {
                   <div className="w-full h-full bg-black flex items-center justify-center">
                     <div className="text-center">
                       {!liveStreamActive ? (
-                        <button
-                          onClick={startLiveCamera}
-                          className="w-16 h-16 mx-auto mb-4 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center transition-colors cursor-pointer group"
-                        >
-                          <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                        </button>
+                        <div className="space-y-4">
+                          <button
+                            onClick={startLiveCamera}
+                            className="w-16 h-16 mx-auto mb-4 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center transition-colors cursor-pointer group"
+                          >
+                            <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                          
+                          {/* Test AI Button */}
+                          <button
+                            onClick={handleTestImageAnalysis}
+                            disabled={isAnalyzing}
+                            className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium flex items-center gap-2 mx-auto disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
+                            title={`Test AI analysis with sample image (will add to ${powerMode.toUpperCase()} mode)`}
+                          >
+                            {isAnalyzing ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                Analyzing...
+                              </>
+                            ) : (
+                              <>
+                                <Brain className="h-5 w-5" />
+                                Test AI ({powerMode === 'high' ? 'HPF' : 'LPF'})
+                              </>
+                            )}
+                          </button>
+                        </div>
                       ) : (
                         <div className="w-16 h-16 mx-auto mb-4 bg-gray-800 rounded-full flex items-center justify-center">
                           <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1535,7 +1885,7 @@ export default function Report() {
                         </div>
                       )}
                       <p className="text-gray-400 text-sm">
-                        {!liveStreamActive ? 'Click camera icon to start' : 'Camera access denied or unavailable'}
+                        {!liveStreamActive ? 'Click camera icon to start or use Test AI button' : 'Camera access denied or unavailable'}
                       </p>
                     </div>
                   </div>
@@ -1579,11 +1929,31 @@ export default function Report() {
                     <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md rounded-full px-6 py-3 border border-white/20 shadow-lg">
                       <button
                         onClick={captureImage}
-                        disabled={!liveStreamActive || !mediaStream || (powerMode === 'high' ? highPowerImages.length >= 10 : lowPowerImages.length >= 10)}
+                        disabled={!liveStreamActive || !mediaStream || (powerMode === 'high' ? highPowerImages.length >= 10 : lowPowerImages.length >= 10) || isAnalyzing}
                         className="px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 text-sm font-medium flex items-center gap-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
                       >
-                        <Plus className="h-4 w-4" />
-                        Capture {powerMode === 'high' ? 'HPF' : 'LPF'} ({powerMode === 'high' ? highPowerImages.length : lowPowerImages.length}/10)
+                        {isAnalyzing ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            Analyzing...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-4 w-4" />
+                            Capture {powerMode === 'high' ? 'HPF' : 'LPF'} ({powerMode === 'high' ? highPowerImages.length : lowPowerImages.length}/10)
+                          </>
+                        )}
+                      </button>
+                      
+                      {/* Test Image Button */}
+                      <button
+                        onClick={handleTestImageAnalysis}
+                        disabled={isAnalyzing}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 text-sm font-medium flex items-center gap-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                        title={`Test AI analysis with sample image (will add to ${powerMode.toUpperCase()} mode)`}
+                      >
+                        <Brain className="h-4 w-4" />
+                        Test AI ({powerMode === 'high' ? 'HPF' : 'LPF'})
                       </button>
                     </div>
                   </div>
@@ -1874,6 +2244,27 @@ export default function Report() {
                              LPF Sediment Analysis
                            </h4>
                            
+                           {/* Debug: Show detected segments */}
+                           {croppedSegments.filter(s => s.powerMode === 'LPF').length > 0 && (
+                             <div className="mb-3 p-2 bg-blue-50 rounded text-xs">
+                               <div className="font-medium text-blue-800 mb-1">AI Detected Segments:</div>
+                               <div className="text-blue-700 mb-2">
+                                 {croppedSegments.filter(s => s.powerMode === 'LPF').map((segment, idx) => (
+                                   <span key={idx} className="inline-block bg-blue-100 px-2 py-1 rounded mr-1 mb-1">
+                                     {segment.classification}
+                                   </span>
+                                 ))}
+                               </div>
+                               <div className="text-xs text-gray-600">
+                                 <div>Epithelial Cells: {croppedSegments.filter(s => s.powerMode === 'LPF').some(s => s.classification.toLowerCase().includes('epithelial') && !s.classification.toLowerCase().includes('squamous')) ? '✓' : '✗'}</div>
+                                 <div>Mucus Threads: {croppedSegments.filter(s => s.powerMode === 'LPF').some(s => s.classification.toLowerCase().includes('mucus')) ? '✓' : '✗'}</div>
+                                 <div>Casts: {croppedSegments.filter(s => s.powerMode === 'LPF').some(s => s.classification.toLowerCase().includes('cast')) ? '✓' : '✗'}</div>
+                                 <div>Squamous Epithelial: {croppedSegments.filter(s => s.powerMode === 'LPF').some(s => s.classification.toLowerCase().includes('squamous')) ? '✓' : '✗'}</div>
+                                 <div>Abnormal Crystals: {croppedSegments.filter(s => s.powerMode === 'LPF').some(s => s.classification.toLowerCase().includes('crystal') && (s.classification.toLowerCase().includes('abnormal') || s.classification.toLowerCase().includes('pathological'))) ? '✓' : '✗'}</div>
+                               </div>
+                             </div>
+                           )}
+                           
                            {/* Field-based Sediment Analysis Table */}
                            <div className="overflow-x-auto">
                              <table className="w-full text-xs">
@@ -1887,39 +2278,95 @@ export default function Report() {
                                  </tr>
                                </thead>
                                <tbody className="text-xs">
-                                 {lowPowerImages.length > 0 ? (
+                                 {isAnalyzing ? (
+                                   // Loading state while AI is analyzing
+                                   <tr>
+                                     <td colSpan={5} className="text-center py-4">
+                                       <div className="flex items-center justify-center space-x-2">
+                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                         <span className="text-blue-600 text-xs">Analyzing image...</span>
+                                       </div>
+                                     </td>
+                                   </tr>
+                                 ) : lowPowerImages.length > 0 ? (
                                    // Show cropped regions for the currently viewed LPF image only
                                    (() => {
                                      const croppedRegions = [1, 2, 3]; // This will be dynamic when cropping is implemented
-                                     return croppedRegions.map((regionIndex) => (
-                                       <tr key={`${currentLPFIndex}-${regionIndex}`} className="border-b border-gray-100 hover:bg-gray-50">
+                                     // Get all detected segments for current LPF field
+                                     const currentFieldSegments = croppedSegments.filter(segment => 
+                                       segment.powerMode === 'LPF'
+                                     )
+                                     
+                                     // Get detected sediment types for this field
+                                     const detectedSediments = currentFieldSegments.map(s => s.classification.toLowerCase())
+                                     
+                                     // Helper function to check for specific sediment types
+                                     const hasEpithelialCells = detectedSediments.some(s => 
+                                       s.includes('epithelial') && !s.includes('squamous')
+                                     )
+                                     const hasMucusThreads = detectedSediments.some(s => 
+                                       s.includes('mucus')
+                                     )
+                                     const hasCasts = detectedSediments.some(s => 
+                                       s.includes('cast')
+                                     )
+                                     const hasSquamousEpithelial = detectedSediments.some(s => 
+                                       s.includes('squamous')
+                                     )
+                                     const hasAbnormalCrystals = detectedSediments.some(s => 
+                                       s.includes('crystal') && (s.includes('abnormal') || s.includes('pathological'))
+                                     )
+                                     
+                                     // Show a single row with all detected sediments for this field
+                                     return (
+                                       <tr key={`lpf-${currentLPFIndex}`} className="border-b border-gray-100 hover:bg-gray-50">
                                          <td className="text-center py-2 px-2">
-                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
-                                             None
+                                           <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
+                                             hasEpithelialCells 
+                                               ? 'bg-green-100 text-green-700' 
+                                               : 'bg-gray-50 text-gray-500'
+                                           }`}>
+                                             {hasEpithelialCells ? 'Detected' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
-                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
-                                             None
+                                           <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
+                                             hasMucusThreads 
+                                               ? 'bg-green-100 text-green-700' 
+                                               : 'bg-gray-50 text-gray-500'
+                                           }`}>
+                                             {hasMucusThreads ? 'Detected' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
-                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
-                                             None
+                                           <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
+                                             hasCasts 
+                                               ? 'bg-green-100 text-green-700' 
+                                               : 'bg-gray-50 text-gray-500'
+                                           }`}>
+                                             {hasCasts ? 'Detected' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
-                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
-                                             None
+                                           <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
+                                             hasSquamousEpithelial 
+                                               ? 'bg-green-100 text-green-700' 
+                                               : 'bg-gray-50 text-gray-500'
+                                           }`}>
+                                             {hasSquamousEpithelial ? 'Detected' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
-                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
-                                             None
+                                           <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
+                                             hasAbnormalCrystals 
+                                               ? 'bg-green-100 text-green-700' 
+                                               : 'bg-gray-50 text-gray-500'
+                                           }`}>
+                                             {hasAbnormalCrystals ? 'Detected' : 'None'}
                                            </div>
                                          </td>
                                        </tr>
-                                     ));
+                                     );
                                    })()
                                  ) : (
                                    <tr>
@@ -2023,6 +2470,29 @@ export default function Report() {
                              HPF Sediment Analysis
                            </h4>
                            
+                           {/* Debug: Show detected segments */}
+                           {croppedSegments.filter(s => s.powerMode === 'HPF').length > 0 && (
+                             <div className="mb-3 p-2 bg-blue-50 rounded text-xs">
+                               <div className="font-medium text-blue-800 mb-1">AI Detected Segments:</div>
+                               <div className="text-blue-700 mb-2">
+                                 {croppedSegments.filter(s => s.powerMode === 'HPF').map((segment, idx) => (
+                                   <span key={idx} className="inline-block bg-blue-100 px-2 py-1 rounded mr-1 mb-1">
+                                     {segment.classification}
+                                   </span>
+                                 ))}
+                               </div>
+                               <div className="text-xs text-gray-600">
+                                 <div>Normal Crystals: {croppedSegments.filter(s => s.powerMode === 'HPF').some(s => s.classification.toLowerCase().includes('crystal') && !s.classification.toLowerCase().includes('abnormal') && !s.classification.toLowerCase().includes('pathological')) ? '✓' : '✗'}</div>
+                                 <div>Bacteria: {croppedSegments.filter(s => s.powerMode === 'HPF').some(s => s.classification.toLowerCase().includes('bacteria')) ? '✓' : '✗'}</div>
+                                 <div>RBCs: {croppedSegments.filter(s => s.powerMode === 'HPF').some(s => s.classification.toLowerCase().includes('rbc') || s.classification.toLowerCase().includes('red blood')) ? '✓' : '✗'}</div>
+                                 <div>WBCs: {croppedSegments.filter(s => s.powerMode === 'HPF').some(s => s.classification.toLowerCase().includes('wbc') || s.classification.toLowerCase().includes('white blood')) ? '✓' : '✗'}</div>
+                                 <div>Transitional/Yeasts/Trichomonas: {croppedSegments.filter(s => s.powerMode === 'HPF').some(s => s.classification.toLowerCase().includes('transitional') || s.classification.toLowerCase().includes('yeast') || s.classification.toLowerCase().includes('trichomonas')) ? '✓' : '✗'}</div>
+                                 <div>Renal Tubular Epithelial: {croppedSegments.filter(s => s.powerMode === 'HPF').some(s => s.classification.toLowerCase().includes('renal') || s.classification.toLowerCase().includes('tubular')) ? '✓' : '✗'}</div>
+                                 <div>Oval Fat Bodies: {croppedSegments.filter(s => s.powerMode === 'HPF').some(s => s.classification.toLowerCase().includes('oval') || s.classification.toLowerCase().includes('fat')) ? '✓' : '✗'}</div>
+                               </div>
+                             </div>
+                           )}
+                           
                            {/* Field-based Sediment Analysis Table */}
                            <div className="overflow-x-auto">
                              <table className="w-full text-xs">
@@ -2038,49 +2508,119 @@ export default function Report() {
                                  </tr>
                                </thead>
                                <tbody className="text-xs">
-                                 {highPowerImages.length > 0 ? (
+                                 {isAnalyzing ? (
+                                   // Loading state while AI is analyzing
+                                   <tr>
+                                     <td colSpan={7} className="text-center py-4">
+                                       <div className="flex items-center justify-center space-x-2">
+                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                         <span className="text-blue-600 text-xs">Analyzing image...</span>
+                                       </div>
+                                     </td>
+                                   </tr>
+                                 ) : highPowerImages.length > 0 ? (
                                    // Show cropped regions for the currently viewed HPF image only
                                    (() => {
                                      const croppedRegions = [1, 2, 3]; // This will be dynamic when cropping is implemented
-                                     return croppedRegions.map((regionIndex) => (
-                                       <tr key={`${currentHPFIndex}-${regionIndex}`} className="border-b border-gray-100 hover:bg-gray-50">
+                                     // Get all detected segments for current HPF field
+                                     const currentFieldSegments = croppedSegments.filter(segment => 
+                                       segment.powerMode === 'HPF'
+                                     )
+                                     
+                                     // Get detected sediment types for this field
+                                     const detectedSediments = currentFieldSegments.map(s => s.classification.toLowerCase())
+                                     
+                                     // Helper function to check for specific sediment types
+                                     const hasNormalCrystals = detectedSediments.some(s => 
+                                       s.includes('crystal') && !s.includes('abnormal') && !s.includes('pathological')
+                                     )
+                                     const hasBacteria = detectedSediments.some(s => 
+                                       s.includes('bacteria')
+                                     )
+                                     const hasRBCs = detectedSediments.some(s => 
+                                       s.includes('rbc') || s.includes('red blood')
+                                     )
+                                     const hasWBCs = detectedSediments.some(s => 
+                                       s.includes('wbc') || s.includes('white blood')
+                                     )
+                                     const hasTransitionalYeastsTrichomonas = detectedSediments.some(s => 
+                                       s.includes('transitional') || s.includes('yeast') || s.includes('trichomonas')
+                                     )
+                                     const hasRenalTubularEpithelial = detectedSediments.some(s => 
+                                       s.includes('renal') || s.includes('tubular')
+                                     )
+                                     const hasOvalFatBodies = detectedSediments.some(s => 
+                                       s.includes('oval') || s.includes('fat')
+                                     )
+                                     
+                                     // Show a single row with all detected sediments for this field
+                                     return (
+                                       <tr key={`hpf-${currentHPFIndex}`} className="border-b border-gray-100 hover:bg-gray-50">
                                          <td className="text-center py-2 px-2">
-                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
-                                             None
+                                           <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
+                                             hasNormalCrystals 
+                                               ? 'bg-green-100 text-green-700' 
+                                               : 'bg-gray-50 text-gray-500'
+                                           }`}>
+                                             {hasNormalCrystals ? 'Detected' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
-                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
-                                             None
+                                           <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
+                                             hasBacteria 
+                                               ? 'bg-green-100 text-green-700' 
+                                               : 'bg-gray-50 text-gray-500'
+                                           }`}>
+                                             {hasBacteria ? 'Detected' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
-                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
-                                             None
+                                           <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
+                                             hasRBCs 
+                                               ? 'bg-green-100 text-green-700' 
+                                               : 'bg-gray-50 text-gray-500'
+                                           }`}>
+                                             {hasRBCs ? 'Detected' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
-                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
-                                             None
+                                           <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
+                                             hasWBCs 
+                                               ? 'bg-green-100 text-green-700' 
+                                               : 'bg-gray-50 text-gray-500'
+                                           }`}>
+                                             {hasWBCs ? 'Detected' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
-                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
-                                             None
+                                           <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
+                                             hasTransitionalYeastsTrichomonas 
+                                               ? 'bg-green-100 text-green-700' 
+                                               : 'bg-gray-50 text-gray-500'
+                                           }`}>
+                                             {hasTransitionalYeastsTrichomonas ? 'Detected' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
-                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
-                                             None
+                                           <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
+                                             hasRenalTubularEpithelial 
+                                               ? 'bg-green-100 text-green-700' 
+                                               : 'bg-gray-50 text-gray-500'
+                                           }`}>
+                                             {hasRenalTubularEpithelial ? 'Detected' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
-                                           <div className="bg-gray-50 rounded px-3 py-1 text-xs font-medium text-blue-600 min-w-[60px]">
-                                             None
+                                           <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
+                                             hasOvalFatBodies 
+                                               ? 'bg-green-100 text-green-700' 
+                                               : 'bg-gray-50 text-gray-500'
+                                           }`}>
+                                             {hasOvalFatBodies ? 'Detected' : 'None'}
                                            </div>
                                          </td>
                                        </tr>
-                                     ));
+                                     );
                                    })()
                                  ) : (
                                    <tr>
