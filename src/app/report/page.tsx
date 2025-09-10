@@ -14,7 +14,7 @@ import { useRouter } from 'next/navigation'
 import { useDashboard } from '@/hooks/useDashboard'
 import { updatePatient, updateTest, testDatabaseConnection, deleteTest, deleteImageFromTest, deleteImageFromStorage, addImageToTest, uploadImageToStorage, uploadBase64Image } from '@/lib/api'
 import { loadOpenCV, isOpenCVReady } from '@/lib/opencv-loader'
-import { applyDigitalStain, matToImageData, matToBase64, cleanupSegmentationResult, createDummyTestImage, type SegmentationResult } from '@/lib/digital-staining'
+import { applyDigitalStain, matToImageData, cleanupSegmentationResult, type SegmentationResult } from '@/lib/digital-staining'
 import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown, Upload, ChevronLeft, ChevronRight, Search, ArrowLeft } from 'lucide-react'
 import ImageModal from '@/components/ImageModal'
 import ConfirmationModal from '@/components/ConfirmationModal'
@@ -56,7 +56,7 @@ export default function Report() {
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState('')
   const [notificationType, setNotificationType] = useState<'success' | 'error' | 'warning' | 'info'>('success')
-  const [showDigitalStainingDemo, setShowDigitalStainingDemo] = useState(false)
+  
   const [searchQuery, setSearchQuery] = useState('')
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -517,8 +517,8 @@ export default function Report() {
       try {
         await loadOpenCV()
         if (isMounted) {
-          setOpencvReady(true)
-        }
+            setOpencvReady(true)
+          }
       } catch (error) {
         console.error('Failed to load OpenCV:', error)
         if (isMounted) {
@@ -756,7 +756,7 @@ export default function Report() {
       await addImageToTest(selectedTest.id, imageUrl, 'microscopic')
       
       setNotificationMessage(`Image captured and saved successfully! (${currentImageCount + 1}/10)`)
-      setNotificationType('success')
+        setNotificationType('success')
       
       // Refresh the data to show the new image
       if (dateParam) {
@@ -773,59 +773,7 @@ export default function Report() {
     }
   }
 
-  // Test digital staining with dummy image
-  const testDigitalStaining = () => {
-    if (!opencvReady || !window.cv || !isOpenCVReady()) {
-      setNotificationMessage('OpenCV is not ready. Please wait for it to load.')
-      setNotificationType('error')
-      setShowNotification(true)
-      return
-    }
-
-    try {
-      // Create dummy test image
-      const dummyCanvas = createDummyTestImage()
-      const ctx = dummyCanvas.getContext('2d')
-      if (!ctx) return
-
-      const imageData = ctx.getImageData(0, 0, dummyCanvas.width, dummyCanvas.height)
-      
-      // Apply digital staining
-      const result = applyDigitalStain(imageData, {
-        threshold: 100,
-        kernelSize: 5,
-        iterations: 2,
-        minArea: 50
-      })
-
-      if (result.success) {
-        setNotificationMessage(`Digital staining test successful! Found ${result.contourCount} sediments.`)
-        setNotificationType('success')
-        setShowNotification(true)
-        
-        // Convert result to base64 for display
-        const originalBase64 = matToBase64(result.originalImage)
-        const segmentedBase64 = matToBase64(result.segmentedImage)
-        
-        if (originalBase64 && segmentedBase64) {
-          console.log('Original image:', originalBase64)
-          console.log('Segmented image:', segmentedBase64)
-        }
-        
-        // Cleanup
-        cleanupSegmentationResult(result)
-      } else {
-        setNotificationMessage(`Digital staining test failed: ${result.error}`)
-        setNotificationType('error')
-        setShowNotification(true)
-      }
-    } catch (error) {
-      console.error('Digital staining test error:', error)
-      setNotificationMessage('Digital staining test failed. Check console for details.')
-      setNotificationType('error')
-      setShowNotification(true)
-    }
-  }
+  
 
   const handleDeleteTest = async () => {
     if (!selectedTest) return
@@ -1436,16 +1384,7 @@ export default function Report() {
                           </button>
                           
                           
-                          {/* Digital Staining Test Button */}
-                          <button
-                            onClick={testDigitalStaining}
-                            disabled={!opencvReady}
-                            className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center gap-2 mx-auto disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-                            title="Test digital staining algorithm with dummy image"
-                          >
-                            <Microscope className="h-5 w-5" />
-                            Test Digital Staining
-                          </button>
+                          
                         </div>
                       ) : (
                         <div className="w-16 h-16 mx-auto mb-4 bg-gray-800 rounded-full flex items-center justify-center">
@@ -1502,10 +1441,10 @@ export default function Report() {
                         disabled={!liveStreamActive || !mediaStream || (powerMode === 'high' ? highPowerImages.length >= 10 : lowPowerImages.length >= 10)}
                         className="px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 text-sm font-medium flex items-center gap-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
                       >
-                        <>
-                          <Plus className="h-4 w-4" />
-                          Capture {powerMode === 'high' ? 'HPF' : 'LPF'} ({powerMode === 'high' ? highPowerImages.length : lowPowerImages.length}/10)
-                        </>
+                          <>
+                            <Plus className="h-4 w-4" />
+                            Capture {powerMode === 'high' ? 'HPF' : 'LPF'} ({powerMode === 'high' ? highPowerImages.length : lowPowerImages.length}/10)
+                          </>
                       </button>
                       
                     </div>
