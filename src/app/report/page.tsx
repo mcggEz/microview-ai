@@ -12,9 +12,10 @@ declare global {
 }
 import { useRouter } from 'next/navigation'
 import { useDashboard } from '@/hooks/useDashboard'
-import { updatePatient, updateTest, testDatabaseConnection, deleteTest, deleteImageFromTest, deleteImageFromStorage, addImageToTest, uploadImageToStorage, uploadBase64Image, updateAICounts } from '@/lib/api'
+import { updatePatient, updateTest, testDatabaseConnection, deleteTest, deleteImageFromTest, deleteImageFromStorage, addImageToTest, uploadImageToStorage, uploadBase64Image } from '@/lib/api'
 import { loadOpenCV, isOpenCVReady } from '@/lib/opencv-loader'
-import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown, Upload, ChevronLeft, ChevronRight, Brain, Search, ArrowLeft } from 'lucide-react'
+import { applyDigitalStain, matToImageData, matToBase64, cleanupSegmentationResult, createDummyTestImage, type SegmentationResult } from '@/lib/digital-staining'
+import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown, Upload, ChevronLeft, ChevronRight, Search, ArrowLeft } from 'lucide-react'
 import ImageModal from '@/components/ImageModal'
 import ConfirmationModal from '@/components/ConfirmationModal'
 import CameraCaptureModal from '@/components/CameraCaptureModal'
@@ -55,6 +56,7 @@ export default function Report() {
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState('')
   const [notificationType, setNotificationType] = useState<'success' | 'error' | 'warning' | 'info'>('success')
+  const [showDigitalStainingDemo, setShowDigitalStainingDemo] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -67,27 +69,8 @@ export default function Report() {
   const [overlayEnabled, setOverlayEnabled] = useState(false)
   const [objectCount, setObjectCount] = useState(0)
   
-  // AI Segmentation states
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [segmentationResults, setSegmentationResults] = useState<any>(null)
-  const [croppedSegments, setCroppedSegments] = useState<any[]>([])
   const [isAddingTestImage, setIsAddingTestImage] = useState(false)
   
-  // AI Count state for each sediment type
-  const [aiCounts, setAiCounts] = useState<{[key: string]: string}>({
-    'Epithelial cells': '0 (None)',
-    'Crystals (normal)': '0 (None)',
-    'Bacteria': '0 (None)',
-    'Mucus threads': '0 (None)',
-    'Casts': '0 (None)',
-    'RBCs': '0 (None)',
-    'WBCs': '0 (None)',
-    'Squamous epithelial cells': '0 (None)',
-    'Transitional epithelial cells, yeasts, Trichomonas': '0 (None)',
-    'Renal tubular epithelial cells': '0 (None)',
-    'Oval fat bodies': '0 (None)',
-    'Abnormal crystals, casts': '0 (None)'
-  })
   const [opencvReady, setOpencvReady] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [powerMode, setPowerMode] = useState<'high' | 'low'>('low')
@@ -204,14 +187,6 @@ export default function Report() {
   const [dummy, setDummy] = useState(0) // Used to trigger re-renders - keeping for future use
   const toggleEdit = () => setDummy(prev => prev + 1)
 
-  // Calculate statistics from AI counts
-  const findings = useMemo(() => {
-    if (!selectedTest) return []
-    return Object.values(aiCounts).map(count => ({
-      count: count.split(' ')[0], // Extract number from "5 (Few)"
-      status: count.includes('None') ? 'normal' : count.includes('Rare') ? 'normal' : 'abnormal'
-    }))
-  }, [selectedTest, aiCounts])
 
   // Search and filter tests by date and search query
   const filteredTests = useMemo(() => {
@@ -424,7 +399,7 @@ export default function Report() {
     }
   }
 
-  // Image segmentation function
+  // Digital staining and segmentation function using the new algorithm
   const performSegmentation = (videoElement: HTMLVideoElement, canvas: HTMLCanvasElement) => {
     if (!opencvReady || !window.cv || !isOpenCVReady()) return
 
@@ -442,43 +417,21 @@ export default function Report() {
       // Get image data
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
       
-      // Create OpenCV Mat from image data
-      const src = window.cv.matFromImageData(imageData)
-      const gray = new window.cv.Mat()
-      const binary = new window.cv.Mat()
-      const contours = new window.cv.MatVector()
-      const hierarchy = new window.cv.Mat()
+      // Apply digital staining algorithm
+      const result: SegmentationResult = applyDigitalStain(imageData, {
+        threshold: 100, // Binary threshold for digital staining
+        kernelSize: 5,  // Morphological kernel size
+        iterations: 2,  // Number of morphological iterations
+        minArea: 50     // Minimum contour area
+      })
 
-      // Convert to grayscale
-      window.cv.cvtColor(src, gray, window.cv.COLOR_RGBA2GRAY)
-
-      // Apply Gaussian blur to reduce noise
-      const blurred = new window.cv.Mat()
-      window.cv.GaussianBlur(gray, blurred, new window.cv.Size(5, 5), 0)
-
-      // Apply adaptive threshold
-      window.cv.adaptiveThreshold(blurred, binary, 255, window.cv.ADAPTIVE_THRESH_GAUSSIAN_C, window.cv.THRESH_BINARY, 11, 2)
-
-      // Find contours
-      window.cv.findContours(binary, contours, hierarchy, window.cv.RETR_EXTERNAL, window.cv.CHAIN_APPROX_SIMPLE)
-
-      // Filter contours by area (remove very small objects)
-      const minArea = 50 // Minimum area threshold
-      let validContours = 0
-      const validContourIndices: number[] = []
-
-      for (let i = 0; i < contours.size(); i++) {
-        const contour = contours.get(i)
-        const area = window.cv.contourArea(contour)
-        if (area > minArea) {
-          validContours++
-          validContourIndices.push(i)
-        }
-        contour.delete()
+      if (!result.success) {
+        console.error('Digital staining failed:', result.error)
+        return
       }
 
       // Update object count
-      setObjectCount(validContours)
+      setObjectCount(result.contourCount)
 
       // Clear canvas (keep it transparent)
       ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -486,44 +439,35 @@ export default function Report() {
       // Set composite operation to overlay contours on video
       ctx.globalCompositeOperation = 'source-over'
 
-      // Draw detected objects
-      ctx.strokeStyle = '#00ff00'
-      ctx.lineWidth = 2
-      ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
-
-      for (const index of validContourIndices) {
-        const contour = contours.get(index)
-        const points = []
+      // Convert segmented image to ImageData and draw it
+      const segmentedImageData = matToImageData(result.segmentedImage)
+      if (segmentedImageData) {
+        // Create a temporary canvas to process the segmented image
+        const tempCanvas = document.createElement('canvas')
+        tempCanvas.width = canvas.width
+        tempCanvas.height = canvas.height
+        const tempCtx = tempCanvas.getContext('2d')
         
-        for (let j = 0; j < contour.rows; j++) {
-          const point = contour.data32S.subarray(j * 2, j * 2 + 2)
-          points.push({ x: point[0], y: point[1] })
+        if (tempCtx) {
+          tempCtx.putImageData(segmentedImageData, 0, 0)
+          
+          // Draw the segmented contours in green with some transparency
+          ctx.globalAlpha = 0.8
+          ctx.drawImage(tempCanvas, 0, 0)
+          ctx.globalAlpha = 1.0
         }
-
-        if (points.length > 0) {
-          ctx.beginPath()
-          ctx.moveTo(points[0].x, points[0].y)
-          for (let k = 1; k < points.length; k++) {
-            ctx.lineTo(points[k].x, points[k].y)
-          }
-          ctx.closePath()
-          ctx.stroke()
-          ctx.fill()
-        }
-        
-        contour.delete()
       }
 
-      // Clean up
-      src.delete()
-      gray.delete()
-      binary.delete()
-      blurred.delete()
-      contours.delete()
-      hierarchy.delete()
+      // Draw contour count
+      ctx.fillStyle = '#00ff00'
+      ctx.font = '16px Arial'
+      ctx.fillText(`Sediments detected: ${result.contourCount}`, 10, 30)
+
+      // Cleanup OpenCV matrices
+      cleanupSegmentationResult(result)
 
     } catch (error) {
-      console.error('Segmentation error:', error)
+      console.error('Digital staining segmentation error:', error)
     }
   }
 
@@ -632,41 +576,6 @@ export default function Report() {
     setCurrentLPFIndex(0)
   }, [selectedTest, isAddingTestImage])
 
-  // Load AI counts from database when test is selected
-  useEffect(() => {
-    if (selectedTest) {
-      setAiCounts({
-        'Epithelial cells': selectedTest.ai_epithelial_cells_count || '0 (None)',
-        'Crystals (normal)': selectedTest.ai_crystals_normal_count || '0 (None)',
-        'Bacteria': selectedTest.ai_bacteria_count || '0 (None)',
-        'Mucus threads': selectedTest.ai_mucus_threads_count || '0 (None)',
-        'Casts': selectedTest.ai_casts_count || '0 (None)',
-        'RBCs': selectedTest.ai_rbcs_count || '0 (None)',
-        'WBCs': selectedTest.ai_wbcs_count || '0 (None)',
-        'Squamous epithelial cells': selectedTest.ai_squamous_epithelial_cells_count || '0 (None)',
-        'Transitional epithelial cells, yeasts, Trichomonas': selectedTest.ai_transitional_epithelial_cells_count || '0 (None)',
-        'Renal tubular epithelial cells': selectedTest.ai_renal_tubular_epithelial_cells_count || '0 (None)',
-        'Oval fat bodies': selectedTest.ai_oval_fat_bodies_count || '0 (None)',
-        'Abnormal crystals, casts': selectedTest.ai_abnormal_crystals_casts_count || '0 (None)'
-      })
-    } else {
-      // Reset to default values when no test is selected
-      setAiCounts({
-        'Epithelial cells': '0 (None)',
-        'Crystals (normal)': '0 (None)',
-        'Bacteria': '0 (None)',
-        'Mucus threads': '0 (None)',
-        'Casts': '0 (None)',
-        'RBCs': '0 (None)',
-        'WBCs': '0 (None)',
-        'Squamous epithelial cells': '0 (None)',
-        'Transitional epithelial cells, yeasts, Trichomonas': '0 (None)',
-        'Renal tubular epithelial cells': '0 (None)',
-        'Oval fat bodies': '0 (None)',
-        'Abnormal crystals, casts': '0 (None)'
-      })
-    }
-  }, [selectedTest])
 
   // Ensure camera stream is attached to video element when test changes
   useEffect(() => {
@@ -686,96 +595,7 @@ export default function Report() {
     }
   }, [selectedTest, mediaStream, liveStreamActive])
 
-  // Generate dropdown options for AI counts based on Strasinger standards
-  const getAICountOptions = (item: string, quantitated: string): string[] => {
-    const options: string[] = []
-    
-    switch (item.toLowerCase()) {
-      case 'epithelial cells':
-        if (quantitated === 'per LPF') {
-          for (let i = 0; i <= 5; i++) options.push(`${i} (Rare)`)
-          for (let i = 6; i <= 20; i++) options.push(`${i} (Few)`)
-          for (let i = 21; i <= 100; i += 5) options.push(`${i} (Moderate)`)
-          options.push('>100 (Many)')
-        }
-        break
-      case 'crystals (normal)':
-        if (quantitated === 'per HPF') {
-          for (let i = 0; i <= 2; i++) options.push(`${i} (Rare)`)
-          for (let i = 3; i <= 5; i++) options.push(`${i} (Few)`)
-          for (let i = 6; i <= 20; i += 2) options.push(`${i} (Moderate)`)
-          options.push('>20 (Many)')
-        }
-        break
-      case 'bacteria':
-        if (quantitated === 'per HPF') {
-          for (let i = 0; i <= 10; i++) options.push(`${i} (Rare)`)
-          for (let i = 11; i <= 50; i += 5) options.push(`${i} (Few)`)
-          for (let i = 55; i <= 200; i += 15) options.push(`${i} (Moderate)`)
-          options.push('>200 (Many)')
-        }
-        break
-      case 'mucus threads':
-        if (quantitated === 'per LPF') {
-          for (let i = 0; i <= 1; i++) options.push(`${i} (Rare)`)
-          for (let i = 2; i <= 3; i++) options.push(`${i} (Few)`)
-          for (let i = 4; i <= 10; i++) options.push(`${i} (Moderate)`)
-          options.push('>10 (Many)')
-        }
-        break
-      case 'rbcs':
-      case 'wbcs':
-        if (quantitated === 'per HPF') {
-          for (let i = 0; i <= 2; i++) options.push(`${i} (None)`)
-          for (let i = 3; i <= 5; i++) options.push(`${i} (Rare)`)
-          for (let i = 6; i <= 10; i++) options.push(`${i} (Few)`)
-          for (let i = 11; i <= 25; i += 3) options.push(`${i} (Moderate)`)
-          for (let i = 28; i <= 50; i += 5) options.push(`${i} (Many)`)
-          options.push('>50 (Many)')
-        }
-        break
-      default:
-        // For items with descriptive ranges
-        const descriptiveItems = ['casts', 'squamous epithelial cells', 'transitional epithelial cells', 'renal tubular epithelial cells', 'oval fat bodies', 'abnormal crystals']
-        if (descriptiveItems.some(desc => item.toLowerCase().includes(desc))) {
-          options.push('0 (None)', '1-2 (Rare)', '3-5 (Few)', '6-10 (Moderate)', '>10 (Many)')
-        }
-        break
-    }
-    
-    return options.length > 0 ? options : ['0 (None)', '1-2 (Rare)', '3-5 (Few)', '6-10 (Moderate)', '>10 (Many)']
-  }
 
-  // Handle AI count change
-  const handleAICountChange = async (item: string, newValue: string) => {
-    // Update local state immediately for responsive UI
-    setAiCounts(prev => ({
-      ...prev,
-      [item]: newValue
-    }))
-
-    // Save to database if a test is selected
-    if (selectedTest) {
-      try {
-        const updatedCounts = {
-          ...aiCounts,
-          [item]: newValue
-        }
-        await updateAICounts(selectedTest.id, updatedCounts)
-        console.log('AI count updated successfully:', item, newValue)
-      } catch (error) {
-        console.error('Failed to update AI count:', error)
-        // Revert local state on error
-        setAiCounts(prev => ({
-          ...prev,
-          [item]: aiCounts[item] // Revert to previous value
-        }))
-        setNotificationMessage('Failed to save AI count. Please try again.')
-        setNotificationType('error')
-        setShowNotification(true)
-      }
-    }
-  }
 
   const handleEditToggle = () => {
     if (isEditing) {
@@ -887,81 +707,6 @@ export default function Report() {
     captureImage()
   }
 
-  // Test function to use test1.jpg for AI analysis
-  const handleTestImageAnalysis = async () => {
-    if (!selectedTest) {
-      setNotificationMessage('No test selected. Please select a test first.')
-      setNotificationType('error')
-      setShowNotification(true)
-      return
-    }
-
-    try {
-      setIsAnalyzing(true)
-      setIsAddingTestImage(true)
-      setNotificationMessage('Loading test image for AI analysis...')
-      setNotificationType('info')
-      setShowNotification(true)
-
-      // Fetch the test image
-      const response = await fetch('/test1.jpg')
-      const blob = await response.blob()
-      const file = new File([blob], 'test1.jpg', { type: 'image/jpeg' })
-
-      // Convert to base64 for display
-      const reader = new FileReader()
-      reader.onload = async () => {
-        const imageDataUrl = reader.result as string
-        
-        // Upload the test image to Supabase Storage
-        const imageUrl = await uploadImageToStorage(file, selectedTest.id, 'microscopic')
-        
-        // Add the image URL to the test record with correct power type
-        const powerType = powerMode === 'high' ? 'hpf' : 'lpf'
-        await addImageToTest(selectedTest.id, imageUrl, powerType)
-        
-        // AI Analysis
-        try {
-          setNotificationMessage('Analyzing test image with AI...')
-          setNotificationType('info')
-          setShowNotification(true)
-          
-          const analysisResults = await analyzeImageWithAI(file)
-          setSegmentationResults(analysisResults)
-          processImageSegments(analysisResults.segments, imageDataUrl)
-          
-          setNotificationMessage(`Test image analyzed successfully! Found ${analysisResults.segments.length} sediments. Added to ${powerMode.toUpperCase()} mode.`)
-          setNotificationType('success')
-        } catch (aiError) {
-          console.warn('AI analysis failed, but image was saved:', aiError)
-          setNotificationMessage(`Test image saved successfully! (AI analysis failed: ${aiError}) Added to ${powerMode.toUpperCase()} mode.`)
-          setNotificationType('warning')
-        }
-        
-        // Update local state to show the image immediately
-        if (powerMode === 'high') {
-          setHighPowerImages(prev => [...prev, imageDataUrl])
-        } else {
-          setLowPowerImages(prev => [...prev, imageDataUrl])
-        }
-        
-        // Don't refresh data immediately to preserve local state
-        // The image will be visible right away from local state update
-        
-        setShowNotification(true)
-      }
-      reader.readAsDataURL(blob)
-      
-    } catch (error) {
-      console.error('Error processing test image:', error)
-      setNotificationMessage('Failed to process test image. Please try again.')
-      setNotificationType('error')
-      setShowNotification(true)
-    } finally {
-      setIsAnalyzing(false)
-      setIsAddingTestImage(false)
-    }
-  }
 
   // Utility to encode file to Base64
   const encodeFileToBase64 = (file: File): Promise<string> => {
@@ -980,206 +725,7 @@ export default function Report() {
   }
 
   // Function to perform image cropping and classification
-  const processImageSegments = (segments: any[], imageUrl: string) => {
-    console.log('Processing segments:', segments)
-    console.log('Image URL:', imageUrl)
-    console.log('Current power mode:', powerMode)
-    
-    const img = new window.Image()
-    img.src = imageUrl
 
-    img.onload = () => {
-      const newCroppedSegments: any[] = []
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-
-      if (!ctx) return
-
-      segments.forEach((segment, index) => {
-        console.log(`Processing segment ${index}:`, segment)
-        // Set canvas dimensions to the size of the cropped segment
-        canvas.width = segment.width
-        canvas.height = segment.height
-
-        // Draw the cropped portion of the original image onto the canvas
-        ctx.drawImage(
-          img,
-          segment.x,
-          segment.y,
-          segment.width,
-          segment.height,
-          0,
-          0,
-          segment.width,
-          segment.height
-        )
-
-        // Get the cropped image data as a data URL and store it
-        const croppedImageUrl = canvas.toDataURL('image/png')
-        const segmentData = {
-          id: `${powerMode === 'high' ? 'HPF' : 'LPF'}-${currentLPFIndex || currentHPFIndex}-${index}`,
-          url: croppedImageUrl,
-          classification: segment.classification,
-          coordinates: {
-            x: segment.x,
-            y: segment.y,
-            width: segment.width,
-            height: segment.height
-          },
-          powerMode: powerMode === 'high' ? 'HPF' : 'LPF'
-        }
-        
-        console.log('Created segment data:', segmentData)
-        newCroppedSegments.push(segmentData)
-      })
-      
-      console.log('All new cropped segments:', newCroppedSegments)
-      setCroppedSegments(prev => {
-        const updated = [...prev, ...newCroppedSegments]
-        console.log('Updated cropped segments:', updated)
-        return updated
-      })
-    }
-  }
-
-  // AI Image Analysis using Gemini API
-  const analyzeImageWithAI = async (imageFile: File): Promise<any> => {
-    const base64ImageData = await encodeFileToBase64(imageFile)
-
-    const systemPrompt = `You are a specialized AI for urinalysis microscopic image analysis. Your task is to identify and classify formed elements in urine samples according to standard urinalysis protocols.
-
-    CRITICAL INSTRUCTIONS:
-    1. **Respond in JSON ONLY** - Your response MUST be a single valid JSON object
-    2. **Use 'segments' array** - The JSON must contain a 'segments' array with detected elements
-    3. **Standard Classifications** - Use ONLY these exact classification names:
-    
-    FOR LOW POWER FIELD (LPF) ANALYSIS:
-    - "Epithelial Cell" (any epithelial cell type)
-    - "Mucus Thread" 
-    - "Cast" (any cast type)
-    - "Squamous Epithelial Cell"
-    - "Abnormal Crystal" (any pathological crystal)
-    
-    FOR HIGH POWER FIELD (HPF) ANALYSIS:
-    - "Normal Crystal" (calcium oxalate, uric acid, etc.)
-    - "Bacteria"
-    - "Red Blood Cell" or "RBC"
-    - "White Blood Cell" or "WBC" 
-    - "Transitional Epithelial Cell"
-    - "Yeast"
-    - "Trichomonas"
-    - "Renal Tubular Epithelial Cell"
-    - "Oval Fat Body"
-    
-    4. **Segment Structure** - Each segment object MUST have:
-    - 'x': integer x-coordinate (top-left corner)
-    - 'y': integer y-coordinate (top-left corner) 
-    - 'width': integer width of bounding box
-    - 'height': integer height of bounding box
-    - 'classification': string using EXACT names above
-    
-    5. **Detection Guidelines**:
-    - Only detect clearly visible, distinct elements
-    - Avoid overlapping or ambiguous regions
-    - Minimum bounding box size: 10x10 pixels
-    - Maximum 20 segments per image to avoid noise
-    `
-
-    const userPrompt = "Analyze this microscopic urine sample image. Identify all visible formed elements and provide precise bounding box coordinates with standard urinalysis classifications. Return only valid JSON with the 'segments' array."
-
-    const payload = {
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: userPrompt },
-            {
-              inlineData: {
-                mimeType: imageFile.type,
-                data: base64ImageData,
-              },
-            },
-          ],
-        },
-      ],
-      systemInstruction: {
-        parts: [{ text: systemPrompt }],
-      },
-      generationConfig: {
-        responseMimeType: "application/json",
-      }
-    }
-
-    // Note: You'll need to add your Gemini API key here
-    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`
-
-    const delay = (ms: number) => new Promise(res => setTimeout(res, ms))
-    const maxRetries = 3
-    let attempt = 0
-
-    while (attempt < maxRetries) {
-      try {
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
-
-        if (!response.ok) {
-          if (response.status === 429 && attempt < maxRetries - 1) {
-            const retryAfter = response.headers.get('Retry-After')
-            const delayTime = retryAfter ? parseInt(retryAfter, 10) * 1000 : (1 << attempt) * 1000
-            console.warn(`Rate limit exceeded. Retrying in ${delayTime}ms...`)
-            await delay(delayTime)
-            attempt++
-            continue
-          }
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        const result = await response.json()
-        const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text
-
-        // Debug: Log the raw response
-        console.log('Gemini API Response:', result)
-        console.log('Extracted JSON Text:', jsonText)
-
-        if (jsonText) {
-          try {
-            const parsedResult = JSON.parse(jsonText)
-            console.log('Parsed Result:', parsedResult)
-            
-            if (parsedResult.segments && Array.isArray(parsedResult.segments)) {
-              console.log('Segments found:', parsedResult.segments.length)
-              return parsedResult
-            } else {
-              console.error('Invalid segments structure:', parsedResult)
-              throw new Error("Analysis failed: Invalid JSON structure from model.")
-            }
-          } catch (parseError) {
-            console.error('JSON Parse Error:', parseError)
-            console.error('Raw JSON Text:', jsonText)
-            throw new Error("Analysis failed: Could not parse JSON response.")
-          }
-        } else {
-          console.error('No JSON text in response:', result)
-          throw new Error("Analysis failed. No JSON data was generated.")
-        }
-      } catch (e) {
-        if (attempt < maxRetries - 1) {
-          const delayTime = (1 << attempt) * 1000
-          console.error(`Attempt ${attempt + 1} failed:`, e)
-          console.warn(`Retrying in ${delayTime}ms...`)
-          await delay(delayTime)
-          attempt++
-        } else {
-          console.error("All attempts to analyze the image failed.", e)
-          throw new Error("Failed to analyze the image. Please try again.")
-        }
-      }
-    }
-  }
 
   const handleImageCapture = async (imageData: string) => {
     if (!selectedTest) {
@@ -1199,7 +745,6 @@ export default function Report() {
     }
 
     try {
-      setIsAnalyzing(true)
       setNotificationMessage('Uploading image...')
       setNotificationType('info')
       setShowNotification(true)
@@ -1210,28 +755,8 @@ export default function Report() {
       // Add the image URL to the test record
       await addImageToTest(selectedTest.id, imageUrl, 'microscopic')
       
-      // AI Analysis
-      try {
-        setNotificationMessage('Analyzing image with AI...')
-        setNotificationType('info')
-        setShowNotification(true)
-        
-        // Convert base64 to File for AI analysis
-        const response = await fetch(imageData)
-        const blob = await response.blob()
-        const file = new File([blob], `captured-image-${Date.now()}.jpg`, { type: 'image/jpeg' })
-        
-        const analysisResults = await analyzeImageWithAI(file)
-        setSegmentationResults(analysisResults)
-        processImageSegments(analysisResults.segments, imageData)
-        
-        setNotificationMessage(`Image captured, saved, and analyzed successfully! Found ${analysisResults.segments.length} sediments. (${currentImageCount + 1}/10)`)
-        setNotificationType('success')
-      } catch (aiError) {
-        console.warn('AI analysis failed, but image was saved:', aiError)
-        setNotificationMessage(`Image captured and saved successfully! (AI analysis failed) (${currentImageCount + 1}/10)`)
-        setNotificationType('warning')
-      }
+      setNotificationMessage(`Image captured and saved successfully! (${currentImageCount + 1}/10)`)
+      setNotificationType('success')
       
       // Refresh the data to show the new image
       if (dateParam) {
@@ -1245,7 +770,60 @@ export default function Report() {
       setNotificationType('error')
       setShowNotification(true)
     } finally {
-      setIsAnalyzing(false)
+    }
+  }
+
+  // Test digital staining with dummy image
+  const testDigitalStaining = () => {
+    if (!opencvReady || !window.cv || !isOpenCVReady()) {
+      setNotificationMessage('OpenCV is not ready. Please wait for it to load.')
+      setNotificationType('error')
+      setShowNotification(true)
+      return
+    }
+
+    try {
+      // Create dummy test image
+      const dummyCanvas = createDummyTestImage()
+      const ctx = dummyCanvas.getContext('2d')
+      if (!ctx) return
+
+      const imageData = ctx.getImageData(0, 0, dummyCanvas.width, dummyCanvas.height)
+      
+      // Apply digital staining
+      const result = applyDigitalStain(imageData, {
+        threshold: 100,
+        kernelSize: 5,
+        iterations: 2,
+        minArea: 50
+      })
+
+      if (result.success) {
+        setNotificationMessage(`Digital staining test successful! Found ${result.contourCount} sediments.`)
+        setNotificationType('success')
+        setShowNotification(true)
+        
+        // Convert result to base64 for display
+        const originalBase64 = matToBase64(result.originalImage)
+        const segmentedBase64 = matToBase64(result.segmentedImage)
+        
+        if (originalBase64 && segmentedBase64) {
+          console.log('Original image:', originalBase64)
+          console.log('Segmented image:', segmentedBase64)
+        }
+        
+        // Cleanup
+        cleanupSegmentationResult(result)
+      } else {
+        setNotificationMessage(`Digital staining test failed: ${result.error}`)
+        setNotificationType('error')
+        setShowNotification(true)
+      }
+    } catch (error) {
+      console.error('Digital staining test error:', error)
+      setNotificationMessage('Digital staining test failed. Check console for details.')
+      setNotificationType('error')
+      setShowNotification(true)
     }
   }
 
@@ -1857,24 +1435,16 @@ export default function Report() {
                             </svg>
                           </button>
                           
-                          {/* Test AI Button */}
+                          
+                          {/* Digital Staining Test Button */}
                           <button
-                            onClick={handleTestImageAnalysis}
-                            disabled={isAnalyzing}
-                            className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium flex items-center gap-2 mx-auto disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-                            title={`Test AI analysis with sample image (will add to ${powerMode.toUpperCase()} mode)`}
+                            onClick={testDigitalStaining}
+                            disabled={!opencvReady}
+                            className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center gap-2 mx-auto disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
+                            title="Test digital staining algorithm with dummy image"
                           >
-                            {isAnalyzing ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                Analyzing...
-                              </>
-                            ) : (
-                              <>
-                                <Brain className="h-5 w-5" />
-                                Test AI ({powerMode === 'high' ? 'HPF' : 'LPF'})
-                              </>
-                            )}
+                            <Microscope className="h-5 w-5" />
+                            Test Digital Staining
                           </button>
                         </div>
                       ) : (
@@ -1929,32 +1499,15 @@ export default function Report() {
                     <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md rounded-full px-6 py-3 border border-white/20 shadow-lg">
                       <button
                         onClick={captureImage}
-                        disabled={!liveStreamActive || !mediaStream || (powerMode === 'high' ? highPowerImages.length >= 10 : lowPowerImages.length >= 10) || isAnalyzing}
+                        disabled={!liveStreamActive || !mediaStream || (powerMode === 'high' ? highPowerImages.length >= 10 : lowPowerImages.length >= 10)}
                         className="px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 text-sm font-medium flex items-center gap-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
                       >
-                        {isAnalyzing ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            Analyzing...
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="h-4 w-4" />
-                            Capture {powerMode === 'high' ? 'HPF' : 'LPF'} ({powerMode === 'high' ? highPowerImages.length : lowPowerImages.length}/10)
-                          </>
-                        )}
+                        <>
+                          <Plus className="h-4 w-4" />
+                          Capture {powerMode === 'high' ? 'HPF' : 'LPF'} ({powerMode === 'high' ? highPowerImages.length : lowPowerImages.length}/10)
+                        </>
                       </button>
                       
-                      {/* Test Image Button */}
-                      <button
-                        onClick={handleTestImageAnalysis}
-                        disabled={isAnalyzing}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 text-sm font-medium flex items-center gap-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
-                        title={`Test AI analysis with sample image (will add to ${powerMode.toUpperCase()} mode)`}
-                      >
-                        <Brain className="h-4 w-4" />
-                        Test AI ({powerMode === 'high' ? 'HPF' : 'LPF'})
-                      </button>
                     </div>
                   </div>
                   
@@ -2244,26 +1797,6 @@ export default function Report() {
                              LPF Sediment Analysis
                            </h4>
                            
-                           {/* Debug: Show detected segments */}
-                           {croppedSegments.filter(s => s.powerMode === 'LPF').length > 0 && (
-                             <div className="mb-3 p-2 bg-blue-50 rounded text-xs">
-                               <div className="font-medium text-blue-800 mb-1">AI Detected Segments:</div>
-                               <div className="text-blue-700 mb-2">
-                                 {croppedSegments.filter(s => s.powerMode === 'LPF').map((segment, idx) => (
-                                   <span key={idx} className="inline-block bg-blue-100 px-2 py-1 rounded mr-1 mb-1">
-                                     {segment.classification}
-                                   </span>
-                                 ))}
-                               </div>
-                               <div className="text-xs text-gray-600">
-                                 <div>Epithelial Cells: {croppedSegments.filter(s => s.powerMode === 'LPF').some(s => s.classification.toLowerCase().includes('epithelial') && !s.classification.toLowerCase().includes('squamous')) ? '✓' : '✗'}</div>
-                                 <div>Mucus Threads: {croppedSegments.filter(s => s.powerMode === 'LPF').some(s => s.classification.toLowerCase().includes('mucus')) ? '✓' : '✗'}</div>
-                                 <div>Casts: {croppedSegments.filter(s => s.powerMode === 'LPF').some(s => s.classification.toLowerCase().includes('cast')) ? '✓' : '✗'}</div>
-                                 <div>Squamous Epithelial: {croppedSegments.filter(s => s.powerMode === 'LPF').some(s => s.classification.toLowerCase().includes('squamous')) ? '✓' : '✗'}</div>
-                                 <div>Abnormal Crystals: {croppedSegments.filter(s => s.powerMode === 'LPF').some(s => s.classification.toLowerCase().includes('crystal') && (s.classification.toLowerCase().includes('abnormal') || s.classification.toLowerCase().includes('pathological'))) ? '✓' : '✗'}</div>
-                               </div>
-                             </div>
-                           )}
                            
                            {/* Field-based Sediment Analysis Table */}
                            <div className="overflow-x-auto">
@@ -2278,24 +1811,13 @@ export default function Report() {
                                  </tr>
                                </thead>
                                <tbody className="text-xs">
-                                 {isAnalyzing ? (
-                                   // Loading state while AI is analyzing
-                                   <tr>
-                                     <td colSpan={5} className="text-center py-4">
-                                       <div className="flex items-center justify-center space-x-2">
-                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                                         <span className="text-blue-600 text-xs">Analyzing image...</span>
-                                       </div>
-                                     </td>
-                                   </tr>
-                                 ) : lowPowerImages.length > 0 ? (
+           
+                                {lowPowerImages.length > 0 ? (
                                    // Show cropped regions for the currently viewed LPF image only
                                    (() => {
                                      const croppedRegions = [1, 2, 3]; // This will be dynamic when cropping is implemented
                                      // Get all detected segments for current LPF field
-                                     const currentFieldSegments = croppedSegments.filter(segment => 
-                                       segment.powerMode === 'LPF'
-                                     )
+                                     const currentFieldSegments: any[] = []
                                      
                                      // Get detected sediment types for this field
                                      const detectedSediments = currentFieldSegments.map(s => s.classification.toLowerCase())
@@ -2470,28 +1992,6 @@ export default function Report() {
                              HPF Sediment Analysis
                            </h4>
                            
-                           {/* Debug: Show detected segments */}
-                           {croppedSegments.filter(s => s.powerMode === 'HPF').length > 0 && (
-                             <div className="mb-3 p-2 bg-blue-50 rounded text-xs">
-                               <div className="font-medium text-blue-800 mb-1">AI Detected Segments:</div>
-                               <div className="text-blue-700 mb-2">
-                                 {croppedSegments.filter(s => s.powerMode === 'HPF').map((segment, idx) => (
-                                   <span key={idx} className="inline-block bg-blue-100 px-2 py-1 rounded mr-1 mb-1">
-                                     {segment.classification}
-                                   </span>
-                                 ))}
-                               </div>
-                               <div className="text-xs text-gray-600">
-                                 <div>Normal Crystals: {croppedSegments.filter(s => s.powerMode === 'HPF').some(s => s.classification.toLowerCase().includes('crystal') && !s.classification.toLowerCase().includes('abnormal') && !s.classification.toLowerCase().includes('pathological')) ? '✓' : '✗'}</div>
-                                 <div>Bacteria: {croppedSegments.filter(s => s.powerMode === 'HPF').some(s => s.classification.toLowerCase().includes('bacteria')) ? '✓' : '✗'}</div>
-                                 <div>RBCs: {croppedSegments.filter(s => s.powerMode === 'HPF').some(s => s.classification.toLowerCase().includes('rbc') || s.classification.toLowerCase().includes('red blood')) ? '✓' : '✗'}</div>
-                                 <div>WBCs: {croppedSegments.filter(s => s.powerMode === 'HPF').some(s => s.classification.toLowerCase().includes('wbc') || s.classification.toLowerCase().includes('white blood')) ? '✓' : '✗'}</div>
-                                 <div>Transitional/Yeasts/Trichomonas: {croppedSegments.filter(s => s.powerMode === 'HPF').some(s => s.classification.toLowerCase().includes('transitional') || s.classification.toLowerCase().includes('yeast') || s.classification.toLowerCase().includes('trichomonas')) ? '✓' : '✗'}</div>
-                                 <div>Renal Tubular Epithelial: {croppedSegments.filter(s => s.powerMode === 'HPF').some(s => s.classification.toLowerCase().includes('renal') || s.classification.toLowerCase().includes('tubular')) ? '✓' : '✗'}</div>
-                                 <div>Oval Fat Bodies: {croppedSegments.filter(s => s.powerMode === 'HPF').some(s => s.classification.toLowerCase().includes('oval') || s.classification.toLowerCase().includes('fat')) ? '✓' : '✗'}</div>
-                               </div>
-                             </div>
-                           )}
                            
                            {/* Field-based Sediment Analysis Table */}
                            <div className="overflow-x-auto">
@@ -2508,24 +2008,12 @@ export default function Report() {
                                  </tr>
                                </thead>
                                <tbody className="text-xs">
-                                 {isAnalyzing ? (
-                                   // Loading state while AI is analyzing
-                                   <tr>
-                                     <td colSpan={7} className="text-center py-4">
-                                       <div className="flex items-center justify-center space-x-2">
-                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                                         <span className="text-blue-600 text-xs">Analyzing image...</span>
-                                       </div>
-                                     </td>
-                                   </tr>
-                                 ) : highPowerImages.length > 0 ? (
+                                {highPowerImages.length > 0 ? (
                                    // Show cropped regions for the currently viewed HPF image only
                                    (() => {
                                      const croppedRegions = [1, 2, 3]; // This will be dynamic when cropping is implemented
                                      // Get all detected segments for current HPF field
-                                     const currentFieldSegments = croppedSegments.filter(segment => 
-                                       segment.powerMode === 'HPF'
-                                     )
+                                     const currentFieldSegments: any[] = []
                                      
                                      // Get detected sediment types for this field
                                      const detectedSediments = currentFieldSegments.map(s => s.classification.toLowerCase())
@@ -2837,7 +2325,6 @@ export default function Report() {
                          <th className="py-1.5 px-2 text-center font-semibold text-gray-800 border-r border-gray-300">Few</th>
                          <th className="py-1.5 px-2 text-center font-semibold text-gray-800 border-r border-gray-300">Moderate</th>
                          <th className="py-1.5 px-2 text-center font-semibold text-gray-800 border-r border-gray-300">Many</th>
-                         <th className="py-1.5 px-2 text-center font-semibold text-gray-800">AI Count</th>
                        </tr>
                      </thead>
                      <tbody>
@@ -2850,17 +2337,6 @@ export default function Report() {
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">5-20</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">20-100</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">&gt;100</td>
-                         <td className="py-1.5 px-2 text-center border-r border-gray-300">
-                           <select 
-                             value={aiCounts['Epithelial cells']} 
-                             onChange={(e) => handleAICountChange('Epithelial cells', e.target.value)}
-                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
-                           >
-                             {getAICountOptions('Epithelial cells', 'per LPF').map(option => (
-                               <option key={option} value={option}>{option}</option>
-                             ))}
-                           </select>
-                         </td>
                        </tr>
                        
                        {/* Crystals (normal) */}
@@ -2872,17 +2348,6 @@ export default function Report() {
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">2-5</td>
                          <td className="py-1.5 px-2 text-center text-red-600 font-semibold border-r border-gray-300">5-20</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">&gt;20</td>
-                         <td className="py-1.5 px-2 text-center border-r border-gray-300">
-                           <select 
-                             value={aiCounts['Crystals (normal)']} 
-                             onChange={(e) => handleAICountChange('Crystals (normal)', e.target.value)}
-                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
-                           >
-                             {getAICountOptions('Crystals (normal)', 'per HPF').map(option => (
-                               <option key={option} value={option}>{option}</option>
-                             ))}
-                           </select>
-                         </td>
                        </tr>
                        
                        {/* Bacteria */}
@@ -2894,17 +2359,6 @@ export default function Report() {
                          <td className="py-1.5 px-2 text-center text-red-600 font-semibold border-r border-gray-300">10-50</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">50-200</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">&gt;200</td>
-                         <td className="py-1.5 px-2 text-center border-r border-gray-300">
-                           <select 
-                             value={aiCounts['Bacteria']} 
-                             onChange={(e) => handleAICountChange('Bacteria', e.target.value)}
-                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
-                           >
-                             {getAICountOptions('Bacteria', 'per HPF').map(option => (
-                               <option key={option} value={option}>{option}</option>
-                             ))}
-                           </select>
-                         </td>
                        </tr>
                        
                        {/* Mucus threads */}
@@ -2916,17 +2370,6 @@ export default function Report() {
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">1-3</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">3-10</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">&gt;10</td>
-                         <td className="py-1.5 px-2 text-center border-r border-gray-300">
-                           <select 
-                             value={aiCounts['Mucus threads']} 
-                             onChange={(e) => handleAICountChange('Mucus threads', e.target.value)}
-                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
-                           >
-                             {getAICountOptions('Mucus threads', 'per LPF').map(option => (
-                               <option key={option} value={option}>{option}</option>
-                             ))}
-                           </select>
-                         </td>
                        </tr>
                        
                        {/* Casts */}
@@ -2935,17 +2378,6 @@ export default function Report() {
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">per LPF</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300" colSpan={5}>
                            Numerical ranges: 0-2, 2-5, 5-10, &gt;10
-                         </td>
-                         <td className="py-1.5 px-2 text-center border-r border-gray-300">
-                           <select 
-                             value={aiCounts['Casts']} 
-                             onChange={(e) => handleAICountChange('Casts', e.target.value)}
-                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
-                           >
-                             {getAICountOptions('Casts', 'per LPF').map(option => (
-                               <option key={option} value={option}>{option}</option>
-                             ))}
-                           </select>
                          </td>
                        </tr>
                        
@@ -2956,17 +2388,6 @@ export default function Report() {
                          <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300" colSpan={5}>
                            Numerical ranges: 0-2, 2-5, 5-10, 10-25, 25-50, 50-100, &gt;100
                          </td>
-                         <td className="py-3 px-4 text-center border-r border-gray-300">
-                           <select 
-                             value={aiCounts['RBCs']} 
-                             onChange={(e) => handleAICountChange('RBCs', e.target.value)}
-                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
-                           >
-                             {getAICountOptions('RBCs', 'per HPF').map(option => (
-                               <option key={option} value={option}>{option}</option>
-                             ))}
-                           </select>
-                         </td>
                        </tr>
                        
                        {/* WBCs */}
@@ -2975,17 +2396,6 @@ export default function Report() {
                          <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300">per HPF</td>
                          <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300" colSpan={5}>
                            Numerical ranges: 0-2, 2-5, 5-10, 10-25, 25-50, 50-100, &gt;100
-                         </td>
-                         <td className="py-3 px-4 text-center border-r border-gray-300">
-                           <select 
-                             value={aiCounts['WBCs']} 
-                             onChange={(e) => handleAICountChange('WBCs', e.target.value)}
-                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
-                           >
-                             {getAICountOptions('WBCs', 'per HPF').map(option => (
-                               <option key={option} value={option}>{option}</option>
-                             ))}
-                           </select>
                          </td>
                        </tr>
                        
@@ -2996,17 +2406,6 @@ export default function Report() {
                          <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
                            Rare, few, moderate or many per LPF
                          </td>
-                         <td className="py-3 px-4 text-center border-r border-gray-300">
-                           <select 
-                             value={aiCounts['Squamous epithelial cells']} 
-                             onChange={(e) => handleAICountChange('Squamous epithelial cells', e.target.value)}
-                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
-                           >
-                             {getAICountOptions('Squamous epithelial cells', 'per LPF').map(option => (
-                               <option key={option} value={option}>{option}</option>
-                             ))}
-                           </select>
-                         </td>
                        </tr>
                        
                        {/* Transitional epithelial cells, yeasts, Trichomonas */}
@@ -3015,17 +2414,6 @@ export default function Report() {
                          <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300"></td>
                          <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
                            Rare, few, moderate, or many per HPF
-                         </td>
-                         <td className="py-3 px-4 text-center border-r border-gray-300">
-                           <select 
-                             value={aiCounts['Transitional epithelial cells, yeasts, Trichomonas']} 
-                             onChange={(e) => handleAICountChange('Transitional epithelial cells, yeasts, Trichomonas', e.target.value)}
-                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
-                           >
-                             {getAICountOptions('Transitional epithelial cells, yeasts, Trichomonas', 'per HPF').map(option => (
-                               <option key={option} value={option}>{option}</option>
-                             ))}
-                           </select>
                          </td>
                        </tr>
                        
@@ -3036,17 +2424,6 @@ export default function Report() {
                          <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
                            Average number per 10 HPFs
                          </td>
-                         <td className="py-3 px-4 text-center border-r border-gray-300">
-                           <select 
-                             value={aiCounts['Renal tubular epithelial cells']} 
-                             onChange={(e) => handleAICountChange('Renal tubular epithelial cells', e.target.value)}
-                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
-                           >
-                             {getAICountOptions('Renal tubular epithelial cells', 'per 10 HPFs').map(option => (
-                               <option key={option} value={option}>{option}</option>
-                             ))}
-                           </select>
-                         </td>
                        </tr>
                        
                        {/* Oval fat bodies */}
@@ -3056,17 +2433,6 @@ export default function Report() {
                          <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
                            Average number per HPF
                          </td>
-                         <td className="py-3 px-4 text-center border-r border-gray-300">
-                           <select 
-                             value={aiCounts['Oval fat bodies']} 
-                             onChange={(e) => handleAICountChange('Oval fat bodies', e.target.value)}
-                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
-                           >
-                             {getAICountOptions('Oval fat bodies', 'per HPF').map(option => (
-                               <option key={option} value={option}>{option}</option>
-                             ))}
-                           </select>
-                         </td>
                        </tr>
                        
                        {/* Abnormal crystals, casts */}
@@ -3075,17 +2441,6 @@ export default function Report() {
                          <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300"></td>
                          <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
                            Average number per LPF
-                         </td>
-                         <td className="py-3 px-4 text-center border-r border-gray-300">
-                           <select 
-                             value={aiCounts['Abnormal crystals, casts']} 
-                             onChange={(e) => handleAICountChange('Abnormal crystals, casts', e.target.value)}
-                             className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 text-blue-600 font-semibold min-w-[80px]"
-                           >
-                             {getAICountOptions('Abnormal crystals, casts', 'per LPF').map(option => (
-                               <option key={option} value={option}>{option}</option>
-                             ))}
-                           </select>
                          </td>
                        </tr>
                      </tbody>
