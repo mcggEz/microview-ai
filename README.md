@@ -1,6 +1,4 @@
-# MicroView AI: Leveraging Large Vision-Language Models in an Augmentative Raspberry Pi–Based System for Urine Microscopy Analysis
-
-## 🎓 Undergraduate Thesis Project
+## MicroView AI: Leveraging Large Vision-Language Models in an Augmentative Raspberry Pi–Based System for Urine Microscopy Analysis
 
 This is my undergraduate thesis project for my degree in **Bachelor of Science in Computer Engineering**, where I served as the primary software developer while collaborating with a team.
 
