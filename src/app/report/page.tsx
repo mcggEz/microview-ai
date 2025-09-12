@@ -407,9 +407,12 @@ export default function Report() {
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
-      // Set canvas size to match video
-      canvas.width = videoElement.videoWidth
-      canvas.height = videoElement.videoHeight
+      // Set canvas size to match the displayed video size to ensure perfect overlay alignment
+      // Using clientWidth/Height accounts for CSS scaling (object-fit) and window resizes
+      const displayWidth = videoElement.clientWidth || videoElement.videoWidth
+      const displayHeight = videoElement.clientHeight || videoElement.videoHeight
+      canvas.width = displayWidth
+      canvas.height = displayHeight
 
       // Draw current video frame to canvas
       ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height)
@@ -419,10 +422,10 @@ export default function Report() {
       
       // Apply digital staining algorithm
       const result: SegmentationResult = applyDigitalStain(imageData, {
-        threshold: 100, // Binary threshold for digital staining
-        kernelSize: 5,  // Morphological kernel size
-        iterations: 2,  // Number of morphological iterations
-        minArea: 50     // Minimum contour area
+        threshold: 80, // Lower threshold increases sensitivity
+        kernelSize: 3,  // Smaller kernel preserves fine details
+        iterations: 1,  // Fewer morph passes to keep small objects
+        minArea: 30     // Smaller minimum area to detect tiny shapes
       })
 
       if (!result.success) {
@@ -451,17 +454,15 @@ export default function Report() {
         if (tempCtx) {
           tempCtx.putImageData(segmentedImageData, 0, 0)
           
-          // Draw the segmented contours in green with some transparency
-          ctx.globalAlpha = 0.8
+          // Draw the segmented mask with low opacity so camera remains clear
+          ctx.globalAlpha = 0.35
           ctx.drawImage(tempCanvas, 0, 0)
           ctx.globalAlpha = 1.0
         }
       }
 
-      // Draw contour count
-      ctx.fillStyle = '#00ff00'
-      ctx.font = '16px Arial'
-      ctx.fillText(`Sediments detected: ${result.contourCount}`, 10, 30)
+      // Note: We deliberately avoid drawing any text on the canvas.
+      // The UI badge already shows: Outlines: N
 
       // Cleanup OpenCV matrices
       cleanupSegmentationResult(result)
@@ -1336,7 +1337,7 @@ export default function Report() {
                       />
                     )}
                     
-                    {/* Segmentation overlay */}
+                    {/* Stain overlay */}
                     {overlayEnabled && (
                       <div className="absolute inset-0 pointer-events-none">
                         {/* Canvas for segmentation results */}
@@ -1350,9 +1351,7 @@ export default function Report() {
                         <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-2 rounded-lg backdrop-blur-sm">
                           <div className="flex items-center space-x-2">
                             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                            <span className="text-sm font-medium">
-                              Objects: {objectCount}
-                            </span>
+                            <span className="text-sm font-medium">Sediments: {objectCount}</span>
                           </div>
                         </div>
                         
@@ -1421,7 +1420,7 @@ export default function Report() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <span className="text-sm font-medium">
-                        {overlayEnabled ? `Segmentation: ${objectCount} objects` : 'Segmentation: OFF'}
+                        {overlayEnabled ? `Stain: ${objectCount} sediments` : 'Stain: OFF'}
                       </span>
                     </button>
                     <button

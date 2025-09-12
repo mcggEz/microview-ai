@@ -99,8 +99,9 @@ export function applyDigitalStain(
     const hierarchy = new window.cv.Mat()
     window.cv.findContours(closing, contours, hierarchy, window.cv.RETR_EXTERNAL, window.cv.CHAIN_APPROX_SIMPLE)
 
-    // 6. Filter contours by area and create segmented image
-    const segmentedImage = new window.cv.Mat.zeros(src.rows, src.cols, window.cv.CV_8UC3)
+    // 6. Filter contours by area and create segmented image (filled sediments mask)
+    // Use 4-channel image with alpha so background stays transparent
+    const segmentedImage = new window.cv.Mat.zeros(src.rows, src.cols, window.cv.CV_8UC4)
     let validContourCount = 0
 
     for (let i = 0; i < contours.size(); i++) {
@@ -108,8 +109,22 @@ export function applyDigitalStain(
       const area = window.cv.contourArea(contour)
       
       if (area > minArea) {
-        // Draw contour in white on black background
-        window.cv.drawContours(segmentedImage, contours, i, [255, 255, 255], 2)
+        // First pass: very light translucent fill so camera stays visible
+        window.cv.drawContours(
+          segmentedImage,
+          contours,
+          i,
+          new window.cv.Scalar(0, 255, 0, 60),
+          -1
+        )
+        // Second pass: thin bright outline for definition
+        window.cv.drawContours(
+          segmentedImage,
+          contours,
+          i,
+          new window.cv.Scalar(0, 255, 0, 220),
+          2
+        )
         validContourCount++
       }
     }
