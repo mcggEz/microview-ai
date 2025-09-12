@@ -54,6 +54,29 @@ export interface UrineTest {
   ai_oval_fat_bodies_count?: string
   ai_abnormal_crystals_casts_count?: string
 
+  // LPF AI Analysis Results
+  lpf_ai_epithelial_cells?: boolean
+  lpf_ai_mucus_threads?: boolean
+  lpf_ai_casts?: boolean
+  lpf_ai_squamous_epithelial?: boolean
+  lpf_ai_abnormal_crystals?: boolean
+  lpf_ai_confidence?: number
+  lpf_ai_analysis_notes?: string
+  lpf_ai_analyzed_at?: string
+
+  // HPF AI Analysis Results
+  hpf_ai_rbc?: boolean
+  hpf_ai_wbc?: boolean
+  hpf_ai_epithelial_cells?: boolean
+  hpf_ai_crystals?: boolean
+  hpf_ai_bacteria?: boolean
+  hpf_ai_yeast?: boolean
+  hpf_ai_sperm?: boolean
+  hpf_ai_parasites?: boolean
+  hpf_ai_confidence?: number
+  hpf_ai_analysis_notes?: string
+  hpf_ai_analyzed_at?: string
+
   created_at: string
   updated_at: string
 }

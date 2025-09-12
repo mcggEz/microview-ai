@@ -16,6 +16,7 @@ import { updatePatient, updateTest, testDatabaseConnection, deleteTest, deleteIm
 import { supabase } from '@/lib/supabase'
 import { loadOpenCV, isOpenCVReady } from '@/lib/opencv-loader'
 import { applyDigitalStain, matToImageData, cleanupSegmentationResult, type SegmentationResult } from '@/lib/digital-staining'
+import { detectLPFSediments, detectHPFSediments, type LPFSedimentDetection, type HPFSedimentDetection } from '@/lib/gemini'
 import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown, Upload, ChevronLeft, ChevronRight, Search, ArrowLeft, Menu } from 'lucide-react'
 import ImageModal from '@/components/ImageModal'
 import ConfirmationModal from '@/components/ConfirmationModal'
@@ -97,6 +98,14 @@ export default function Report() {
     abnormalCrystals: '0'
   })
 
+  // LPF Sediment Detection state
+  const [lpfSedimentDetection, setLpfSedimentDetection] = useState<LPFSedimentDetection | null>(null)
+  const [isAnalyzingLPF, setIsAnalyzingLPF] = useState(false)
+
+  // HPF Sediment Detection state
+  const [hpfSedimentDetection, setHpfSedimentDetection] = useState<HPFSedimentDetection | null>(null)
+  const [isAnalyzingHPF, setIsAnalyzingHPF] = useState(false)
+
   // Helper function to create dropdown options based on sediment type
   const getDropdownOptions = (type: string) => {
     const options = {
@@ -163,6 +172,142 @@ export default function Report() {
         setNotificationType('error')
         setShowNotification(true)
       }
+    }
+  }
+
+  // Function to analyze LPF image for sediments
+  const analyzeLPFImage = async (imageUrl: string) => {
+    if (!imageUrl || !selectedTest) return
+
+    // Check if we already have AI analysis data for this test
+    if (selectedTest.lpf_ai_analyzed_at) {
+      console.log('LPF AI analysis already exists, loading from database')
+      setLpfSedimentDetection({
+        epithelial_cells: selectedTest.lpf_ai_epithelial_cells || false,
+        mucus_threads: selectedTest.lpf_ai_mucus_threads || false,
+        casts: selectedTest.lpf_ai_casts || false,
+        squamous_epithelial: selectedTest.lpf_ai_squamous_epithelial || false,
+        abnormal_crystals: selectedTest.lpf_ai_abnormal_crystals || false,
+        confidence: selectedTest.lpf_ai_confidence || 0,
+        analysis_notes: selectedTest.lpf_ai_analysis_notes || ''
+      })
+      return
+    }
+
+    setIsAnalyzingLPF(true)
+    try {
+      // Convert image URL to File object
+      const response = await fetch(imageUrl)
+      const blob = await response.blob()
+      const file = new File([blob], 'lpf-image.jpg', { type: 'image/jpeg' })
+
+      // Analyze with Gemini AI
+      const detection = await detectLPFSediments(file)
+      setLpfSedimentDetection(detection)
+
+      // Save to database
+      const { error } = await supabase
+        .from('urine_tests')
+        .update({
+          lpf_ai_epithelial_cells: detection.epithelial_cells,
+          lpf_ai_mucus_threads: detection.mucus_threads,
+          lpf_ai_casts: detection.casts,
+          lpf_ai_squamous_epithelial: detection.squamous_epithelial,
+          lpf_ai_abnormal_crystals: detection.abnormal_crystals,
+          lpf_ai_confidence: detection.confidence,
+          lpf_ai_analysis_notes: detection.analysis_notes,
+          lpf_ai_analyzed_at: new Date().toISOString()
+        })
+        .eq('id', selectedTest.id)
+
+      if (error) {
+        console.error('Error saving LPF AI analysis:', error)
+        setNotificationMessage('Failed to save LPF analysis results')
+        setNotificationType('error')
+        setShowNotification(true)
+      } else {
+        console.log('LPF AI analysis saved to database')
+      }
+
+      console.log('LPF Sediment Detection:', detection)
+    } catch (error) {
+      console.error('Error analyzing LPF image:', error)
+      setNotificationMessage('Failed to analyze LPF image')
+      setNotificationType('error')
+      setShowNotification(true)
+    } finally {
+      setIsAnalyzingLPF(false)
+    }
+  }
+
+  // Function to analyze HPF image for sediments
+  const analyzeHPFImage = async (imageUrl: string) => {
+    if (!imageUrl || !selectedTest) return
+
+    // Check if we already have AI analysis data for this test
+    if (selectedTest.hpf_ai_analyzed_at) {
+      console.log('HPF AI analysis already exists, loading from database')
+      setHpfSedimentDetection({
+        rbc: selectedTest.hpf_ai_rbc || false,
+        wbc: selectedTest.hpf_ai_wbc || false,
+        epithelial_cells: selectedTest.hpf_ai_epithelial_cells || false,
+        crystals: selectedTest.hpf_ai_crystals || false,
+        bacteria: selectedTest.hpf_ai_bacteria || false,
+        yeast: selectedTest.hpf_ai_yeast || false,
+        sperm: selectedTest.hpf_ai_sperm || false,
+        parasites: selectedTest.hpf_ai_parasites || false,
+        confidence: selectedTest.hpf_ai_confidence || 0,
+        analysis_notes: selectedTest.hpf_ai_analysis_notes || ''
+      })
+      return
+    }
+
+    setIsAnalyzingHPF(true)
+    try {
+      // Convert image URL to File object
+      const response = await fetch(imageUrl)
+      const blob = await response.blob()
+      const file = new File([blob], 'hpf-image.jpg', { type: 'image/jpeg' })
+
+      // Analyze with Gemini AI
+      const detection = await detectHPFSediments(file)
+      setHpfSedimentDetection(detection)
+
+      // Save to database
+      const { error } = await supabase
+        .from('urine_tests')
+        .update({
+          hpf_ai_rbc: detection.rbc,
+          hpf_ai_wbc: detection.wbc,
+          hpf_ai_epithelial_cells: detection.epithelial_cells,
+          hpf_ai_crystals: detection.crystals,
+          hpf_ai_bacteria: detection.bacteria,
+          hpf_ai_yeast: detection.yeast,
+          hpf_ai_sperm: detection.sperm,
+          hpf_ai_parasites: detection.parasites,
+          hpf_ai_confidence: detection.confidence,
+          hpf_ai_analysis_notes: detection.analysis_notes,
+          hpf_ai_analyzed_at: new Date().toISOString()
+        })
+        .eq('id', selectedTest.id)
+
+      if (error) {
+        console.error('Error saving HPF AI analysis:', error)
+        setNotificationMessage('Failed to save HPF analysis results')
+        setNotificationType('error')
+        setShowNotification(true)
+      } else {
+        console.log('HPF AI analysis saved to database')
+      }
+
+      console.log('HPF Sediment Detection:', detection)
+    } catch (error) {
+      console.error('Error analyzing HPF image:', error)
+      setNotificationMessage('Failed to analyze HPF image')
+      setNotificationType('error')
+      setShowNotification(true)
+    } finally {
+      setIsAnalyzingHPF(false)
     }
   }
 
@@ -468,6 +613,47 @@ export default function Report() {
           setLowPowerImages(prev => prev.filter((_, i) => i !== index))
         }
         
+        // Clear AI analysis data if this was the last image
+        const remainingImages = powerType === 'high' ? highPowerImages.filter((_, i) => i !== index) : lowPowerImages.filter((_, i) => i !== index)
+        if (remainingImages.length === 0) {
+          const fieldsToClear = powerType === 'low' 
+            ? {
+                lpf_ai_epithelial_cells: null,
+                lpf_ai_mucus_threads: null,
+                lpf_ai_casts: null,
+                lpf_ai_squamous_epithelial: null,
+                lpf_ai_abnormal_crystals: null,
+                lpf_ai_confidence: null,
+                lpf_ai_analysis_notes: null,
+                lpf_ai_analyzed_at: null
+              }
+            : {
+                hpf_ai_rbc: null,
+                hpf_ai_wbc: null,
+                hpf_ai_epithelial_cells: null,
+                hpf_ai_crystals: null,
+                hpf_ai_bacteria: null,
+                hpf_ai_yeast: null,
+                hpf_ai_sperm: null,
+                hpf_ai_parasites: null,
+                hpf_ai_confidence: null,
+                hpf_ai_analysis_notes: null,
+                hpf_ai_analyzed_at: null
+              }
+
+          await supabase
+            .from('urine_tests')
+            .update(fieldsToClear)
+            .eq('id', selectedTest.id)
+
+          // Clear local state
+          if (powerType === 'low') {
+            setLpfSedimentDetection(null)
+          } else {
+            setHpfSedimentDetection(null)
+          }
+        }
+        
         // Refresh test data
         if (dateParam) {
           await preloadByDate(dateParam)
@@ -480,6 +666,66 @@ export default function Report() {
     } catch (error) {
       console.error('Error removing image:', error)
       setNotificationMessage('Failed to delete image')
+      setNotificationType('error')
+      setShowNotification(true)
+    }
+  }
+
+  // Function to refresh AI analysis (force re-analysis)
+  const refreshAIAnalysis = async (powerMode: 'low' | 'high') => {
+    if (!selectedTest) return
+
+    try {
+      // Clear existing AI analysis data
+      const fieldsToClear = powerMode === 'low' 
+        ? {
+            lpf_ai_epithelial_cells: null,
+            lpf_ai_mucus_threads: null,
+            lpf_ai_casts: null,
+            lpf_ai_squamous_epithelial: null,
+            lpf_ai_abnormal_crystals: null,
+            lpf_ai_confidence: null,
+            lpf_ai_analysis_notes: null,
+            lpf_ai_analyzed_at: null
+          }
+        : {
+            hpf_ai_rbc: null,
+            hpf_ai_wbc: null,
+            hpf_ai_epithelial_cells: null,
+            hpf_ai_crystals: null,
+            hpf_ai_bacteria: null,
+            hpf_ai_yeast: null,
+            hpf_ai_sperm: null,
+            hpf_ai_parasites: null,
+            hpf_ai_confidence: null,
+            hpf_ai_analysis_notes: null,
+            hpf_ai_analyzed_at: null
+          }
+
+      await supabase
+        .from('urine_tests')
+        .update(fieldsToClear)
+        .eq('id', selectedTest.id)
+
+      // Clear local state
+      if (powerMode === 'low') {
+        setLpfSedimentDetection(null)
+        if (lowPowerImages.length > 0) {
+          analyzeLPFImage(lowPowerImages[currentLPFIndex])
+        }
+      } else {
+        setHpfSedimentDetection(null)
+        if (highPowerImages.length > 0) {
+          analyzeHPFImage(highPowerImages[currentHPFIndex])
+        }
+      }
+
+      setNotificationMessage(`${powerMode.toUpperCase()} AI analysis refreshed`)
+      setNotificationType('success')
+      setShowNotification(true)
+    } catch (error) {
+      console.error('Error refreshing AI analysis:', error)
+      setNotificationMessage('Failed to refresh AI analysis')
       setNotificationType('error')
       setShowNotification(true)
     }
@@ -682,6 +928,24 @@ export default function Report() {
       })
     }
   }, [selectedTest])
+
+  // Auto-analyze LPF images when they change
+  useEffect(() => {
+    if (lowPowerImages.length > 0 && currentLPFIndex < lowPowerImages.length) {
+      analyzeLPFImage(lowPowerImages[currentLPFIndex])
+    } else {
+      setLpfSedimentDetection(null)
+    }
+  }, [lowPowerImages, currentLPFIndex])
+
+  // Auto-analyze HPF images when they change
+  useEffect(() => {
+    if (highPowerImages.length > 0 && currentHPFIndex < highPowerImages.length) {
+      analyzeHPFImage(highPowerImages[currentHPFIndex])
+    } else {
+      setHpfSedimentDetection(null)
+    }
+  }, [highPowerImages, currentHPFIndex])
 
 
   // Ensure camera stream is attached to video element when test changes
@@ -1121,18 +1385,18 @@ export default function Report() {
         <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
           {/* Left side - Back button and test info */}
           <div className="flex items-center gap-2 md:gap-4 order-1">
-             <button
-               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-colors ${
-                 sidebarCollapsed 
-                   ? 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100' 
-                   : 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100'
-               }`}
+                sidebarCollapsed 
+                  ? 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100' 
+                  : 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100'
+              }`}
                title={sidebarCollapsed ? 'Open Patient List' : 'Close Patient List'}
              >
                <Menu className="h-4 w-4" />
                <span className="text-sm font-medium">{sidebarCollapsed ? 'Open List' : 'Close List'}</span>
-             </button>
+            </button>
             
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
               <h1 className="text-sm md:text-base font-bold text-gray-900 leading-tight">Microscopy Urinalysis Report</h1>
@@ -1237,7 +1501,7 @@ export default function Report() {
         </div>
       </div>
 
-       <div className="flex h-[calc(100vh-72px)] overflow-hidden">
+      <div className="flex h-[calc(100vh-72px)] overflow-hidden">
          {/* Mobile Overlay */}
          {!sidebarCollapsed && (
            <div 
@@ -1246,7 +1510,7 @@ export default function Report() {
            />
          )}
          
-         {/* Left Sidebar */}
+        {/* Left Sidebar */}
          <div className={`${
            sidebarCollapsed 
              ? 'hidden' 
@@ -1263,64 +1527,64 @@ export default function Report() {
               <X className="h-5 w-5 text-gray-600" />
             </button>
           </div>
-
+          
           {/* Main Sidebar Content */}
           <div className="p-3 flex-1 overflow-y-auto">
 
             {/* Date Selection */}
-            <div className="mb-3">
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">Select Date</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="date"
-                  value={selectedDate || new Date().toISOString().split('T')[0]}
-                  onChange={(e) => {
-                    setSelectedDate(e.target.value)
-                    if (e.target.value) {
-                      preloadByDate(e.target.value)
-                    }
-                  }}
-                  className="w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-xs text-black"
-                />
+              <div className="mb-3">
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Select Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="date"
+                    value={selectedDate || new Date().toISOString().split('T')[0]}
+                    onChange={(e) => {
+                      setSelectedDate(e.target.value)
+                      if (e.target.value) {
+                        preloadByDate(e.target.value)
+                      }
+                    }}
+                    className="w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-xs text-black"
+                  />
+                </div>
               </div>
-            </div>
 
             {/* Search and Filters */}
             <div className="mb-4 space-y-3">
               {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search patients, test codes..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-xs text-black placeholder-gray-500"
-                />
-              </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search patients, test codes..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-xs text-black placeholder-gray-500"
+                  />
+                </div>
 
               {/* Results Count */}
-              <div className="text-xs text-gray-600">
-                {selectedDate && (
-                  <span className="text-blue-600 font-medium">{new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                )}
-                <span className="text-gray-600"> • {filteredTests.length} of {tests.length} tests</span>
-              </div>
-            </div>
+                <div className="text-xs text-gray-600">
+                  {selectedDate && (
+                    <span className="text-blue-600 font-medium">{new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                  )}
+                  <span className="text-gray-600"> • {filteredTests.length} of {tests.length} tests</span>
+                </div>
+           </div>
 
            {loading ? (
              <div className="text-center py-4 text-gray-600">
                <div className="animate-pulse">
-                 <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                 <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                 <div className="h-4 bg-gray-200 rounded"></div>
+                     <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                     <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                     <div className="h-4 bg-gray-200 rounded"></div>
                </div>
              </div>
            ) : error ? (
              <div className="text-center py-4">
-               <div className="text-red-600 mb-2 text-sm">{error}</div>
-               <button onClick={clearError} className="text-blue-600 hover:text-blue-800 text-xs">Try again</button>
+                   <div className="text-red-600 mb-2 text-sm">{error}</div>
+                   <button onClick={clearError} className="text-blue-600 hover:text-blue-800 text-xs">Try again</button>
              </div>
            ) : (
              <>
@@ -1343,8 +1607,8 @@ export default function Report() {
                          }} 
                          className="p-2 rounded-lg cursor-pointer transition-colors bg-gray-100 hover:bg-gray-200"
                        >
-                         <div className="text-xs font-medium text-gray-900">Test: {test.test_code}</div>
-                         <div className="text-xs text-gray-500">Status: {test.status}</div>
+                             <div className="text-xs font-medium text-gray-900">Test: {test.test_code}</div>
+                             <div className="text-xs text-gray-500">Status: {test.status}</div>
                        </div>
                      )
                    })
@@ -1805,10 +2069,19 @@ export default function Report() {
                          
                          {/* Sidebar - Sediment Description */}
                          <div className="flex-1 bg-white border-l-2 border-gray-300 p-3">
-                           <h4 className="font-semibold text-gray-900 mb-3 flex items-center text-sm">
+                           <div className="flex items-center justify-between mb-3">
+                             <h4 className="font-semibold text-gray-900 flex items-center text-sm">
                              <Microscope className="h-3 w-3 mr-1 text-orange-600" />
                              LPF Sediment Analysis
                            </h4>
+                             <button
+                               onClick={() => refreshAIAnalysis('low')}
+                               className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
+                               title="Refresh AI Analysis"
+                             >
+                               Refresh AI
+                             </button>
+                           </div>
                            
                            
                            {/* Field-based Sediment Analysis Table */}
@@ -1824,85 +2097,74 @@ export default function Report() {
                                  </tr>
                                </thead>
                                <tbody className="text-xs">
-           
                                 {lowPowerImages.length > 0 ? (
-                                   // Show cropped regions for the currently viewed LPF image only
-                                   (() => {
-                                     const croppedRegions = [1, 2, 3]; // This will be dynamic when cropping is implemented
-                                     // Get all detected segments for current LPF field
-                                     const currentFieldSegments: any[] = []
-                                     
-                                     // Get detected sediment types for this field
-                                     const detectedSediments = currentFieldSegments.map(s => s.classification.toLowerCase())
-                                     
-                                     // Helper function to check for specific sediment types
-                                     const hasEpithelialCells = detectedSediments.some(s => 
-                                       s.includes('epithelial') && !s.includes('squamous')
-                                     )
-                                     const hasMucusThreads = detectedSediments.some(s => 
-                                       s.includes('mucus')
-                                     )
-                                     const hasCasts = detectedSediments.some(s => 
-                                       s.includes('cast')
-                                     )
-                                     const hasSquamousEpithelial = detectedSediments.some(s => 
-                                       s.includes('squamous')
-                                     )
-                                     const hasAbnormalCrystals = detectedSediments.some(s => 
-                                       s.includes('crystal') && (s.includes('abnormal') || s.includes('pathological'))
-                                     )
-                                     
-                                     // Show a single row with all detected sediments for this field
-                                     return (
-                                       <tr key={`lpf-${currentLPFIndex}`} className="border-b border-gray-100 hover:bg-gray-50">
+                                   <tr className="border-b border-gray-100 hover:bg-gray-50">
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                             hasEpithelialCells 
+                                         lpfSedimentDetection?.epithelial_cells 
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                             {hasEpithelialCells ? 'Detected' : 'None'}
+                                         {isAnalyzingLPF ? (
+                                           <div className="flex items-center justify-center">
+                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                           </div>
+                                         ) : lpfSedimentDetection?.epithelial_cells ? 'Observed' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                             hasMucusThreads 
+                                         lpfSedimentDetection?.mucus_threads 
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                             {hasMucusThreads ? 'Detected' : 'None'}
+                                         {isAnalyzingLPF ? (
+                                           <div className="flex items-center justify-center">
+                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                           </div>
+                                         ) : lpfSedimentDetection?.mucus_threads ? 'Observed' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                             hasCasts 
+                                         lpfSedimentDetection?.casts 
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                             {hasCasts ? 'Detected' : 'None'}
+                                         {isAnalyzingLPF ? (
+                                           <div className="flex items-center justify-center">
+                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                           </div>
+                                         ) : lpfSedimentDetection?.casts ? 'Observed' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                             hasSquamousEpithelial 
+                                         lpfSedimentDetection?.squamous_epithelial 
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                             {hasSquamousEpithelial ? 'Detected' : 'None'}
+                                         {isAnalyzingLPF ? (
+                                           <div className="flex items-center justify-center">
+                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                           </div>
+                                         ) : lpfSedimentDetection?.squamous_epithelial ? 'Observed' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                             hasAbnormalCrystals 
+                                         lpfSedimentDetection?.abnormal_crystals 
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                             {hasAbnormalCrystals ? 'Detected' : 'None'}
+                                         {isAnalyzingLPF ? (
+                                           <div className="flex items-center justify-center">
+                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                           </div>
+                                         ) : lpfSedimentDetection?.abnormal_crystals ? 'Observed' : 'None'}
                                            </div>
                                          </td>
                                        </tr>
-                                     );
-                                   })()
                                  ) : (
                                    <tr>
                                      <td colSpan={5} className="text-center py-4 text-gray-500 text-xs">
@@ -1913,6 +2175,20 @@ export default function Report() {
                                </tbody>
                              </table>
                            </div>
+                           
+                           {/* AI Analysis Status */}
+                           {lpfSedimentDetection && (
+                             <div className="mt-3 p-2 bg-blue-50 rounded-lg">
+                               <div className="flex items-center justify-between text-xs">
+                                 <span className="text-blue-700 font-medium">
+                                   AI Analysis Complete ({lpfSedimentDetection.confidence}% confidence)
+                                 </span>
+                                 <span className="text-blue-600">
+                                   {lpfSedimentDetection.analysis_notes}
+                                 </span>
+                               </div>
+                             </div>
+                           )}
                          </div>
                        </div>
                      </div>
@@ -2000,10 +2276,19 @@ export default function Report() {
                          
                          {/* Sidebar - Sediment Description */}
                          <div className="flex-1 bg-white border-l-2 border-gray-300 p-3">
-                           <h4 className="font-semibold text-gray-900 mb-3 flex items-center text-sm">
-                             <Microscope className="h-3 w-3 mr-1 text-blue-600" />
-                             HPF Sediment Analysis
-                           </h4>
+                           <div className="flex items-center justify-between mb-3">
+                             <h4 className="font-semibold text-gray-900 flex items-center text-sm">
+                               <Microscope className="h-3 w-3 mr-1 text-blue-600" />
+                               HPF Sediment Analysis
+                             </h4>
+                             <button
+                               onClick={() => refreshAIAnalysis('high')}
+                               className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
+                               title="Refresh AI Analysis"
+                             >
+                               Refresh AI
+                             </button>
+                           </div>
                            
                            
                            {/* Field-based Sediment Analysis Table */}
@@ -2011,121 +2296,127 @@ export default function Report() {
                              <table className="w-full text-xs">
                                <thead>
                                  <tr className="border-b border-gray-200">
-                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Crystals (Normal)</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">RBC</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">WBC</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Epithelial Cells</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Crystals</th>
                                    <th className="text-center py-2 px-2 font-semibold text-gray-700">Bacteria</th>
-                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">RBCs</th>
-                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">WBCs</th>
-                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Transitional/Yeasts/Trichomonas</th>
-                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Renal Tubular Epithelial</th>
-                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Oval Fat Bodies</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Yeast</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Sperm</th>
+                                   <th className="text-center py-2 px-2 font-semibold text-gray-700">Parasites</th>
                                  </tr>
                                </thead>
                                <tbody className="text-xs">
                                 {highPowerImages.length > 0 ? (
-                                   // Show cropped regions for the currently viewed HPF image only
-                                   (() => {
-                                     const croppedRegions = [1, 2, 3]; // This will be dynamic when cropping is implemented
-                                     // Get all detected segments for current HPF field
-                                     const currentFieldSegments: any[] = []
-                                     
-                                     // Get detected sediment types for this field
-                                     const detectedSediments = currentFieldSegments.map(s => s.classification.toLowerCase())
-                                     
-                                     // Helper function to check for specific sediment types
-                                     const hasNormalCrystals = detectedSediments.some(s => 
-                                       s.includes('crystal') && !s.includes('abnormal') && !s.includes('pathological')
-                                     )
-                                     const hasBacteria = detectedSediments.some(s => 
-                                       s.includes('bacteria')
-                                     )
-                                     const hasRBCs = detectedSediments.some(s => 
-                                       s.includes('rbc') || s.includes('red blood')
-                                     )
-                                     const hasWBCs = detectedSediments.some(s => 
-                                       s.includes('wbc') || s.includes('white blood')
-                                     )
-                                     const hasTransitionalYeastsTrichomonas = detectedSediments.some(s => 
-                                       s.includes('transitional') || s.includes('yeast') || s.includes('trichomonas')
-                                     )
-                                     const hasRenalTubularEpithelial = detectedSediments.some(s => 
-                                       s.includes('renal') || s.includes('tubular')
-                                     )
-                                     const hasOvalFatBodies = detectedSediments.some(s => 
-                                       s.includes('oval') || s.includes('fat')
-                                     )
-                                     
-                                     // Show a single row with all detected sediments for this field
-                                     return (
-                                       <tr key={`hpf-${currentHPFIndex}`} className="border-b border-gray-100 hover:bg-gray-50">
+                                   <tr className="border-b border-gray-100 hover:bg-gray-50">
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                             hasNormalCrystals 
+                                         hpfSedimentDetection?.rbc 
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                             {hasNormalCrystals ? 'Detected' : 'None'}
+                                         {isAnalyzingHPF ? (
+                                           <div className="flex items-center justify-center">
+                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                           </div>
+                                         ) : hpfSedimentDetection?.rbc ? 'Observed' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                             hasBacteria 
+                                         hpfSedimentDetection?.wbc 
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                             {hasBacteria ? 'Detected' : 'None'}
+                                         {isAnalyzingHPF ? (
+                                           <div className="flex items-center justify-center">
+                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                           </div>
+                                         ) : hpfSedimentDetection?.wbc ? 'Observed' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                             hasRBCs 
+                                         hpfSedimentDetection?.epithelial_cells 
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                             {hasRBCs ? 'Detected' : 'None'}
+                                         {isAnalyzingHPF ? (
+                                           <div className="flex items-center justify-center">
+                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                           </div>
+                                         ) : hpfSedimentDetection?.epithelial_cells ? 'Observed' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                             hasWBCs 
+                                         hpfSedimentDetection?.crystals 
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                             {hasWBCs ? 'Detected' : 'None'}
+                                         {isAnalyzingHPF ? (
+                                           <div className="flex items-center justify-center">
+                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                           </div>
+                                         ) : hpfSedimentDetection?.crystals ? 'Observed' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                             hasTransitionalYeastsTrichomonas 
+                                         hpfSedimentDetection?.bacteria 
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                             {hasTransitionalYeastsTrichomonas ? 'Detected' : 'None'}
+                                         {isAnalyzingHPF ? (
+                                           <div className="flex items-center justify-center">
+                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                           </div>
+                                         ) : hpfSedimentDetection?.bacteria ? 'Observed' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                             hasRenalTubularEpithelial 
+                                         hpfSedimentDetection?.yeast 
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                             {hasRenalTubularEpithelial ? 'Detected' : 'None'}
+                                         {isAnalyzingHPF ? (
+                                           <div className="flex items-center justify-center">
+                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                           </div>
+                                         ) : hpfSedimentDetection?.yeast ? 'Observed' : 'None'}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                             hasOvalFatBodies 
+                                         hpfSedimentDetection?.sperm 
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                             {hasOvalFatBodies ? 'Detected' : 'None'}
+                                         {isAnalyzingHPF ? (
+                                           <div className="flex items-center justify-center">
+                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                           </div>
+                                         ) : hpfSedimentDetection?.sperm ? 'Observed' : 'None'}
+                                       </div>
+                                     </td>
+                                     <td className="text-center py-2 px-2">
+                                       <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
+                                         hpfSedimentDetection?.parasites 
+                                           ? 'bg-green-100 text-green-700' 
+                                           : 'bg-gray-50 text-gray-500'
+                                       }`}>
+                                         {isAnalyzingHPF ? (
+                                           <div className="flex items-center justify-center">
+                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                           </div>
+                                         ) : hpfSedimentDetection?.parasites ? 'Observed' : 'None'}
                                            </div>
                                          </td>
                                        </tr>
-                                     );
-                                   })()
                                  ) : (
                                    <tr>
-                                     <td colSpan={7} className="text-center py-4 text-gray-500 text-xs">
+                                     <td colSpan={8} className="text-center py-4 text-gray-500 text-xs">
                                        No HPF images captured yet
                                      </td>
                                    </tr>
@@ -2133,6 +2424,20 @@ export default function Report() {
                                </tbody>
                              </table>
                            </div>
+                           
+                           {/* AI Analysis Status */}
+                           {hpfSedimentDetection && (
+                             <div className="mt-3 p-2 bg-blue-50 rounded-lg">
+                               <div className="flex items-center justify-between text-xs">
+                                 <span className="text-blue-700 font-medium">
+                                   AI Analysis Complete ({hpfSedimentDetection.confidence}% confidence)
+                                 </span>
+                                 <span className="text-blue-600">
+                                   {hpfSedimentDetection.analysis_notes}
+                                 </span>
+                               </div>
+                             </div>
+                           )}
                          </div>
                        </div>
                      </div>
@@ -2371,7 +2676,7 @@ export default function Report() {
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">0</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">0-2</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">2-5</td>
-                         <td className="py-1.5 px-2 text-center text-red-600 font-semibold border-r border-gray-300">5-20</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 font-semibold border-r border-gray-300">5-20</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">&gt;20</td>
                          <td className="py-1.5 px-2 text-center border-r border-gray-300 bg-green-50">
                            <select
@@ -2391,8 +2696,8 @@ export default function Report() {
                          <td className="py-1.5 px-2 font-medium text-gray-900 border-r border-gray-300">Bacteria</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">per HPF</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">0</td>
-                         <td className="py-1.5 px-2 text-center text-red-600 font-semibold border-r border-gray-300">0-10</td>
-                         <td className="py-1.5 px-2 text-center text-red-600 font-semibold border-r border-gray-300">10-50</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 font-semibold border-r border-gray-300">0-10</td>
+                         <td className="py-1.5 px-2 text-center text-gray-700 font-semibold border-r border-gray-300">10-50</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">50-200</td>
                          <td className="py-1.5 px-2 text-center text-gray-700 border-r border-gray-300">&gt;200</td>
                          <td className="py-1.5 px-2 text-center border-r border-gray-300 bg-green-50">
@@ -2494,7 +2799,7 @@ export default function Report() {
                        <tr className="border-b border-gray-300">
                          <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Squamous epithelial cells</td>
                          <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300"></td>
-                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
+                         <td className="py-3 px-4 text-center text-gray-700 font-semibold border-r border-gray-300" colSpan={5}>
                            Rare, few, moderate or many per LPF
                          </td>
                          <td className="py-3 px-4 text-center border-r border-gray-300 bg-green-50">
@@ -2514,7 +2819,7 @@ export default function Report() {
                        <tr className="border-b border-gray-300">
                          <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Transitional epithelial cells, yeasts, Trichomonas</td>
                          <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300"></td>
-                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
+                         <td className="py-3 px-4 text-center text-gray-700 font-semibold border-r border-gray-300" colSpan={5}>
                            Rare, few, moderate, or many per HPF
                          </td>
                          <td className="py-3 px-4 text-center border-r border-gray-300 bg-green-50">
@@ -2534,7 +2839,7 @@ export default function Report() {
                        <tr className="border-b border-gray-300">
                          <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Renal tubular epithelial cells</td>
                          <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300"></td>
-                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
+                         <td className="py-3 px-4 text-center text-gray-700 font-semibold border-r border-gray-300" colSpan={5}>
                            Average number per 10 HPFs
                          </td>
                          <td className="py-3 px-4 text-center border-r border-gray-300 bg-green-50">
@@ -2554,7 +2859,7 @@ export default function Report() {
                        <tr className="border-b border-gray-300">
                          <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Oval fat bodies</td>
                          <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300"></td>
-                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
+                         <td className="py-3 px-4 text-center text-gray-700 font-semibold border-r border-gray-300" colSpan={5}>
                            Average number per HPF
                          </td>
                          <td className="py-3 px-4 text-center border-r border-gray-300 bg-green-50">
@@ -2574,7 +2879,7 @@ export default function Report() {
                        <tr className="border-b border-gray-300">
                          <td className="py-3 px-4 font-medium text-gray-900 border-r border-gray-300">Abnormal crystals, casts</td>
                          <td className="py-3 px-4 text-center text-gray-700 border-r border-gray-300"></td>
-                         <td className="py-3 px-4 text-center text-red-600 font-semibold border-r border-gray-300" colSpan={5}>
+                         <td className="py-3 px-4 text-center text-gray-700 font-semibold border-r border-gray-300" colSpan={5}>
                            Average number per LPF
                          </td>
                          <td className="py-3 px-4 text-center border-r border-gray-300 bg-green-50">
