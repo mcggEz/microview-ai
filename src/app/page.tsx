@@ -20,7 +20,7 @@ export default function Home() {
               <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-green-600 rounded-lg flex items-center justify-center">
                 <Microscope className="w-6 h-6 text-white" />
               </div>
-              <h1 className="text-2xl font-bold text-gray-900">Urinalysis AI</h1>
+              <h1 className="text-2xl font-bold text-gray-900">MicroView AI</h1>
             </div>
             <div className="hidden md:flex items-center space-x-6">
               <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">Features</a>
@@ -35,14 +35,18 @@ export default function Home() {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            AI-Powered
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-600"> Urinalysis</span>
+            MicroView AI
             <br />
-            Analysis System
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-600">Leveraging Large Vision-Language Models</span>
+            <br />
+            <span className="text-2xl md:text-4xl">in an Augmentative Raspberry Pi–Based System for Urine Microscopy Analysis</span>
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Revolutionize your medical laboratory with our advanced AI-powered microscopic urine analysis system. 
-            Get accurate results faster with Google Gemini AI integration.
+          <p className="text-xl text-gray-600 mb-8 max-w-4xl mx-auto">
+            An undergraduate thesis project for Bachelor of Science in Computer Engineering at 
+            <span className="font-semibold text-blue-600"> Pamantasan ng Lungsod ng Maynila (PLM)</span>. 
+            This cost-effective, Raspberry Pi–based augmentative microscopy urinalysis system enhanced with 
+            Vision-Language Models aims to democratize access to reliable urinalysis diagnostic automation 
+            for resource-constrained laboratories.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
@@ -136,41 +140,74 @@ export default function Home() {
       {/* About Section */}
       <section id="about" className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">📋 Project Overview</h2>
+            <p className="text-xl text-gray-600 max-w-4xl mx-auto">
+              With the recent advancement of foundational models like Gemini, ChatGPT, and other large language models, 
+              there has been a paradigm shift in AI capabilities, particularly in multimodal understanding and natural language generation.
+            </p>
+          </div>
+          
+          <div className="grid lg:grid-cols-2 gap-12 items-start">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">About Our System</h2>
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">Research Innovation</h3>
               <p className="text-lg text-gray-600 mb-6">
-                Developed as a comprehensive thesis project in Computer Engineering, this urinalysis analysis system 
-                represents the cutting edge of medical technology integration.
+                These Vision-Language Models (VLMs) have demonstrated remarkable potential in analyzing complex visual data 
+                while providing human-interpretable explanations. In the context of medical diagnostics, this presents an 
+                unprecedented opportunity to explore whether these advanced AI systems can revolutionize automated urinalysis analysis.
               </p>
               <p className="text-lg text-gray-600 mb-6">
-                Our system combines advanced AI algorithms, real-time image processing, and professional medical 
-                reporting to deliver accurate, reliable results for healthcare professionals.
+                MicroView AI is a cost-effective, Raspberry Pi–based urine microscopy system enhanced with Vision-Language Models (VLMs) 
+                that investigates the application of state-of-the-art AI to urine sediment microscopy, exploring their potential to 
+                provide accurate, explainable, and cost-effective analysis that could democratize access to reliable diagnostic 
+                automation for resource-constrained laboratories.
               </p>
-              <div className="flex space-x-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">99.8%</div>
-                  <div className="text-sm text-gray-600">Accuracy Rate</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">5x</div>
-                  <div className="text-sm text-gray-600">Faster Analysis</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">24/7</div>
-                  <div className="text-sm text-gray-600">Availability</div>
-                </div>
-              </div>
+              <p className="text-lg text-gray-600 mb-8">
+                Unlike expensive commercial analyzers, this approach emphasizes both affordability and transparency, addressing the 
+                critical gap in diagnostic access by providing a practical, trustworthy tool that bridges the gap between manual 
+                and fully automated analysis.
+              </p>
             </div>
+            
             <div className="bg-gradient-to-br from-blue-100 to-green-100 p-8 rounded-2xl">
-              <div className="text-center">
+              <div className="text-center mb-6">
                 <Microscope className="w-24 h-24 text-blue-600 mx-auto mb-4" />
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">BS Computer Engineering Thesis</h3>
-                <p className="text-gray-600">
-                  Advanced urinalysis image processing system with AI integration
+                <p className="text-gray-600 mb-4">
+                  Pamantasan ng Lungsod ng Maynila (PLM)
                 </p>
               </div>
+              
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">Cost-Effective</div>
+                  <div className="text-sm text-gray-600">Raspberry Pi–Based System</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">VLM Enhanced</div>
+                  <div className="text-sm text-gray-600">Vision-Language Models</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">Accessible</div>
+                  <div className="text-sm text-gray-600">Resource-Constrained Labs</div>
+                </div>
+              </div>
             </div>
+          </div>
+          
+          {/* Research Impact Section */}
+          <div className="mt-16 bg-white p-8 rounded-2xl shadow-lg">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">Research Impact</h3>
+            <p className="text-lg text-gray-600 mb-6 text-center max-w-4xl mx-auto">
+              This research contributes to the advancement of accessible medical diagnostics and demonstrates the potential of 
+              Visual-Language Models in healthcare technologies. The findings provide a foundation for democratizing reliable 
+              urinalysis and addressing the persistent access-accuracy gap in diagnostic services, especially in third world 
+              countries where access to such advanced diagnostic machines is limited due to high costs and infrastructure requirements.
+            </p>
+            <p className="text-lg text-gray-600 text-center max-w-4xl mx-auto">
+              By combining low-cost hardware with transparent AI, this work positions itself as a viable step toward ensuring 
+              diagnostic equity across diverse clinical settings.
+            </p>
           </div>
         </div>
       </section>
@@ -201,10 +238,10 @@ export default function Home() {
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-green-600 rounded-lg flex items-center justify-center">
                   <Microscope className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold">Urinalysis AI</span>
+                <span className="text-xl font-bold">MicroView AI</span>
               </div>
               <p className="text-gray-400">
-                Advanced AI-powered microscopic urine analysis system
+                Leveraging Large Vision-Language Models in an Augmentative Raspberry Pi–Based System for Urine Microscopy Analysis
               </p>
             </div>
             <div>
@@ -226,14 +263,18 @@ export default function Home() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Contact</h4>
+              <h4 className="font-semibold mb-4">Academic Institution</h4>
               <p className="text-gray-400">
-                BS Computer Engineering Thesis Project
+                Pamantasan ng Lungsod ng Maynila (PLM)
+                <br />
+                Bachelor of Science in Computer Engineering
+                <br />
+                Undergraduate Thesis Project
               </p>
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2025 Urinalysis AI System. All rights reserved.</p>
+            <p>&copy; 2025 MicroView AI System. All rights reserved.</p>
           </div>
         </div>
       </footer>
