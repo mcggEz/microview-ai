@@ -1121,20 +1121,18 @@ export default function Report() {
         <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
           {/* Left side - Back button and test info */}
           <div className="flex items-center gap-2 md:gap-4 order-1">
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-all duration-200 ${
-                sidebarCollapsed 
-                  ? 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 shadow-sm' 
-                  : 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 shadow-sm'
-              }`}
-              title={sidebarCollapsed ? 'Open Patient List' : 'Close Patient List'}
-            >
-              <Menu className="h-5 w-5" />
-              <span className="text-sm font-medium hidden sm:inline">
-                {sidebarCollapsed ? 'Open List' : 'Close List'}
-              </span>
-            </button>
+             <button
+               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+               className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-colors ${
+                 sidebarCollapsed 
+                   ? 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100' 
+                   : 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100'
+               }`}
+               title={sidebarCollapsed ? 'Open Patient List' : 'Close Patient List'}
+             >
+               <Menu className="h-4 w-4" />
+               <span className="text-sm font-medium">{sidebarCollapsed ? 'Open List' : 'Close List'}</span>
+             </button>
             
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
               <h1 className="text-sm md:text-base font-bold text-gray-900 leading-tight">Microscopy Urinalysis Report</h1>
@@ -1239,165 +1237,97 @@ export default function Report() {
         </div>
       </div>
 
-      <div className="flex h-[calc(100vh-72px)] overflow-hidden">
-        {/* Mobile Overlay */}
-        {!sidebarCollapsed && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-            onClick={() => setSidebarCollapsed(true)}
-          />
-        )}
-        
-        {/* Left Sidebar */}
-        <div className={`${
-          sidebarCollapsed 
-            ? 'hidden lg:block lg:w-16' 
-            : 'w-80 lg:w-80'
-        } bg-white border-r border-gray-200 h-full flex flex-col transition-all duration-300 ease-in-out relative z-[55]`}>
+       <div className="flex h-[calc(100vh-72px)] overflow-hidden">
+         {/* Mobile Overlay */}
+         {!sidebarCollapsed && (
+           <div 
+             className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+             onClick={() => setSidebarCollapsed(true)}
+           />
+         )}
+         
+         {/* Left Sidebar */}
+         <div className={`${
+           sidebarCollapsed 
+             ? 'hidden' 
+             : 'w-80'
+         } bg-white border-r border-gray-200 h-full flex flex-col transition-all duration-300 ease-in-out relative z-[55] lg:relative fixed lg:static top-0 left-0`}>
           
-          {/* Main Sidebar Content */}
-          <div className={`${sidebarCollapsed ? 'px-2' : 'p-3'} transition-all duration-300 flex-1 overflow-y-auto`}>
+          {/* Mobile Close Button */}
+          <div className="lg:hidden flex justify-end p-3 border-b border-gray-200">
+            <button
+              onClick={() => setSidebarCollapsed(true)}
+              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+              title="Close Patient List"
+            >
+              <X className="h-5 w-5 text-gray-600" />
+            </button>
+          </div>
 
-            {/* Collapsed Sidebar - Mini Test List */}
-            {sidebarCollapsed && (
-              <div className="space-y-2 py-4">
-                <div className="text-center mb-4">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-2">
-                    <Microscope className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div className="text-xs text-gray-500 font-medium">Tests</div>
-                </div>
-                
-                {filteredTests.slice(0, 8).map((test) => {
-                  const patient = patients.find(p => p.id === test.patient_id)
-                  return (
-                    <div 
-                      key={test.id}
-                      onClick={() => {
-                        if (patient) {
-                          setSelectedPatient(patient)
-                          setSelectedTest(test)
-                        }
-                      }}
-                      className={`p-2 rounded-lg cursor-pointer transition-colors ${
-                        selectedTest?.id === test.id 
-                          ? 'bg-blue-100 border-l-2 border-blue-500' 
-                          : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                      title={`${test.test_code} - ${test.status}`}
-                    >
-                      <div className="text-center">
-                        <div className="text-xs font-medium text-gray-900 truncate">
-                          {test.test_code?.split('-')[2] || 'XX'}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {test.status?.charAt(0) || 'P'}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-                
-                {filteredTests.length > 8 && (
-                  <div className="text-center text-xs text-gray-400 mt-2">
-                    +{filteredTests.length - 8} more
-                  </div>
-                )}
-              </div>
-            )}
+          {/* Main Sidebar Content */}
+          <div className="p-3 flex-1 overflow-y-auto">
 
             {/* Date Selection */}
-            {!sidebarCollapsed && (
-              <div className="mb-3">
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">Select Date</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="date"
-                    value={selectedDate || new Date().toISOString().split('T')[0]}
-                    onChange={(e) => {
-                      setSelectedDate(e.target.value)
-                      if (e.target.value) {
-                        preloadByDate(e.target.value)
-                      }
-                    }}
-                    className="w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-xs text-black"
-                  />
-                </div>
+            <div className="mb-3">
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Select Date</label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="date"
+                  value={selectedDate || new Date().toISOString().split('T')[0]}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value)
+                    if (e.target.value) {
+                      preloadByDate(e.target.value)
+                    }
+                  }}
+                  className="w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-xs text-black"
+                />
               </div>
-            )}
+            </div>
 
             {/* Search and Filters */}
-            <div className={`${sidebarCollapsed ? 'mb-3' : 'mb-4'} ${sidebarCollapsed ? 'space-y-2' : 'space-y-3'}`}>
+            <div className="mb-4 space-y-3">
               {/* Search */}
-              {!sidebarCollapsed && (
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search patients, test codes..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-xs text-black placeholder-gray-500"
-                  />
-                </div>
-              )}
-
-
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search patients, test codes..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-xs text-black placeholder-gray-500"
+                />
+              </div>
 
               {/* Results Count */}
-              {!sidebarCollapsed && (
-                <div className="text-xs text-gray-600">
-                  {selectedDate && (
-                    <span className="text-blue-600 font-medium">{new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                  )}
-                  <span className="text-gray-600"> • {filteredTests.length} of {tests.length} tests</span>
-                </div>
-              )}
-           </div>
+              <div className="text-xs text-gray-600">
+                {selectedDate && (
+                  <span className="text-blue-600 font-medium">{new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                )}
+                <span className="text-gray-600"> • {filteredTests.length} of {tests.length} tests</span>
+              </div>
+            </div>
 
            {loading ? (
-             <div className={`text-center ${sidebarCollapsed ? 'py-2' : 'py-4'} text-gray-600`}>
+             <div className="text-center py-4 text-gray-600">
                <div className="animate-pulse">
-                 {sidebarCollapsed ? (
-                   <>
-                     <div className="h-3 bg-gray-200 rounded mb-1"></div>
-                     <div className="h-3 bg-gray-200 rounded mb-1"></div>
-                     <div className="h-3 bg-gray-200 rounded"></div>
-                   </>
-                 ) : (
-                   <>
-                     <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                     <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                     <div className="h-4 bg-gray-200 rounded"></div>
-                   </>
-                 )}
+                 <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                 <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                 <div className="h-4 bg-gray-200 rounded"></div>
                </div>
              </div>
            ) : error ? (
-             <div className={`text-center ${sidebarCollapsed ? 'py-2' : 'py-4'}`}>
-               {!sidebarCollapsed && (
-                 <>
-                   <div className="text-red-600 mb-2 text-sm">{error}</div>
-                   <button onClick={clearError} className="text-blue-600 hover:text-blue-800 text-xs">Try again</button>
-                 </>
-               )}
-               {sidebarCollapsed && (
-                 <div className="text-red-500 text-xs" title={error}>⚠️</div>
-               )}
+             <div className="text-center py-4">
+               <div className="text-red-600 mb-2 text-sm">{error}</div>
+               <button onClick={clearError} className="text-blue-600 hover:text-blue-800 text-xs">Try again</button>
              </div>
            ) : (
              <>
                <div className="space-y-1.5 mb-3">
                  {filteredTests.length === 0 ? (
-                   <div className={`text-gray-500 ${sidebarCollapsed ? 'text-xs' : 'text-sm'} text-center ${sidebarCollapsed ? 'py-2' : 'py-4'}`}>
-                     {sidebarCollapsed ? (
-                       <div title={tests.length === 0 ? 'No tests available' : 'No tests match your search/filter'}>
-                         {tests.length === 0 ? '📭' : '🔍'}
-                       </div>
-                     ) : (
-                       tests.length === 0 ? 'No tests available' : 'No tests match your search/filter'
-                     )}
+                   <div className="text-gray-500 text-sm text-center py-4">
+                     {tests.length === 0 ? 'No tests available' : 'No tests match your search/filter'}
                    </div>
                  ) : (
                    filteredTests.map((test) => {
@@ -1411,27 +1341,10 @@ export default function Report() {
                              setSelectedTest(test)
                            }
                          }} 
-                         className={`${sidebarCollapsed ? 'p-1.5' : 'p-2'} rounded-lg cursor-pointer transition-colors ${
-                           selectedTest?.id === test.id 
-                             ? 'bg-blue-100 border-l-4 border-blue-500' 
-                             : 'bg-gray-100 hover:bg-gray-200'
-                         }`}
+                         className="p-2 rounded-lg cursor-pointer transition-colors bg-gray-100 hover:bg-gray-200"
                        >
-                         {sidebarCollapsed ? (
-                           <div className="text-center" title={`${test.test_code} - ${test.status}`}>
-                             <div className="text-xs font-medium text-gray-900 truncate">
-                               {test.test_code?.split('-')[2] || 'XX'}
-                             </div>
-                             <div className="text-xs text-gray-500 mt-1">
-                               {test.status?.charAt(0) || 'P'}
-                             </div>
-                           </div>
-                         ) : (
-                           <>
-                             <div className="text-xs font-medium text-gray-900">Test: {test.test_code}</div>
-                             <div className="text-xs text-gray-500">Status: {test.status}</div>
-                           </>
-                         )}
+                         <div className="text-xs font-medium text-gray-900">Test: {test.test_code}</div>
+                         <div className="text-xs text-gray-500">Status: {test.status}</div>
                        </div>
                      )
                    })
@@ -1446,48 +1359,26 @@ export default function Report() {
          </div>
 
           {/* Bottom Sidebar Buttons - Settings and Logout */}
-          <div className={`${sidebarCollapsed ? 'px-2' : 'p-3'} border-t border-gray-200 mt-auto`}>
-            {sidebarCollapsed ? (
-              <button
-                onClick={() => {
-                  try {
-                    router.push('/')
-                  } catch (e) {
-                    // Fallback
-                    // @ts-ignore
-                    window.location.href = '/'
-                  }
-                }}
-                className="w-full flex items-center justify-center p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
-                title="Logout"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16,17 21,12 16,7"/>
-                  <line x1="21" y1="12" x2="9" y2="12"/>
-                </svg>
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  try {
-                    router.push('/')
-                  } catch (e) {
-                    // Fallback
-                    // @ts-ignore
-                    window.location.href = '/'
-                  }
-                }}
-                className="w-full flex items-center justify-center px-3 py-2 space-x-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
-              >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16,17 21,12 16,7"/>
-                  <line x1="21" y1="12" x2="9" y2="12"/>
-                </svg>
-                <span className="text-xs font-medium">Logout</span>
-              </button>
-            )}
+          <div className="p-3 border-t border-gray-200 mt-auto">
+            <button
+              onClick={() => {
+                try {
+                  router.push('/')
+                } catch (e) {
+                  // Fallback
+                  // @ts-ignore
+                  window.location.href = '/'
+                }
+              }}
+              className="w-full flex items-center justify-center px-3 py-2 space-x-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16,17 21,12 16,7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              <span className="text-xs font-medium">Logout</span>
+            </button>
           </div>
         </div>
 
