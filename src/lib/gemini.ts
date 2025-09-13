@@ -22,24 +22,24 @@ export interface UrinalysisResult {
 }
 
 export interface LPFSedimentDetection {
-  epithelial_cells: boolean
-  mucus_threads: boolean
-  casts: boolean
-  squamous_epithelial: boolean
-  abnormal_crystals: boolean
+  epithelial_cells: number
+  mucus_threads: number
+  casts: number
+  squamous_epithelial: number
+  abnormal_crystals: number
   confidence: number
   analysis_notes: string
 }
 
 export interface HPFSedimentDetection {
-  rbc: boolean
-  wbc: boolean
-  epithelial_cells: boolean
-  crystals: boolean
-  bacteria: boolean
-  yeast: boolean
-  sperm: boolean
-  parasites: boolean
+  rbc: number
+  wbc: number
+  epithelial_cells: number
+  crystals: number
+  bacteria: number
+  yeast: number
+  sperm: number
+  parasites: number
   confidence: number
   analysis_notes: string
 }
@@ -80,12 +80,20 @@ Please analyze the image carefully and provide accurate counts, morphology descr
     const response = await result.response
     const text = response.text()
     
-    // Extract JSON from markdown response if wrapped in code blocks
+    // Extract JSON from response - handle various formats
     let jsonText = text.trim()
+    
+    // Remove markdown code blocks
     if (jsonText.startsWith('```json')) {
       jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
     } else if (jsonText.startsWith('```')) {
       jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '')
+    }
+    
+    // Look for JSON object in the text (handle cases where AI adds explanatory text)
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      jsonText = jsonMatch[0]
     }
     
     // Parse JSON response
@@ -115,27 +123,28 @@ export async function detectLPFSediments(imageFile: File): Promise<LPFSedimentDe
     const base64Image = await fileToBase64(imageFile)
     
     // Create the prompt for LPF sediment detection
-    const prompt = `Analyze this Low Power Field (LPF) urine microscopy image and detect the presence of specific sediments. 
+    const prompt = `Analyze this Low Power Field (LPF) urine microscopy image and count the specific sediments present. 
 
-Look for these specific sediment types:
-1. Epithelial Cells - Look for round or oval cells with distinct nuclei
-2. Mucus Threads - Look for long, thin, translucent strands
-3. Casts - Look for cylindrical structures (hyaline, granular, cellular casts)
-4. Squamous Epithelial - Look for large, flat cells with irregular borders
-5. Abnormal Crystals - Look for unusual crystal formations (not normal calcium oxalate)
+Look for these specific sediment types and provide accurate counts:
+1. Epithelial Cells - Round or oval cells with distinct nuclei
+2. Mucus Threads - Long, thin, translucent strands
+3. Casts - Cylindrical structures (hyaline, granular, cellular casts)
+4. Squamous Epithelial - Large, flat cells with irregular borders
+5. Abnormal Crystals - Unusual crystal formations (not normal calcium oxalate)
 
-Return the results in the following JSON format:
+IMPORTANT: Return ONLY the JSON object below, no additional text or explanations:
+
 {
-  "epithelial_cells": true/false,
-  "mucus_threads": true/false,
-  "casts": true/false,
-  "squamous_epithelial": true/false,
-  "abnormal_crystals": true/false,
+  "epithelial_cells": 0,
+  "mucus_threads": 0,
+  "casts": 0,
+  "squamous_epithelial": 0,
+  "abnormal_crystals": 0,
   "confidence": 85,
   "analysis_notes": "Brief description of what was observed"
 }
 
-Be conservative in your detection - only mark as true if you are reasonably confident the sediment is present. Set confidence as a percentage (0-100) based on image quality and clarity.`
+Provide accurate counts for each sediment type. Use 0 if none are present. Be conservative in your counting - only count items you are reasonably confident about. Set confidence as a percentage (0-100) based on image quality and clarity.`
 
     // Generate content with image
     const result = await model.generateContent([prompt, {
@@ -148,12 +157,20 @@ Be conservative in your detection - only mark as true if you are reasonably conf
     const response = await result.response
     const text = response.text()
     
-    // Extract JSON from markdown response if wrapped in code blocks
+    // Extract JSON from response - handle various formats
     let jsonText = text.trim()
+    
+    // Remove markdown code blocks
     if (jsonText.startsWith('```json')) {
       jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
     } else if (jsonText.startsWith('```')) {
       jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '')
+    }
+    
+    // Look for JSON object in the text (handle cases where AI adds explanatory text)
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      jsonText = jsonMatch[0]
     }
     
     // Parse JSON response
@@ -173,33 +190,34 @@ export async function detectHPFSediments(imageFile: File): Promise<HPFSedimentDe
     const base64Image = await fileToBase64(imageFile)
     
     // Create the prompt for HPF sediment detection
-    const prompt = `Analyze this High Power Field (HPF) urine microscopy image and detect the presence of specific sediments. 
+    const prompt = `Analyze this High Power Field (HPF) urine microscopy image and count the specific sediments present. 
 
-Look for these specific sediment types:
-1. RBC (Red Blood Cells) - Look for small, round, biconcave cells
-2. WBC (White Blood Cells) - Look for larger cells with distinct nuclei
-3. Epithelial Cells - Look for round or oval cells with distinct nuclei
-4. Crystals - Look for various crystal formations (calcium oxalate, uric acid, etc.)
-5. Bacteria - Look for small, rod-shaped or spherical organisms
-6. Yeast - Look for oval or round fungal cells, often with budding
-7. Sperm - Look for spermatozoa with head and tail structures
-8. Parasites - Look for parasitic organisms or eggs
+Look for these specific sediment types and provide accurate counts:
+1. RBC (Red Blood Cells) - Small, round, biconcave cells
+2. WBC (White Blood Cells) - Larger cells with distinct nuclei
+3. Epithelial Cells - Round or oval cells with distinct nuclei
+4. Crystals - Various crystal formations (calcium oxalate, uric acid, etc.)
+5. Bacteria - Small, rod-shaped or spherical organisms
+6. Yeast - Oval or round fungal cells, often with budding
+7. Sperm - Spermatozoa with head and tail structures
+8. Parasites - Parasitic organisms or eggs
 
-Return the results in the following JSON format:
+IMPORTANT: Return ONLY the JSON object below, no additional text or explanations:
+
 {
-  "rbc": true/false,
-  "wbc": true/false,
-  "epithelial_cells": true/false,
-  "crystals": true/false,
-  "bacteria": true/false,
-  "yeast": true/false,
-  "sperm": true/false,
-  "parasites": true/false,
+  "rbc": 0,
+  "wbc": 0,
+  "epithelial_cells": 0,
+  "crystals": 0,
+  "bacteria": 0,
+  "yeast": 0,
+  "sperm": 0,
+  "parasites": 0,
   "confidence": 85,
   "analysis_notes": "Brief description of what was observed"
 }
 
-Be conservative in your detection - only mark as true if you are reasonably confident the sediment is present. Set confidence as a percentage (0-100) based on image quality and clarity.`
+Provide accurate counts for each sediment type. Use 0 if none are present. Be conservative in your counting - only count items you are reasonably confident about. Set confidence as a percentage (0-100) based on image quality and clarity.`
 
     // Generate content with image
     const result = await model.generateContent([prompt, {
@@ -212,12 +230,20 @@ Be conservative in your detection - only mark as true if you are reasonably conf
     const response = await result.response
     const text = response.text()
     
-    // Extract JSON from markdown response if wrapped in code blocks
+    // Extract JSON from response - handle various formats
     let jsonText = text.trim()
+    
+    // Remove markdown code blocks
     if (jsonText.startsWith('```json')) {
       jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
     } else if (jsonText.startsWith('```')) {
       jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '')
+    }
+    
+    // Look for JSON object in the text (handle cases where AI adds explanatory text)
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      jsonText = jsonMatch[0]
     }
     
     // Parse JSON response

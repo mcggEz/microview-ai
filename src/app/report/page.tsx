@@ -12,12 +12,12 @@ declare global {
 }
 import { useRouter } from 'next/navigation'
 import { useDashboard } from '@/hooks/useDashboard'
-import { updatePatient, updateTest, testDatabaseConnection, deleteTest, deleteImageFromTest, deleteImageFromStorage, addImageToTest, uploadImageToStorage, uploadBase64Image } from '@/lib/api'
+import { updatePatient, updateTest, testDatabaseConnection, deleteTest, deleteImageFromTest, deleteImageFromStorage, addImageToTest, uploadImageToStorage, uploadBase64Image, getImageAnalysisByIndex, upsertImageAnalysis, deleteImageAnalysisByTest, deleteImageAnalysisByImage } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
 import { loadOpenCV, isOpenCVReady } from '@/lib/opencv-loader'
 import { applyDigitalStain, matToImageData, cleanupSegmentationResult, type SegmentationResult } from '@/lib/digital-staining'
 import { detectLPFSediments, detectHPFSediments, type LPFSedimentDetection, type HPFSedimentDetection } from '@/lib/gemini'
-import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown, Upload, ChevronLeft, ChevronRight, Search, ArrowLeft, Menu } from 'lucide-react'
+import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown, Upload, ChevronLeft, ChevronRight, Search, ArrowLeft, Menu, RefreshCw } from 'lucide-react'
 import ImageModal from '@/components/ImageModal'
 import ConfirmationModal from '@/components/ConfirmationModal'
 import CameraCaptureModal from '@/components/CameraCaptureModal'
@@ -176,23 +176,8 @@ export default function Report() {
   }
 
   // Function to analyze LPF image for sediments
-  const analyzeLPFImage = async (imageUrl: string) => {
+  const analyzeLPFImage = async (imageUrl: string, imageIndex: number) => {
     if (!imageUrl || !selectedTest) return
-
-    // Check if we already have AI analysis data for this test
-    if (selectedTest.lpf_ai_analyzed_at) {
-      console.log('LPF AI analysis already exists, loading from database')
-      setLpfSedimentDetection({
-        epithelial_cells: selectedTest.lpf_ai_epithelial_cells || false,
-        mucus_threads: selectedTest.lpf_ai_mucus_threads || false,
-        casts: selectedTest.lpf_ai_casts || false,
-        squamous_epithelial: selectedTest.lpf_ai_squamous_epithelial || false,
-        abnormal_crystals: selectedTest.lpf_ai_abnormal_crystals || false,
-        confidence: selectedTest.lpf_ai_confidence || 0,
-        analysis_notes: selectedTest.lpf_ai_analysis_notes || ''
-      })
-      return
-    }
 
     setIsAnalyzingLPF(true)
     try {
@@ -205,28 +190,31 @@ export default function Report() {
       const detection = await detectLPFSediments(file)
       setLpfSedimentDetection(detection)
 
-      // Save to database
-      const { error } = await supabase
-        .from('urine_tests')
-        .update({
-          lpf_ai_epithelial_cells: detection.epithelial_cells,
-          lpf_ai_mucus_threads: detection.mucus_threads,
-          lpf_ai_casts: detection.casts,
-          lpf_ai_squamous_epithelial: detection.squamous_epithelial,
-          lpf_ai_abnormal_crystals: detection.abnormal_crystals,
-          lpf_ai_confidence: detection.confidence,
-          lpf_ai_analysis_notes: detection.analysis_notes,
-          lpf_ai_analyzed_at: new Date().toISOString()
+      // Save to individual image analysis table
+      try {
+        await upsertImageAnalysis({
+          test_id: selectedTest.id,
+          power_mode: 'LPF',
+          image_index: imageIndex,
+          image_url: imageUrl,
+          lpf_epithelial_cells: detection.epithelial_cells,
+          lpf_mucus_threads: detection.mucus_threads,
+          lpf_casts: detection.casts,
+          lpf_squamous_epithelial: detection.squamous_epithelial,
+          lpf_abnormal_crystals: detection.abnormal_crystals,
+          confidence: detection.confidence,
+          analysis_notes: detection.analysis_notes,
+          analyzed_at: new Date().toISOString()
         })
-        .eq('id', selectedTest.id)
-
-      if (error) {
-        console.error('Error saving LPF AI analysis:', error)
-        setNotificationMessage('Failed to save LPF analysis results')
-        setNotificationType('error')
+        console.log('LPF AI analysis saved to individual image analysis table')
+        setNotificationMessage('LPF image analyzed and saved successfully')
+        setNotificationType('success')
         setShowNotification(true)
-      } else {
-        console.log('LPF AI analysis saved to database')
+      } catch (dbError) {
+        console.warn('Database save failed, but analysis completed:', dbError)
+        setNotificationMessage('Analysis completed (database issue - check console for details)')
+        setNotificationType('warning')
+        setShowNotification(true)
       }
 
       console.log('LPF Sediment Detection:', detection)
@@ -241,26 +229,8 @@ export default function Report() {
   }
 
   // Function to analyze HPF image for sediments
-  const analyzeHPFImage = async (imageUrl: string) => {
+  const analyzeHPFImage = async (imageUrl: string, imageIndex: number) => {
     if (!imageUrl || !selectedTest) return
-
-    // Check if we already have AI analysis data for this test
-    if (selectedTest.hpf_ai_analyzed_at) {
-      console.log('HPF AI analysis already exists, loading from database')
-      setHpfSedimentDetection({
-        rbc: selectedTest.hpf_ai_rbc || false,
-        wbc: selectedTest.hpf_ai_wbc || false,
-        epithelial_cells: selectedTest.hpf_ai_epithelial_cells || false,
-        crystals: selectedTest.hpf_ai_crystals || false,
-        bacteria: selectedTest.hpf_ai_bacteria || false,
-        yeast: selectedTest.hpf_ai_yeast || false,
-        sperm: selectedTest.hpf_ai_sperm || false,
-        parasites: selectedTest.hpf_ai_parasites || false,
-        confidence: selectedTest.hpf_ai_confidence || 0,
-        analysis_notes: selectedTest.hpf_ai_analysis_notes || ''
-      })
-      return
-    }
 
     setIsAnalyzingHPF(true)
     try {
@@ -273,31 +243,34 @@ export default function Report() {
       const detection = await detectHPFSediments(file)
       setHpfSedimentDetection(detection)
 
-      // Save to database
-      const { error } = await supabase
-        .from('urine_tests')
-        .update({
-          hpf_ai_rbc: detection.rbc,
-          hpf_ai_wbc: detection.wbc,
-          hpf_ai_epithelial_cells: detection.epithelial_cells,
-          hpf_ai_crystals: detection.crystals,
-          hpf_ai_bacteria: detection.bacteria,
-          hpf_ai_yeast: detection.yeast,
-          hpf_ai_sperm: detection.sperm,
-          hpf_ai_parasites: detection.parasites,
-          hpf_ai_confidence: detection.confidence,
-          hpf_ai_analysis_notes: detection.analysis_notes,
-          hpf_ai_analyzed_at: new Date().toISOString()
+      // Save to individual image analysis table
+      try {
+        await upsertImageAnalysis({
+          test_id: selectedTest.id,
+          power_mode: 'HPF',
+          image_index: imageIndex,
+          image_url: imageUrl,
+          hpf_rbc: detection.rbc,
+          hpf_wbc: detection.wbc,
+          hpf_epithelial_cells: detection.epithelial_cells,
+          hpf_crystals: detection.crystals,
+          hpf_bacteria: detection.bacteria,
+          hpf_yeast: detection.yeast,
+          hpf_sperm: detection.sperm,
+          hpf_parasites: detection.parasites,
+          confidence: detection.confidence,
+          analysis_notes: detection.analysis_notes,
+          analyzed_at: new Date().toISOString()
         })
-        .eq('id', selectedTest.id)
-
-      if (error) {
-        console.error('Error saving HPF AI analysis:', error)
-        setNotificationMessage('Failed to save HPF analysis results')
-        setNotificationType('error')
+        console.log('HPF AI analysis saved to individual image analysis table')
+        setNotificationMessage('HPF image analyzed and saved successfully')
+        setNotificationType('success')
         setShowNotification(true)
-      } else {
-        console.log('HPF AI analysis saved to database')
+      } catch (dbError) {
+        console.warn('Database save failed, but analysis completed:', dbError)
+        setNotificationMessage('Analysis completed (database issue - check console for details)')
+        setNotificationType('warning')
+        setShowNotification(true)
       }
 
       console.log('HPF Sediment Detection:', detection)
@@ -359,6 +332,7 @@ export default function Report() {
       setDateParam(sp.get('date'))
     }
   }, [])
+
 
   // Update URL when test is selected
   useEffect(() => {
@@ -608,49 +582,55 @@ export default function Report() {
         
         // Update local state based on power type
         if (powerType === 'high') {
-          setHighPowerImages(prev => prev.filter((_, i) => i !== index))
+          const newImages = highPowerImages.filter((_, i) => i !== index)
+          setHighPowerImages(newImages)
+          
+          // Adjust current index if needed
+          if (currentHPFIndex >= newImages.length && newImages.length > 0) {
+            setCurrentHPFIndex(newImages.length - 1)
+          } else if (newImages.length === 0) {
+            setCurrentHPFIndex(0)
+          }
         } else {
-          setLowPowerImages(prev => prev.filter((_, i) => i !== index))
+          const newImages = lowPowerImages.filter((_, i) => i !== index)
+          setLowPowerImages(newImages)
+          
+          // Adjust current index if needed
+          if (currentLPFIndex >= newImages.length && newImages.length > 0) {
+            setCurrentLPFIndex(newImages.length - 1)
+          } else if (newImages.length === 0) {
+            setCurrentLPFIndex(0)
+          }
         }
         
+        // Delete individual image analysis for this specific image
+        try {
+          await deleteImageAnalysisByImage(selectedTest.id, powerType === 'high' ? 'HPF' : 'LPF', index)
+        } catch (error) {
+          console.warn('Error deleting individual image analysis:', error)
+        }
+
         // Clear AI analysis data if this was the last image
         const remainingImages = powerType === 'high' ? highPowerImages.filter((_, i) => i !== index) : lowPowerImages.filter((_, i) => i !== index)
         if (remainingImages.length === 0) {
-          const fieldsToClear = powerType === 'low' 
-            ? {
-                lpf_ai_epithelial_cells: null,
-                lpf_ai_mucus_threads: null,
-                lpf_ai_casts: null,
-                lpf_ai_squamous_epithelial: null,
-                lpf_ai_abnormal_crystals: null,
-                lpf_ai_confidence: null,
-                lpf_ai_analysis_notes: null,
-                lpf_ai_analyzed_at: null
-              }
-            : {
-                hpf_ai_rbc: null,
-                hpf_ai_wbc: null,
-                hpf_ai_epithelial_cells: null,
-                hpf_ai_crystals: null,
-                hpf_ai_bacteria: null,
-                hpf_ai_yeast: null,
-                hpf_ai_sperm: null,
-                hpf_ai_parasites: null,
-                hpf_ai_confidence: null,
-                hpf_ai_analysis_notes: null,
-                hpf_ai_analyzed_at: null
-              }
-
-          await supabase
-            .from('urine_tests')
-            .update(fieldsToClear)
-            .eq('id', selectedTest.id)
-
           // Clear local state
           if (powerType === 'low') {
             setLpfSedimentDetection(null)
           } else {
             setHpfSedimentDetection(null)
+          }
+        } else {
+          // If there are remaining images, trigger analysis for the current image
+          if (powerType === 'low' && remainingImages.length > 0) {
+            const newCurrentIndex = currentLPFIndex >= remainingImages.length ? remainingImages.length - 1 : currentLPFIndex
+            if (remainingImages[newCurrentIndex]) {
+              analyzeLPFImage(remainingImages[newCurrentIndex], newCurrentIndex)
+            }
+          } else if (powerType === 'high' && remainingImages.length > 0) {
+            const newCurrentIndex = currentHPFIndex >= remainingImages.length ? remainingImages.length - 1 : currentHPFIndex
+            if (remainingImages[newCurrentIndex]) {
+              analyzeHPFImage(remainingImages[newCurrentIndex], newCurrentIndex)
+            }
           }
         }
         
@@ -671,61 +651,100 @@ export default function Report() {
     }
   }
 
-  // Function to refresh AI analysis (force re-analysis)
-  const refreshAIAnalysis = async (powerMode: 'low' | 'high') => {
+  // Function to handle LPF image upload
+  const handleLPFImageUpload = async (file: File) => {
     if (!selectedTest) return
 
     try {
-      // Clear existing AI analysis data
-      const fieldsToClear = powerMode === 'low' 
-        ? {
-            lpf_ai_epithelial_cells: null,
-            lpf_ai_mucus_threads: null,
-            lpf_ai_casts: null,
-            lpf_ai_squamous_epithelial: null,
-            lpf_ai_abnormal_crystals: null,
-            lpf_ai_confidence: null,
-            lpf_ai_analysis_notes: null,
-            lpf_ai_analyzed_at: null
-          }
-        : {
-            hpf_ai_rbc: null,
-            hpf_ai_wbc: null,
-            hpf_ai_epithelial_cells: null,
-            hpf_ai_crystals: null,
-            hpf_ai_bacteria: null,
-            hpf_ai_yeast: null,
-            hpf_ai_sperm: null,
-            hpf_ai_parasites: null,
-            hpf_ai_confidence: null,
-            hpf_ai_analysis_notes: null,
-            hpf_ai_analyzed_at: null
-          }
+      // Upload image to Supabase storage
+      const imagePath = await uploadImageToStorage(file, selectedTest.id, 'lpf')
+      
+      // Add image to test record
+      const updatedTest = await addImageToTest(selectedTest.id, imagePath, 'lpf')
+      
+      // Update local state
+      setLowPowerImages(prev => [...prev, imagePath])
+      setCurrentLPFIndex(lowPowerImages.length) // Set to the new image
 
-      await supabase
-        .from('urine_tests')
-        .update(fieldsToClear)
-        .eq('id', selectedTest.id)
+      setNotificationMessage('LPF image uploaded successfully!')
+      setNotificationType('success')
+      setShowNotification(true)
 
-      // Clear local state
-      if (powerMode === 'low') {
+      // Refresh test data
+      if (dateParam) {
+        await preloadByDate(dateParam)
+      }
+    } catch (error) {
+      console.error('Error uploading LPF image:', error)
+      setNotificationMessage('Failed to upload LPF image')
+      setNotificationType('error')
+      setShowNotification(true)
+    }
+  }
+
+  // Function to handle HPF image upload
+  const handleHPFImageUpload = async (file: File) => {
+    if (!selectedTest) return
+
+    try {
+      // Upload image to Supabase storage
+      const imagePath = await uploadImageToStorage(file, selectedTest.id, 'hpf')
+      
+      // Add image to test record
+      const updatedTest = await addImageToTest(selectedTest.id, imagePath, 'hpf')
+      
+      // Update local state
+      setHighPowerImages(prev => [...prev, imagePath])
+      setCurrentHPFIndex(highPowerImages.length) // Set to the new image
+
+      setNotificationMessage('HPF image uploaded successfully!')
+      setNotificationType('success')
+      setShowNotification(true)
+
+      // Refresh test data
+      if (dateParam) {
+        await preloadByDate(dateParam)
+      }
+    } catch (error) {
+      console.error('Error uploading HPF image:', error)
+      setNotificationMessage('Failed to upload HPF image')
+      setNotificationType('error')
+      setShowNotification(true)
+    }
+  }
+
+  // Helper function to format sediment count display
+  const formatSedimentCount = (count: number | undefined, isAnalyzing: boolean): string => {
+    if (isAnalyzing) return ''
+    if (count === undefined || count === null) return 'None'
+    if (count === 0) return 'None'
+    return count.toString()
+  }
+
+  // Function to recount AI analysis for current specific image
+  const recountImage = async (powerMode: 'low' | 'high') => {
+    if (!selectedTest) return
+
+    try {
+      // Clear existing AI analysis data for the current specific image only
+      if (powerMode === 'low' && lowPowerImages.length > 0) {
+        await deleteImageAnalysisByImage(selectedTest.id, 'LPF', currentLPFIndex)
         setLpfSedimentDetection(null)
-        if (lowPowerImages.length > 0) {
-          analyzeLPFImage(lowPowerImages[currentLPFIndex])
-        }
-      } else {
+        // Re-analyze the current LPF image
+        analyzeLPFImage(lowPowerImages[currentLPFIndex], currentLPFIndex)
+      } else if (powerMode === 'high' && highPowerImages.length > 0) {
+        await deleteImageAnalysisByImage(selectedTest.id, 'HPF', currentHPFIndex)
         setHpfSedimentDetection(null)
-        if (highPowerImages.length > 0) {
-          analyzeHPFImage(highPowerImages[currentHPFIndex])
-        }
+        // Re-analyze the current HPF image
+        analyzeHPFImage(highPowerImages[currentHPFIndex], currentHPFIndex)
       }
 
-      setNotificationMessage(`${powerMode.toUpperCase()} AI analysis refreshed`)
+      setNotificationMessage(`${powerMode.toUpperCase()} image recounted successfully`)
       setNotificationType('success')
       setShowNotification(true)
     } catch (error) {
-      console.error('Error refreshing AI analysis:', error)
-      setNotificationMessage('Failed to refresh AI analysis')
+      console.error('Error recounting image:', error)
+      setNotificationMessage('Failed to recount image')
       setNotificationType('error')
       setShowNotification(true)
     }
@@ -909,6 +928,23 @@ export default function Report() {
     setCurrentLPFIndex(0)
   }, [selectedTest, isAddingTestImage])
 
+  // Ensure indices are valid when image arrays change
+  useEffect(() => {
+    if (lowPowerImages.length > 0 && currentLPFIndex >= lowPowerImages.length) {
+      setCurrentLPFIndex(lowPowerImages.length - 1)
+    } else if (lowPowerImages.length === 0) {
+      setCurrentLPFIndex(0)
+    }
+  }, [lowPowerImages.length, currentLPFIndex])
+
+  useEffect(() => {
+    if (highPowerImages.length > 0 && currentHPFIndex >= highPowerImages.length) {
+      setCurrentHPFIndex(highPowerImages.length - 1)
+    } else if (highPowerImages.length === 0) {
+      setCurrentHPFIndex(0)
+    }
+  }, [highPowerImages.length, currentHPFIndex])
+
   // Load AI generated values from database when test is selected
   useEffect(() => {
     if (selectedTest) {
@@ -931,21 +967,76 @@ export default function Report() {
 
   // Auto-analyze LPF images when they change
   useEffect(() => {
-    if (lowPowerImages.length > 0 && currentLPFIndex < lowPowerImages.length) {
-      analyzeLPFImage(lowPowerImages[currentLPFIndex])
+    if (lowPowerImages.length > 0 && currentLPFIndex < lowPowerImages.length && selectedTest) {
+      // Check for existing analysis for this specific image
+      const checkExistingAnalysis = async () => {
+        try {
+          const existingAnalysis = await getImageAnalysisByIndex(selectedTest.id, 'LPF', currentLPFIndex)
+          if (existingAnalysis) {
+            console.log('Loading LPF AI analysis from database for image', currentLPFIndex)
+            setLpfSedimentDetection({
+              epithelial_cells: typeof existingAnalysis.lpf_epithelial_cells === 'number' ? existingAnalysis.lpf_epithelial_cells : 0,
+              mucus_threads: typeof existingAnalysis.lpf_mucus_threads === 'number' ? existingAnalysis.lpf_mucus_threads : 0,
+              casts: typeof existingAnalysis.lpf_casts === 'number' ? existingAnalysis.lpf_casts : 0,
+              squamous_epithelial: typeof existingAnalysis.lpf_squamous_epithelial === 'number' ? existingAnalysis.lpf_squamous_epithelial : 0,
+              abnormal_crystals: typeof existingAnalysis.lpf_abnormal_crystals === 'number' ? existingAnalysis.lpf_abnormal_crystals : 0,
+              confidence: existingAnalysis.confidence || 0,
+              analysis_notes: existingAnalysis.analysis_notes || ''
+            })
+          } else {
+            // Only call API if no database data exists for this specific image
+            analyzeLPFImage(lowPowerImages[currentLPFIndex], currentLPFIndex)
+          }
+        } catch (error) {
+          console.error('Error checking existing LPF analysis:', error)
+          // Fallback to API call if database check fails
+          analyzeLPFImage(lowPowerImages[currentLPFIndex], currentLPFIndex)
+        }
+      }
+      
+      checkExistingAnalysis()
     } else {
       setLpfSedimentDetection(null)
     }
-  }, [lowPowerImages, currentLPFIndex])
+  }, [lowPowerImages, currentLPFIndex, selectedTest])
 
   // Auto-analyze HPF images when they change
   useEffect(() => {
-    if (highPowerImages.length > 0 && currentHPFIndex < highPowerImages.length) {
-      analyzeHPFImage(highPowerImages[currentHPFIndex])
+    if (highPowerImages.length > 0 && currentHPFIndex < highPowerImages.length && selectedTest) {
+      // Check for existing analysis for this specific image
+      const checkExistingAnalysis = async () => {
+        try {
+          const existingAnalysis = await getImageAnalysisByIndex(selectedTest.id, 'HPF', currentHPFIndex)
+          if (existingAnalysis) {
+            console.log('Loading HPF AI analysis from database for image', currentHPFIndex)
+            setHpfSedimentDetection({
+              rbc: typeof existingAnalysis.hpf_rbc === 'number' ? existingAnalysis.hpf_rbc : 0,
+              wbc: typeof existingAnalysis.hpf_wbc === 'number' ? existingAnalysis.hpf_wbc : 0,
+              epithelial_cells: typeof existingAnalysis.hpf_epithelial_cells === 'number' ? existingAnalysis.hpf_epithelial_cells : 0,
+              crystals: typeof existingAnalysis.hpf_crystals === 'number' ? existingAnalysis.hpf_crystals : 0,
+              bacteria: typeof existingAnalysis.hpf_bacteria === 'number' ? existingAnalysis.hpf_bacteria : 0,
+              yeast: typeof existingAnalysis.hpf_yeast === 'number' ? existingAnalysis.hpf_yeast : 0,
+              sperm: typeof existingAnalysis.hpf_sperm === 'number' ? existingAnalysis.hpf_sperm : 0,
+              parasites: typeof existingAnalysis.hpf_parasites === 'number' ? existingAnalysis.hpf_parasites : 0,
+              confidence: existingAnalysis.confidence || 0,
+              analysis_notes: existingAnalysis.analysis_notes || ''
+            })
+          } else {
+            // Only call API if no database data exists for this specific image
+            analyzeHPFImage(highPowerImages[currentHPFIndex], currentHPFIndex)
+          }
+        } catch (error) {
+          console.error('Error checking existing HPF analysis:', error)
+          // Fallback to API call if database check fails
+          analyzeHPFImage(highPowerImages[currentHPFIndex], currentHPFIndex)
+        }
+      }
+      
+      checkExistingAnalysis()
     } else {
       setHpfSedimentDetection(null)
     }
-  }, [highPowerImages, currentHPFIndex])
+  }, [highPowerImages, currentHPFIndex, selectedTest])
 
 
   // Ensure camera stream is attached to video element when test changes
@@ -2004,6 +2095,13 @@ export default function Report() {
                            {lowPowerImages.length}/10 images {lowPowerImages.length >= 10 ? '✓' : ''}
                          </span>
                        </h3>
+                       <label
+                         htmlFor="lpf-image-upload"
+                         className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200 transition-colors cursor-pointer"
+                         title="Upload LPF Image"
+                       >
+                         Upload Image
+                       </label>
                      </div>
                    </div>
 
@@ -2053,35 +2151,35 @@ export default function Report() {
                            {/* Image Counter */}
                            {lowPowerImages.length > 1 && (
                              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
-                               {currentLPFIndex + 1} / {lowPowerImages.length}
+                               {Math.min(currentLPFIndex + 1, lowPowerImages.length)} / {lowPowerImages.length}
                              </div>
                            )}
                            
-                           {/* Delete Button */}
-                           <button
-                             onClick={() => removeCapturedImage(currentLPFIndex, 'low')}
-                             className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
-                             title="Delete current image"
-                           >
-                             <Trash2 className="h-4 w-4" />
-                           </button>
+                           {/* Action Buttons */}
+                           <div className="absolute top-4 right-4 flex gap-2">
+                             <button
+                               onClick={() => recountImage('low')}
+                               className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition-colors shadow-lg"
+                               title="Recount current image"
+                             >
+                               <RefreshCw className="h-4 w-4" />
+                             </button>
+                             <button
+                               onClick={() => removeCapturedImage(currentLPFIndex, 'low')}
+                               className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                               title="Delete current image"
+                             >
+                               <Trash2 className="h-4 w-4" />
+                             </button>
+                           </div>
                          </div>
                          
                          {/* Sidebar - Sediment Description */}
                          <div className="flex-1 bg-white border-l-2 border-gray-300 p-3">
-                           <div className="flex items-center justify-between mb-3">
-                             <h4 className="font-semibold text-gray-900 flex items-center text-sm">
+                           <h4 className="font-semibold text-gray-900 mb-3 flex items-center text-sm">
                              <Microscope className="h-3 w-3 mr-1 text-orange-600" />
                              LPF Sediment Analysis
                            </h4>
-                             <button
-                               onClick={() => refreshAIAnalysis('low')}
-                               className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
-                               title="Refresh AI Analysis"
-                             >
-                               Refresh AI
-                             </button>
-                           </div>
                            
                            
                            {/* Field-based Sediment Analysis Table */}
@@ -2101,7 +2199,7 @@ export default function Report() {
                                    <tr className="border-b border-gray-100 hover:bg-gray-50">
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                         lpfSedimentDetection?.epithelial_cells 
+                                         (lpfSedimentDetection?.epithelial_cells || 0) > 0
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
@@ -2109,12 +2207,12 @@ export default function Report() {
                                            <div className="flex items-center justify-center">
                                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                                            </div>
-                                         ) : lpfSedimentDetection?.epithelial_cells ? 'Observed' : 'None'}
+                                         ) : formatSedimentCount(lpfSedimentDetection?.epithelial_cells, isAnalyzingLPF)}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                         lpfSedimentDetection?.mucus_threads 
+                                         (lpfSedimentDetection?.mucus_threads || 0) > 0
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
@@ -2122,12 +2220,12 @@ export default function Report() {
                                            <div className="flex items-center justify-center">
                                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                                            </div>
-                                         ) : lpfSedimentDetection?.mucus_threads ? 'Observed' : 'None'}
+                                         ) : formatSedimentCount(lpfSedimentDetection?.mucus_threads, isAnalyzingLPF)}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                         lpfSedimentDetection?.casts 
+                                         (lpfSedimentDetection?.casts || 0) > 0
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
@@ -2135,12 +2233,12 @@ export default function Report() {
                                            <div className="flex items-center justify-center">
                                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                                            </div>
-                                         ) : lpfSedimentDetection?.casts ? 'Observed' : 'None'}
+                                         ) : formatSedimentCount(lpfSedimentDetection?.casts, isAnalyzingLPF)}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                         lpfSedimentDetection?.squamous_epithelial 
+                                         (lpfSedimentDetection?.squamous_epithelial || 0) > 0
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
@@ -2148,12 +2246,12 @@ export default function Report() {
                                            <div className="flex items-center justify-center">
                                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                                            </div>
-                                         ) : lpfSedimentDetection?.squamous_epithelial ? 'Observed' : 'None'}
+                                         ) : formatSedimentCount(lpfSedimentDetection?.squamous_epithelial, isAnalyzingLPF)}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                         lpfSedimentDetection?.abnormal_crystals 
+                                         (lpfSedimentDetection?.abnormal_crystals || 0) > 0
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
@@ -2161,7 +2259,7 @@ export default function Report() {
                                            <div className="flex items-center justify-center">
                                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                                            </div>
-                                         ) : lpfSedimentDetection?.abnormal_crystals ? 'Observed' : 'None'}
+                                         ) : formatSedimentCount(lpfSedimentDetection?.abnormal_crystals, isAnalyzingLPF)}
                                            </div>
                                          </td>
                                        </tr>
@@ -2211,6 +2309,13 @@ export default function Report() {
                            {highPowerImages.length}/10 images {highPowerImages.length >= 10 ? '✓' : ''}
                          </span>
                        </h3>
+                       <label
+                         htmlFor="hpf-image-upload"
+                         className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200 transition-colors cursor-pointer"
+                         title="Upload HPF Image"
+                       >
+                         Upload Image
+                       </label>
                      </div>
                    </div>
 
@@ -2260,35 +2365,35 @@ export default function Report() {
                            {/* Image Counter */}
                            {highPowerImages.length > 1 && (
                              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
-                               {currentHPFIndex + 1} / {highPowerImages.length}
+                               {Math.min(currentHPFIndex + 1, highPowerImages.length)} / {highPowerImages.length}
                              </div>
                            )}
                            
-                           {/* Delete Button */}
-                           <button
-                             onClick={() => removeCapturedImage(currentHPFIndex, 'high')}
-                             className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
-                             title="Delete current image"
-                           >
-                             <Trash2 className="h-4 w-4" />
-                           </button>
+                           {/* Action Buttons */}
+                           <div className="absolute top-4 right-4 flex gap-2">
+                             <button
+                               onClick={() => recountImage('high')}
+                               className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition-colors shadow-lg"
+                               title="Recount current image"
+                             >
+                               <RefreshCw className="h-4 w-4" />
+                             </button>
+                             <button
+                               onClick={() => removeCapturedImage(currentHPFIndex, 'high')}
+                               className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                               title="Delete current image"
+                             >
+                               <Trash2 className="h-4 w-4" />
+                             </button>
+                           </div>
                          </div>
                          
                          {/* Sidebar - Sediment Description */}
                          <div className="flex-1 bg-white border-l-2 border-gray-300 p-3">
-                           <div className="flex items-center justify-between mb-3">
-                             <h4 className="font-semibold text-gray-900 flex items-center text-sm">
-                               <Microscope className="h-3 w-3 mr-1 text-blue-600" />
-                               HPF Sediment Analysis
-                             </h4>
-                             <button
-                               onClick={() => refreshAIAnalysis('high')}
-                               className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
-                               title="Refresh AI Analysis"
-                             >
-                               Refresh AI
-                             </button>
-                           </div>
+                           <h4 className="font-semibold text-gray-900 mb-3 flex items-center text-sm">
+                             <Microscope className="h-3 w-3 mr-1 text-blue-600" />
+                             HPF Sediment Analysis
+                           </h4>
                            
                            
                            {/* Field-based Sediment Analysis Table */}
@@ -2311,7 +2416,7 @@ export default function Report() {
                                    <tr className="border-b border-gray-100 hover:bg-gray-50">
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                         hpfSedimentDetection?.rbc 
+                                         (hpfSedimentDetection?.rbc || 0) > 0
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
@@ -2319,12 +2424,12 @@ export default function Report() {
                                            <div className="flex items-center justify-center">
                                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                                            </div>
-                                         ) : hpfSedimentDetection?.rbc ? 'Observed' : 'None'}
+                                         ) : formatSedimentCount(hpfSedimentDetection?.rbc, isAnalyzingHPF)}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                         hpfSedimentDetection?.wbc 
+                                         (hpfSedimentDetection?.wbc || 0) > 0
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
@@ -2332,12 +2437,12 @@ export default function Report() {
                                            <div className="flex items-center justify-center">
                                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                                            </div>
-                                         ) : hpfSedimentDetection?.wbc ? 'Observed' : 'None'}
+                                         ) : formatSedimentCount(hpfSedimentDetection?.wbc, isAnalyzingHPF)}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                         hpfSedimentDetection?.epithelial_cells 
+                                         (hpfSedimentDetection?.epithelial_cells || 0) > 0
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
@@ -2345,12 +2450,12 @@ export default function Report() {
                                            <div className="flex items-center justify-center">
                                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                                            </div>
-                                         ) : hpfSedimentDetection?.epithelial_cells ? 'Observed' : 'None'}
+                                         ) : formatSedimentCount(hpfSedimentDetection?.epithelial_cells, isAnalyzingHPF)}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                         hpfSedimentDetection?.crystals 
+                                         (hpfSedimentDetection?.crystals || 0) > 0
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
@@ -2358,12 +2463,12 @@ export default function Report() {
                                            <div className="flex items-center justify-center">
                                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                                            </div>
-                                         ) : hpfSedimentDetection?.crystals ? 'Observed' : 'None'}
+                                         ) : formatSedimentCount(hpfSedimentDetection?.crystals, isAnalyzingHPF)}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                         hpfSedimentDetection?.bacteria 
+                                         (hpfSedimentDetection?.bacteria || 0) > 0
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
@@ -2371,12 +2476,12 @@ export default function Report() {
                                            <div className="flex items-center justify-center">
                                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                                            </div>
-                                         ) : hpfSedimentDetection?.bacteria ? 'Observed' : 'None'}
+                                         ) : formatSedimentCount(hpfSedimentDetection?.bacteria, isAnalyzingHPF)}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                         hpfSedimentDetection?.yeast 
+                                         (hpfSedimentDetection?.yeast || 0) > 0
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
@@ -2384,12 +2489,12 @@ export default function Report() {
                                            <div className="flex items-center justify-center">
                                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                                            </div>
-                                         ) : hpfSedimentDetection?.yeast ? 'Observed' : 'None'}
+                                         ) : formatSedimentCount(hpfSedimentDetection?.yeast, isAnalyzingHPF)}
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                         hpfSedimentDetection?.sperm 
+                                         (hpfSedimentDetection?.sperm || 0) > 0
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
@@ -2397,20 +2502,20 @@ export default function Report() {
                                            <div className="flex items-center justify-center">
                                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                                            </div>
-                                         ) : hpfSedimentDetection?.sperm ? 'Observed' : 'None'}
+                                         ) : formatSedimentCount(hpfSedimentDetection?.sperm, isAnalyzingHPF)}
                                        </div>
                                      </td>
                                      <td className="text-center py-2 px-2">
                                        <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                         hpfSedimentDetection?.parasites 
-                                           ? 'bg-green-100 text-green-700' 
-                                           : 'bg-gray-50 text-gray-500'
+                                         (hpfSedimentDetection?.parasites || 0) > 0
+                                               ? 'bg-green-100 text-green-700' 
+                                               : 'bg-gray-50 text-gray-500'
                                        }`}>
                                          {isAnalyzingHPF ? (
                                            <div className="flex items-center justify-center">
                                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                                            </div>
-                                         ) : hpfSedimentDetection?.parasites ? 'Observed' : 'None'}
+                                         ) : formatSedimentCount(hpfSedimentDetection?.parasites, isAnalyzingHPF)}
                                            </div>
                                          </td>
                                        </tr>
@@ -2469,6 +2574,30 @@ export default function Report() {
                          // Handle camera capture logic here
                          console.log('Camera capture:', files)
                          // You can implement the actual upload to Supabase storage here
+                       }
+                     }}
+                   />
+                   <input
+                     id="lpf-image-upload"
+                     type="file"
+                     accept="image/*"
+                     className="hidden"
+                     onChange={(e) => {
+                       const file = e.target.files?.[0]
+                       if (file) {
+                         handleLPFImageUpload(file)
+                       }
+                     }}
+                   />
+                   <input
+                     id="hpf-image-upload"
+                     type="file"
+                     accept="image/*"
+                     className="hidden"
+                     onChange={(e) => {
+                       const file = e.target.files?.[0]
+                       if (file) {
+                         handleHPFImageUpload(file)
                        }
                      }}
                    />

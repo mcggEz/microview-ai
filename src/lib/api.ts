@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { Patient, UrineTest, ResultStatus, SedimentAnalysis, PowerMode } from '@/types/database'
+import { Patient, UrineTest, ResultStatus, SedimentAnalysis, PowerMode, ImageAnalysis } from '@/types/database'
 
 // Patients
 export const getPatients = async (): Promise<Patient[]> => {
@@ -333,7 +333,7 @@ export const deleteTest = async (testId: string): Promise<void> => {
 
 
 // Image Upload Functions
-export const uploadImageToStorage = async (file: File, testId: string, imageType: 'microscopic' | 'gross' = 'microscopic'): Promise<string> => {
+export const uploadImageToStorage = async (file: File, testId: string, imageType: 'microscopic' | 'gross' | 'lpf' | 'hpf' = 'microscopic'): Promise<string> => {
   try {
     // Generate unique filename
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
@@ -365,7 +365,7 @@ export const uploadImageToStorage = async (file: File, testId: string, imageType
   }
 }
 
-export const uploadBase64Image = async (base64Data: string, testId: string, imageType: 'microscopic' | 'gross' = 'microscopic'): Promise<string> => {
+export const uploadBase64Image = async (base64Data: string, testId: string, imageType: 'microscopic' | 'gross' | 'lpf' | 'hpf' = 'microscopic'): Promise<string> => {
   try {
     // Convert base64 to blob
     const base64Response = await fetch(base64Data)
@@ -593,3 +593,211 @@ export const deleteSedimentAnalysisByTest = async (testId: string): Promise<void
   
   console.log('All sediment analysis deleted successfully for test')
 }
+
+// Image Analysis Functions
+export const getImageAnalysis = async (testId: string, powerMode: PowerMode): Promise<ImageAnalysis[]> => {
+  console.log(`Fetching image analysis for test ${testId}, power mode ${powerMode}`)
+  
+  const { data, error } = await supabase
+    .from('image_analysis')
+    .select('*')
+    .eq('test_id', testId)
+    .eq('power_mode', powerMode)
+    .order('image_index', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching image analysis:', error)
+    throw error
+  }
+  
+  console.log('Image analysis fetched successfully:', data?.length || 0, 'records')
+  return data || []
+}
+
+export const getImageAnalysisByIndex = async (
+  testId: string, 
+  powerMode: PowerMode, 
+  imageIndex: number
+): Promise<ImageAnalysis | null> => {
+  console.log(`Fetching image analysis for test ${testId}, ${powerMode} image ${imageIndex}`)
+  
+  const { data, error } = await supabase
+    .from('image_analysis')
+    .select('*')
+    .eq('test_id', testId)
+    .eq('power_mode', powerMode)
+    .eq('image_index', imageIndex)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No rows found
+      return null
+    }
+    console.error('Error fetching image analysis by index:', error)
+    throw error
+  }
+  
+  console.log('Image analysis by index fetched successfully:', data)
+  return data
+}
+
+export const createImageAnalysis = async (
+  analysisData: Omit<ImageAnalysis, 'id' | 'created_at' | 'updated_at'>
+): Promise<ImageAnalysis> => {
+  console.log('Creating image analysis with data:', analysisData)
+  
+  const { data, error } = await supabase
+    .from('image_analysis')
+    .insert(analysisData)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Supabase error creating image analysis:', error)
+    throw error
+  }
+  
+  console.log('Image analysis created successfully:', data)
+  return data
+}
+
+export const updateImageAnalysis = async (
+  id: string, 
+  updates: Partial<Omit<ImageAnalysis, 'id' | 'test_id' | 'power_mode' | 'image_index' | 'image_url' | 'created_at' | 'updated_at'>>
+): Promise<ImageAnalysis> => {
+  console.log(`Updating image analysis ${id} with data:`, updates)
+  
+  const { data, error } = await supabase
+    .from('image_analysis')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Supabase error updating image analysis:', error)
+    throw error
+  }
+  
+  console.log('Image analysis updated successfully:', data)
+  return data
+}
+
+export const upsertImageAnalysis = async (
+  analysisData: Omit<ImageAnalysis, 'id' | 'created_at' | 'updated_at'>
+): Promise<ImageAnalysis> => {
+  console.log('Upserting image analysis with data:', JSON.stringify(analysisData, null, 2))
+  
+  // First, check if the image_analysis table exists
+  const { data: tableCheck, error: tableError } = await supabase
+    .from('image_analysis')
+    .select('id')
+    .limit(1)
+
+  if (tableError) {
+    console.error('image_analysis table does not exist:', {
+      error: tableError,
+      message: tableError.message,
+      code: tableError.code,
+      details: tableError.details,
+      hint: tableError.hint
+    })
+    throw new Error(`image_analysis table does not exist: ${tableError.message}`)
+  }
+
+  console.log('✅ image_analysis table exists and is accessible')
+
+  // Verify the test exists
+  const { data: testData, error: testError } = await supabase
+    .from('urine_tests')
+    .select('id')
+    .eq('id', analysisData.test_id)
+    .single()
+
+  if (testError || !testData) {
+    console.error('Test not found:', {
+      testId: analysisData.test_id,
+      error: testError
+    })
+    throw new Error(`Test with ID ${analysisData.test_id} not found`)
+  }
+
+  const { data, error } = await supabase
+    .from('image_analysis')
+    .upsert(analysisData, {
+      onConflict: 'test_id,power_mode,image_index'
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Supabase error upserting image analysis:', {
+      error,
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      data: analysisData
+    })
+    throw error
+  }
+  
+  console.log('Image analysis upserted successfully:', data)
+  return data
+}
+
+export const deleteImageAnalysis = async (id: string): Promise<void> => {
+  console.log(`Deleting image analysis ${id}`)
+  
+  const { error } = await supabase
+    .from('image_analysis')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.error('Supabase error deleting image analysis:', error)
+    throw error
+  }
+  
+  console.log('Image analysis deleted successfully')
+}
+
+export const deleteImageAnalysisByTest = async (testId: string): Promise<void> => {
+  console.log(`Deleting all image analysis for test ${testId}`)
+  
+  const { error } = await supabase
+    .from('image_analysis')
+    .delete()
+    .eq('test_id', testId)
+
+  if (error) {
+    console.error('Supabase error deleting image analysis by test:', error)
+    throw error
+  }
+  
+  console.log('All image analysis deleted successfully for test')
+}
+
+export const deleteImageAnalysisByImage = async (
+  testId: string, 
+  powerMode: PowerMode, 
+  imageIndex: number
+): Promise<void> => {
+  console.log(`Deleting image analysis for test ${testId}, ${powerMode} image ${imageIndex}`)
+  
+  const { error } = await supabase
+    .from('image_analysis')
+    .delete()
+    .eq('test_id', testId)
+    .eq('power_mode', powerMode)
+    .eq('image_index', imageIndex)
+
+  if (error) {
+    console.error('Supabase error deleting image analysis by image:', error)
+    throw error
+  }
+  
+  console.log('Image analysis deleted successfully for specific image')
+}
+
