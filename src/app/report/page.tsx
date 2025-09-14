@@ -105,6 +105,10 @@ export default function Report() {
   // HPF Sediment Detection state
   const [hpfSedimentDetection, setHpfSedimentDetection] = useState<HPFSedimentDetection | null>(null)
   const [isAnalyzingHPF, setIsAnalyzingHPF] = useState(false)
+  
+  // State for manual corrections
+  const [isEditingHPF, setIsEditingHPF] = useState(false)
+  const [editedHPFCounts, setEditedHPFCounts] = useState<Partial<HPFSedimentDetection>>({})
 
   // Helper function to create dropdown options based on sediment type
   const getDropdownOptions = (type: string) => {
@@ -748,6 +752,66 @@ export default function Report() {
       setNotificationType('error')
       setShowNotification(true)
     }
+  }
+
+  // Function to start editing HPF counts
+  const startEditingHPF = () => {
+    setIsEditingHPF(true)
+    setEditedHPFCounts(hpfSedimentDetection || {})
+  }
+
+  // Function to save manual corrections for HPF
+  const saveHPFManualCorrections = async () => {
+    if (!selectedTest) return
+
+    try {
+      const imageIndex = currentHPFIndex
+      const imageUrl = highPowerImages[currentHPFIndex]
+      
+      // Update HPF detection with manual corrections
+      const correctedDetection = { 
+        ...hpfSedimentDetection, 
+        ...editedHPFCounts
+      } as HPFSedimentDetection
+      setHpfSedimentDetection(correctedDetection)
+      
+      // Save to database
+      await upsertImageAnalysis({
+        test_id: selectedTest.id,
+        power_mode: 'HPF',
+        image_index: imageIndex,
+        image_url: imageUrl,
+        hpf_rbc: correctedDetection.rbc,
+        hpf_wbc: correctedDetection.wbc,
+        hpf_epithelial_cells: correctedDetection.epithelial_cells,
+        hpf_crystals: correctedDetection.crystals,
+        hpf_bacteria: correctedDetection.bacteria,
+        hpf_yeast: correctedDetection.yeast,
+        hpf_sperm: correctedDetection.sperm,
+        hpf_parasites: correctedDetection.parasites,
+        confidence: correctedDetection.confidence,
+        analysis_notes: (correctedDetection.analysis_notes || '') + ' (Manually corrected)',
+        analyzed_at: new Date().toISOString()
+      })
+      
+      setIsEditingHPF(false)
+      setEditedHPFCounts({})
+      
+      setNotificationMessage('HPF counts corrected and saved')
+      setNotificationType('success')
+      setShowNotification(true)
+    } catch (error) {
+      console.error('Error saving HPF manual corrections:', error)
+      setNotificationMessage('Failed to save corrections')
+      setNotificationType('error')
+      setShowNotification(true)
+    }
+  }
+
+  // Function to cancel editing HPF
+  const cancelEditingHPF = () => {
+    setIsEditingHPF(false)
+    setEditedHPFCounts({})
   }
 
   // Digital staining and segmentation function using the new algorithm
@@ -2164,13 +2228,13 @@ export default function Report() {
                              >
                                <RefreshCw className="h-4 w-4" />
                              </button>
-                             <button
-                               onClick={() => removeCapturedImage(currentLPFIndex, 'low')}
+                           <button
+                             onClick={() => removeCapturedImage(currentLPFIndex, 'low')}
                                className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
-                               title="Delete current image"
-                             >
-                               <Trash2 className="h-4 w-4" />
-                             </button>
+                             title="Delete current image"
+                           >
+                             <Trash2 className="h-4 w-4" />
+                           </button>
                            </div>
                          </div>
                          
@@ -2378,13 +2442,13 @@ export default function Report() {
                              >
                                <RefreshCw className="h-4 w-4" />
                              </button>
-                             <button
-                               onClick={() => removeCapturedImage(currentHPFIndex, 'high')}
+                           <button
+                             onClick={() => removeCapturedImage(currentHPFIndex, 'high')}
                                className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
-                               title="Delete current image"
-                             >
-                               <Trash2 className="h-4 w-4" />
-                             </button>
+                             title="Delete current image"
+                           >
+                             <Trash2 className="h-4 w-4" />
+                           </button>
                            </div>
                          </div>
                          
@@ -2454,17 +2518,29 @@ export default function Report() {
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
+                                            {isEditingHPF ? (
+                                              <input
+                                                type="number"
+                                                min="0"
+                                                max="1000"
+                                                value={editedHPFCounts.crystals || hpfSedimentDetection?.crystals || 0}
+                                                onChange={(e) => setEditedHPFCounts(prev => ({ ...prev, crystals: parseInt(e.target.value) || 0 }))}
+                                                className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-center"
+                                                placeholder="0"
+                                              />
+                                            ) : (
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                         (hpfSedimentDetection?.crystals || 0) > 0
+                                                (hpfSedimentDetection?.crystals || 0) > 0
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                         {isAnalyzingHPF ? (
-                                           <div className="flex items-center justify-center">
-                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                                {isAnalyzingHPF ? (
+                                                  <div className="flex items-center justify-center">
+                                                    <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                                            </div>
-                                         ) : formatSedimentCount(hpfSedimentDetection?.crystals, isAnalyzingHPF)}
-                                           </div>
+                                                ) : formatSedimentCount(hpfSedimentDetection?.crystals, isAnalyzingHPF)}
+                                              </div>
+                                            )}
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
@@ -2541,6 +2617,35 @@ export default function Report() {
                                    {hpfSedimentDetection.analysis_notes}
                                  </span>
                                </div>
+                             </div>
+                           )}
+
+                           {/* Manual Correction Controls */}
+                           {hpfSedimentDetection && (
+                             <div className="mt-3 flex gap-2">
+                               {!isEditingHPF ? (
+                                 <button
+                                   onClick={startEditingHPF}
+                                   className="px-3 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600 transition-colors"
+                                 >
+                                   Edit Counts
+                                 </button>
+                               ) : (
+                                 <>
+                                   <button
+                                     onClick={saveHPFManualCorrections}
+                                     className="px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 transition-colors"
+                                   >
+                                     Save
+                                   </button>
+                                   <button
+                                     onClick={cancelEditingHPF}
+                                     className="px-3 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600 transition-colors"
+                                   >
+                                     Cancel
+                                   </button>
+                                 </>
+                               )}
                              </div>
                            )}
                          </div>

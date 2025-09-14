@@ -3,8 +3,39 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 // Initialize Gemini API
 const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '')
 
-// Get the Gemini 2.5 Flash model for image analysis
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+// Get the primary Gemini 2.5 Flash model for image analysis
+const primaryModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+
+// Get the fallback Gemini 1.5 Flash model for when primary is overloaded
+const fallbackModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+
+// Helper function to try primary model first, then fallback if overloaded
+async function generateContentWithFallback(prompt: string, imageData: any) {
+  try {
+    console.log('Trying primary model (Gemini 2.5 Flash)...')
+    const result = await primaryModel.generateContent([prompt, imageData])
+    console.log('✅ Primary model successful')
+    return result
+  } catch (error: any) {
+    console.warn('Primary model failed:', error.message)
+    
+    // Check if it's an overload error (503) or similar
+    if (error.message?.includes('overloaded') || error.message?.includes('503') || error.message?.includes('try again later')) {
+      console.log('Primary model overloaded, trying fallback model (Gemini 1.5 Flash)...')
+      try {
+        const result = await fallbackModel.generateContent([prompt, imageData])
+        console.log('✅ Fallback model successful')
+        return result
+      } catch (fallbackError) {
+        console.error('Both models failed:', fallbackError)
+        throw fallbackError
+      }
+    } else {
+      // If it's not an overload error, throw the original error
+      throw error
+    }
+  }
+}
 
 export interface UrinalysisResult {
   rbc: { count: string; unit: string; morphology: string; notes: string; status: 'normal' | 'abnormal' | 'critical' }
@@ -69,13 +100,13 @@ export async function analyzeUrinalysisImage(imageFile: File): Promise<Urinalysi
 
 Please analyze the image carefully and provide accurate counts, morphology descriptions, and clinical significance. Set status as 'normal', 'abnormal', or 'critical' based on clinical relevance. Provide an overall accuracy percentage based on image quality and clarity.`
 
-    // Generate content with image
-    const result = await model.generateContent([prompt, {
+    // Generate content with image using fallback mechanism
+    const result = await generateContentWithFallback(prompt, {
       inlineData: {
         mimeType: imageFile.type,
         data: base64Image.split(',')[1] // Remove data:image/...;base64, prefix
       }
-    }])
+    })
 
     const response = await result.response
     const text = response.text()
@@ -146,13 +177,13 @@ IMPORTANT: Return ONLY the JSON object below, no additional text or explanations
 
 Provide accurate counts for each sediment type. Use 0 if none are present. Be conservative in your counting - only count items you are reasonably confident about. Set confidence as a percentage (0-100) based on image quality and clarity.`
 
-    // Generate content with image
-    const result = await model.generateContent([prompt, {
+    // Generate content with image using fallback mechanism
+    const result = await generateContentWithFallback(prompt, {
       inlineData: {
         mimeType: imageFile.type,
         data: base64Image.split(',')[1] // Remove data:image/...;base64, prefix
       }
-    }])
+    })
 
     const response = await result.response
     const text = response.text()
@@ -183,24 +214,38 @@ Provide accurate counts for each sediment type. Use 0 if none are present. Be co
   }
 }
 
-// Function to detect HPF sediments using Gemini AI
+// Function to detect HPF sediments using Gemini AI with improved accuracy
 export async function detectHPFSediments(imageFile: File): Promise<HPFSedimentDetection> {
   try {
     // Convert image to base64
     const base64Image = await fileToBase64(imageFile)
     
     // Create the prompt for HPF sediment detection
-    const prompt = `Analyze this High Power Field (HPF) urine microscopy image and count the specific sediments present. 
+    const prompt = `You are a medical laboratory technician analyzing a High Power Field (HPF) urine microscopy image. Your task is to count specific sediments with extreme accuracy.
 
-Look for these specific sediment types and provide accurate counts:
-1. RBC (Red Blood Cells) - Small, round, biconcave cells
-2. WBC (White Blood Cells) - Larger cells with distinct nuclei
-3. Epithelial Cells - Round or oval cells with distinct nuclei
-4. Crystals - Various crystal formations (calcium oxalate, uric acid, etc.)
-5. Bacteria - Small, rod-shaped or spherical organisms
+CRITICAL COUNTING RULES:
+1. Count each sediment individually - do not double count
+2. Only count complete, clearly visible sediments
+3. Do not count partial, overlapping, or ambiguous items
+4. For crystals: count each distinct crystal formation separately
+5. Be extremely conservative - if unsure, don't count it
+
+SEDIMENT TYPES TO COUNT:
+1. RBC (Red Blood Cells) - Small, round, biconcave cells, typically 6-8 μm
+2. WBC (White Blood Cells) - Larger cells (10-15 μm) with distinct nuclei
+3. Epithelial Cells - Round or oval cells with distinct nuclei, various sizes
+4. Crystals - Distinct crystal formations (calcium oxalate, uric acid, etc.) - COUNT EACH CRYSTAL SEPARATELY
+5. Bacteria - Small, rod-shaped or spherical organisms, typically 1-3 μm
 6. Yeast - Oval or round fungal cells, often with budding
-7. Sperm - Spermatozoa with head and tail structures
+7. Sperm - Spermatozoa with distinct head and tail structures
 8. Parasites - Parasitic organisms or eggs
+
+COUNTING METHODOLOGY:
+- Scan the entire image systematically
+- Count each sediment type individually
+- For crystals: look for distinct crystal boundaries and count each one
+- Avoid counting artifacts, debris, or unclear objects
+- If sediments are touching but clearly separate, count them separately
 
 IMPORTANT: Return ONLY the JSON object below, no additional text or explanations:
 
@@ -217,39 +262,81 @@ IMPORTANT: Return ONLY the JSON object below, no additional text or explanations
   "analysis_notes": "Brief description of what was observed"
 }
 
-Provide accurate counts for each sediment type. Use 0 if none are present. Be conservative in your counting - only count items you are reasonably confident about. Set confidence as a percentage (0-100) based on image quality and clarity.`
+Provide accurate counts for each sediment type. Use 0 if none are present. Be extremely conservative in your counting - only count items you are 100% confident about. Set confidence as a percentage (0-100) based on image quality and clarity.`
 
-    // Generate content with image
-    const result = await model.generateContent([prompt, {
-      inlineData: {
-        mimeType: imageFile.type,
-        data: base64Image.split(',')[1] // Remove data:image/...;base64, prefix
+    // Try multiple attempts for better accuracy
+    const attempts = 2
+    const results: HPFSedimentDetection[] = []
+    
+    for (let i = 0; i < attempts; i++) {
+      try {
+        console.log(`HPF Analysis attempt ${i + 1}/${attempts}`)
+        
+        // Generate content with image using fallback mechanism
+        const result = await generateContentWithFallback(prompt, {
+          inlineData: {
+            mimeType: imageFile.type,
+            data: base64Image.split(',')[1] // Remove data:image/...;base64, prefix
+          }
+        })
+
+        const response = await result.response
+        const text = response.text()
+        
+        // Extract JSON from response - handle various formats
+        let jsonText = text.trim()
+        
+        // Remove markdown code blocks
+        if (jsonText.startsWith('```json')) {
+          jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+        } else if (jsonText.startsWith('```')) {
+          jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '')
+        }
+        
+        // Look for JSON object in the text (handle cases where AI adds explanatory text)
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          jsonText = jsonMatch[0]
+        }
+        
+        // Parse JSON response
+        const detection = JSON.parse(jsonText) as HPFSedimentDetection
+        
+        // Log the raw response for debugging
+        console.log(`Attempt ${i + 1} - Raw AI Response:`, text)
+        console.log(`Attempt ${i + 1} - Extracted JSON:`, jsonText)
+        console.log(`Attempt ${i + 1} - Parsed Detection:`, detection)
+        
+        // Validate the response
+        if (typeof detection.crystals === 'number' && detection.crystals >= 0) {
+          results.push(detection)
+        } else {
+          console.warn(`Attempt ${i + 1} - Invalid crystal count received:`, detection.crystals)
+        }
+        
+        // Add small delay between attempts
+        if (i < attempts - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        }
+        
+      } catch (attemptError) {
+        console.error(`Attempt ${i + 1} failed:`, attemptError)
       }
-    }])
-
-    const response = await result.response
-    const text = response.text()
-    
-    // Extract JSON from response - handle various formats
-    let jsonText = text.trim()
-    
-    // Remove markdown code blocks
-    if (jsonText.startsWith('```json')) {
-      jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
-    } else if (jsonText.startsWith('```')) {
-      jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '')
     }
     
-    // Look for JSON object in the text (handle cases where AI adds explanatory text)
-    const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      jsonText = jsonMatch[0]
+    if (results.length === 0) {
+      throw new Error('All analysis attempts failed')
     }
     
-    // Parse JSON response
-    const detection = JSON.parse(jsonText) as HPFSedimentDetection
+    // Use the result with highest confidence, or first result if all have same confidence
+    const bestResult = results.reduce((best, current) => 
+      current.confidence > best.confidence ? current : best
+    )
     
-    return detection
+    console.log('Final HPF Detection Result:', bestResult)
+    console.log('All attempts:', results)
+    
+    return bestResult
   } catch (error) {
     console.error('Error detecting HPF sediments with Gemini:', error)
     throw new Error('Failed to analyze HPF sediments. Please try again.')
