@@ -117,3 +117,14 @@ export interface ImageAnalysis {
   created_at: string
   updated_at: string
 }
+
+export interface MedTechUser {
+  id: string
+  email: string
+  password_hash: string
+  full_name?: string
+  is_active: boolean
+  role: string
+  created_at: string
+  updated_at: string
+}

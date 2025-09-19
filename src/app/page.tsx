@@ -1,13 +1,13 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Microscope, TestTube, Brain, Camera, Database, Shield } from 'lucide-react'
+import { Microscope, TestTube } from 'lucide-react'
 
 export default function Home() {
   const router = useRouter()
 
   const handleDemoClick = () => {
-    router.push('/report')
+    router.push('/login')
   }
 
   return (
@@ -23,7 +23,6 @@ export default function Home() {
               <h1 className="text-2xl font-bold text-gray-900">MicroView AI</h1>
             </div>
             <div className="hidden md:flex items-center space-x-6">
-              <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">Features</a>
               <a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors">About</a>
               <a href="#contact" className="text-gray-600 hover:text-gray-900 transition-colors">Contact</a>
             </div>
@@ -63,85 +62,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Advanced Features</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Our system combines cutting-edge technology with medical expertise to deliver exceptional results
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mb-4">
-                <Brain className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">AI Analysis</h3>
-              <p className="text-gray-600">
-                Powered by Google Gemini AI for accurate microscopic analysis and result interpretation
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl">
-              <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mb-4">
-                <Camera className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Live Camera</h3>
-              <p className="text-gray-600">
-                Real-time microscopic image capture with integrated camera controls
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl">
-              <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mb-4">
-                <Database className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Smart Database</h3>
-              <p className="text-gray-600">
-                Secure patient data management with Supabase backend integration
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl">
-              <div className="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center mb-4">
-                <TestTube className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Test Management</h3>
-              <p className="text-gray-600">
-                Comprehensive test tracking, validation, and reporting system
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-xl">
-              <div className="w-12 h-12 bg-red-600 rounded-lg flex items-center justify-center mb-4">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Security</h3>
-              <p className="text-gray-600">
-                HIPAA-compliant data protection with role-based access control
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 rounded-xl">
-              <div className="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center mb-4">
-                <Microscope className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Professional Reports</h3>
-              <p className="text-gray-600">
-                Generate detailed, professional urinalysis reports with quantitative analysis
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      
 
       {/* About Section */}
       <section id="about" className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">📋 Project Overview</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">Project Overview</h2>
             <p className="text-xl text-gray-600 max-w-4xl mx-auto">
               With the recent advancement of foundational models like Gemini, ChatGPT, and other large language models, 
               there has been a paradigm shift in AI capabilities, particularly in multimodal understanding and natural language generation.

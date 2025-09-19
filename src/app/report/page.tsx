@@ -22,7 +22,6 @@ import ImageModal from '@/components/ImageModal'
 import ConfirmationModal from '@/components/ConfirmationModal'
 import CameraCaptureModal from '@/components/CameraCaptureModal'
 import Notification from '@/components/Notification'
-import PatientTestHistory from '@/components/PatientTestHistory'
 import Image from 'next/image'
 import { UrineTest } from '@/types/database'
 
@@ -62,7 +61,6 @@ export default function Report() {
   const [searchQuery, setSearchQuery] = useState('')
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [showHistory, setShowHistory] = useState(false)
   const [showHeader, setShowHeader] = useState(true)
   const [liveStreamActive, setLiveStreamActive] = useState(false)
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null)
@@ -98,17 +96,40 @@ export default function Report() {
     abnormalCrystals: '0'
   })
 
-  // LPF Sediment Detection state
-  const [lpfSedimentDetection, setLpfSedimentDetection] = useState<LPFSedimentDetection | null>(null)
-  const [isAnalyzingLPF, setIsAnalyzingLPF] = useState(false)
+  // Text-only Urinalysis Summary (after Strasinger)
+  const [urinalysisText, setUrinalysisText] = useState({
+    color: '',
+    transparency: '',
+    specificGravity: '',
+    ph: '',
+    protein: '',
+    glucose: '',
+    rbc: '',
+    pusCells: '',
+    epithelialCells: '',
+    bacteria: '',
+    remarks: ''
+  })
 
-  // HPF Sediment Detection state
+  const updateUrinalysisText = (key: keyof typeof urinalysisText, value: string) => {
+    setUrinalysisText(prev => ({ ...prev, [key]: value }))
+  }
+
+  // LPF Sediment Detection state - per image
+  const [lpfSedimentDetection, setLpfSedimentDetection] = useState<LPFSedimentDetection | null>(null)
+  const [isAnalyzingLPF, setIsAnalyzingLPF] = useState<{ [imageIndex: number]: boolean }>({})
+
+  // HPF Sediment Detection state - per image
   const [hpfSedimentDetection, setHpfSedimentDetection] = useState<HPFSedimentDetection | null>(null)
-  const [isAnalyzingHPF, setIsAnalyzingHPF] = useState(false)
+  const [isAnalyzingHPF, setIsAnalyzingHPF] = useState<{ [imageIndex: number]: boolean }>({})
   
-  // State for manual corrections
-  const [isEditingHPF, setIsEditingHPF] = useState(false)
-  const [editedHPFCounts, setEditedHPFCounts] = useState<Partial<HPFSedimentDetection>>({})
+  
+  // State to prevent analysis during image deletion
+  const [isDeletingImage, setIsDeletingImage] = useState(false)
+  
+  // AbortController for canceling ongoing Gemini requests
+  const [lpfAbortController, setLpfAbortController] = useState<AbortController | null>(null)
+  const [hpfAbortController, setHpfAbortController] = useState<AbortController | null>(null)
 
   // Helper function to create dropdown options based on sediment type
   const getDropdownOptions = (type: string) => {
@@ -179,19 +200,34 @@ export default function Report() {
     }
   }
 
-  // Function to analyze LPF image for sediments
+  // Function to analyze LPF image for sediments - ONLY for current image
   const analyzeLPFImage = async (imageUrl: string, imageIndex: number) => {
     if (!imageUrl || !selectedTest) return
 
-    setIsAnalyzingLPF(true)
+    console.log(`🔬 Starting LPF analysis for image ${imageIndex + 1} (URL: ${imageUrl.substring(0, 50)}...)`)
+    
+    // Cancel any existing LPF request
+    if (lpfAbortController) {
+      console.log('🛑 Canceling previous LPF request')
+      lpfAbortController.abort()
+    }
+    
+    // Create new AbortController for this request
+    const abortController = new AbortController()
+    setLpfAbortController(abortController)
+    
+    setIsAnalyzingLPF(prev => ({ ...prev, [imageIndex]: true }))
     try {
       // Convert image URL to File object
       const response = await fetch(imageUrl)
       const blob = await response.blob()
       const file = new File([blob], 'lpf-image.jpg', { type: 'image/jpeg' })
 
-      // Analyze with Gemini AI
-      const detection = await detectLPFSediments(file)
+      console.log(`📤 Sending LPF image ${imageIndex + 1} to Gemini API...`)
+      // Analyze with Gemini AI (pass abort signal)
+      const detection = await detectLPFSediments(file, abortController.signal)
+      console.log(`✅ LPF analysis complete for image ${imageIndex + 1}:`, detection)
+      console.log('📝 New LPF Analysis text:', detection.analysis_notes)
       setLpfSedimentDetection(detection)
 
       // Save to individual image analysis table
@@ -222,29 +258,49 @@ export default function Report() {
       }
 
       console.log('LPF Sediment Detection:', detection)
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('🛑 LPF analysis cancelled for image', imageIndex + 1)
+        return // Don't show error for cancelled requests
+      }
       console.error('Error analyzing LPF image:', error)
       setNotificationMessage('Failed to analyze LPF image')
       setNotificationType('error')
       setShowNotification(true)
     } finally {
-      setIsAnalyzingLPF(false)
+      setIsAnalyzingLPF(prev => ({ ...prev, [imageIndex]: false }))
+      setLpfAbortController(null) // Clear the abort controller
     }
   }
 
-  // Function to analyze HPF image for sediments
+  // Function to analyze HPF image for sediments - ONLY for current image
   const analyzeHPFImage = async (imageUrl: string, imageIndex: number) => {
     if (!imageUrl || !selectedTest) return
 
-    setIsAnalyzingHPF(true)
+    console.log(`🔬 Starting HPF analysis for image ${imageIndex + 1} (URL: ${imageUrl.substring(0, 50)}...)`)
+    
+    // Cancel any existing HPF request
+    if (hpfAbortController) {
+      console.log('🛑 Canceling previous HPF request')
+      hpfAbortController.abort()
+    }
+    
+    // Create new AbortController for this request
+    const abortController = new AbortController()
+    setHpfAbortController(abortController)
+    
+    setIsAnalyzingHPF(prev => ({ ...prev, [imageIndex]: true }))
     try {
       // Convert image URL to File object
       const response = await fetch(imageUrl)
       const blob = await response.blob()
       const file = new File([blob], 'hpf-image.jpg', { type: 'image/jpeg' })
 
-      // Analyze with Gemini AI
-      const detection = await detectHPFSediments(file)
+      console.log(`📤 Sending HPF image ${imageIndex + 1} to Gemini API...`)
+      // Analyze with Gemini AI (pass abort signal)
+      const detection = await detectHPFSediments(file, abortController.signal)
+      console.log(`✅ HPF analysis complete for image ${imageIndex + 1}:`, detection)
+      console.log('📝 New HPF Analysis text:', detection.analysis_notes)
       setHpfSedimentDetection(detection)
 
       // Save to individual image analysis table
@@ -278,13 +334,18 @@ export default function Report() {
       }
 
       console.log('HPF Sediment Detection:', detection)
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('🛑 HPF analysis cancelled for image', imageIndex + 1)
+        return // Don't show error for cancelled requests
+      }
       console.error('Error analyzing HPF image:', error)
       setNotificationMessage('Failed to analyze HPF image')
       setNotificationType('error')
       setShowNotification(true)
     } finally {
-      setIsAnalyzingHPF(false)
+      setIsAnalyzingHPF(prev => ({ ...prev, [imageIndex]: false }))
+      setHpfAbortController(null) // Clear the abort controller
     }
   }
 
@@ -530,15 +591,36 @@ export default function Report() {
       const imageUrl = await uploadImageToStorage(file, selectedTest.id, 'microscopic')
       
       if (imageUrl) {
+        console.log(`📸 Capturing new ${powerType.toUpperCase()} image...`)
+        
         // Add image to test record with correct power type
         await addImageToTest(selectedTest.id, imageUrl, powerType)
+        
+        // Clear existing analysis data for new image
+        if (powerMode === 'high') {
+          setHpfSedimentDetection(null)
+          setIsAnalyzingHPF({})
+        } else {
+          setLpfSedimentDetection(null)
+          setIsAnalyzingLPF({})
+        }
         
         // Update local state based on power mode
         const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8)
         if (powerMode === 'high') {
-          setHighPowerImages(prev => [...prev, imageDataUrl])
+          setHighPowerImages(prev => {
+            const newImages = [...prev, imageDataUrl]
+            setCurrentHPFIndex(newImages.length - 1)
+            console.log(`📸 HPF image captured, new index: ${newImages.length - 1}`)
+            return newImages
+          })
         } else {
-          setLowPowerImages(prev => [...prev, imageDataUrl])
+          setLowPowerImages(prev => {
+            const newImages = [...prev, imageDataUrl]
+            setCurrentLPFIndex(newImages.length - 1)
+            console.log(`📸 LPF image captured, new index: ${newImages.length - 1}`)
+            return newImages
+          })
         }
         
         // Check if we've reached 10 LPF images and auto-switch to HPF
@@ -571,6 +653,20 @@ export default function Report() {
   const removeCapturedImage = async (index: number, powerType: 'high' | 'low') => {
     if (!selectedTest) return
     
+    console.log(`🗑️ Deleting ${powerType.toUpperCase()} image at index ${index}`)
+    
+    // Cancel any ongoing analysis requests
+    if (powerType === 'low' && lpfAbortController) {
+      console.log('🛑 Canceling ongoing LPF analysis request')
+      lpfAbortController.abort()
+      setLpfAbortController(null)
+    } else if (powerType === 'high' && hpfAbortController) {
+      console.log('🛑 Canceling ongoing HPF analysis request')
+      hpfAbortController.abort()
+      setHpfAbortController(null)
+    }
+    
+    setIsDeletingImage(true)
     try {
       // Get the correct image array based on power type
       const imageArray = powerType === 'high' ? highPowerImages : lowPowerImages
@@ -617,26 +713,14 @@ export default function Report() {
         // Clear AI analysis data if this was the last image
         const remainingImages = powerType === 'high' ? highPowerImages.filter((_, i) => i !== index) : lowPowerImages.filter((_, i) => i !== index)
         if (remainingImages.length === 0) {
-          // Clear local state
+          // Clear local state when no images remain
           if (powerType === 'low') {
             setLpfSedimentDetection(null)
           } else {
             setHpfSedimentDetection(null)
           }
-        } else {
-          // If there are remaining images, trigger analysis for the current image
-          if (powerType === 'low' && remainingImages.length > 0) {
-            const newCurrentIndex = currentLPFIndex >= remainingImages.length ? remainingImages.length - 1 : currentLPFIndex
-            if (remainingImages[newCurrentIndex]) {
-              analyzeLPFImage(remainingImages[newCurrentIndex], newCurrentIndex)
-            }
-          } else if (powerType === 'high' && remainingImages.length > 0) {
-            const newCurrentIndex = currentHPFIndex >= remainingImages.length ? remainingImages.length - 1 : currentHPFIndex
-            if (remainingImages[newCurrentIndex]) {
-              analyzeHPFImage(remainingImages[newCurrentIndex], newCurrentIndex)
-            }
-          }
         }
+        // Note: useEffect hooks will automatically handle analysis for remaining images
         
         // Refresh test data
         if (dateParam) {
@@ -652,6 +736,8 @@ export default function Report() {
       setNotificationMessage('Failed to delete image')
       setNotificationType('error')
       setShowNotification(true)
+    } finally {
+      setIsDeletingImage(false)
     }
   }
 
@@ -660,15 +746,26 @@ export default function Report() {
     if (!selectedTest) return
 
     try {
+      console.log('📤 Uploading new LPF image...')
+      
       // Upload image to Supabase storage
       const imagePath = await uploadImageToStorage(file, selectedTest.id, 'lpf')
       
       // Add image to test record
       const updatedTest = await addImageToTest(selectedTest.id, imagePath, 'lpf')
       
+      // Clear existing analysis data for new image
+      setLpfSedimentDetection(null)
+      setIsAnalyzingLPF({})
+      
       // Update local state
-      setLowPowerImages(prev => [...prev, imagePath])
-      setCurrentLPFIndex(lowPowerImages.length) // Set to the new image
+      setLowPowerImages(prev => {
+        const newImages = [...prev, imagePath]
+        // Set current index to the new image (last in array)
+        setCurrentLPFIndex(newImages.length - 1)
+        console.log(`📸 LPF image added, new index: ${newImages.length - 1}`)
+        return newImages
+      })
 
       setNotificationMessage('LPF image uploaded successfully!')
       setNotificationType('success')
@@ -691,15 +788,26 @@ export default function Report() {
     if (!selectedTest) return
 
     try {
+      console.log('📤 Uploading new HPF image...')
+      
       // Upload image to Supabase storage
       const imagePath = await uploadImageToStorage(file, selectedTest.id, 'hpf')
       
       // Add image to test record
       const updatedTest = await addImageToTest(selectedTest.id, imagePath, 'hpf')
       
+      // Clear existing analysis data for new image
+      setHpfSedimentDetection(null)
+      setIsAnalyzingHPF({})
+      
       // Update local state
-      setHighPowerImages(prev => [...prev, imagePath])
-      setCurrentHPFIndex(highPowerImages.length) // Set to the new image
+      setHighPowerImages(prev => {
+        const newImages = [...prev, imagePath]
+        // Set current index to the new image (last in array)
+        setCurrentHPFIndex(newImages.length - 1)
+        console.log(`📸 HPF image added, new index: ${newImages.length - 1}`)
+        return newImages
+      })
 
       setNotificationMessage('HPF image uploaded successfully!')
       setNotificationType('success')
@@ -754,26 +862,54 @@ export default function Report() {
     }
   }
 
-  // Function to start editing HPF counts
-  const startEditingHPF = () => {
-    setIsEditingHPF(true)
-    setEditedHPFCounts(hpfSedimentDetection || {})
+
+  // Function to save individual LPF count to database
+  const saveLPFCountToDatabase = async (field: keyof LPFSedimentDetection, value: number) => {
+    if (!selectedTest || !lpfSedimentDetection) return
+
+    try {
+      const imageIndex = currentLPFIndex
+      const imageUrl = lowPowerImages[currentLPFIndex]
+      
+      // Update LPF detection with new value
+      const updatedDetection = { 
+        ...lpfSedimentDetection, 
+        [field]: value
+      } as LPFSedimentDetection
+      
+      // Save to database
+      await upsertImageAnalysis({
+        test_id: selectedTest.id,
+        power_mode: 'LPF',
+        image_index: imageIndex,
+        image_url: imageUrl,
+        lpf_epithelial_cells: updatedDetection.epithelial_cells,
+        lpf_mucus_threads: updatedDetection.mucus_threads,
+        lpf_casts: updatedDetection.casts,
+        lpf_squamous_epithelial: updatedDetection.squamous_epithelial,
+        lpf_abnormal_crystals: updatedDetection.abnormal_crystals,
+        confidence: updatedDetection.confidence,
+        analysis_notes: (updatedDetection.analysis_notes || '') + ' (Manually corrected)',
+        analyzed_at: new Date().toISOString()
+      })
+    } catch (error) {
+      console.error('Error saving LPF count to database:', error)
+    }
   }
 
-  // Function to save manual corrections for HPF
-  const saveHPFManualCorrections = async () => {
-    if (!selectedTest) return
+  // Function to save individual HPF count to database
+  const saveHPFCountToDatabase = async (field: keyof HPFSedimentDetection, value: number) => {
+    if (!selectedTest || !hpfSedimentDetection) return
 
     try {
       const imageIndex = currentHPFIndex
       const imageUrl = highPowerImages[currentHPFIndex]
       
-      // Update HPF detection with manual corrections
-      const correctedDetection = { 
+      // Update HPF detection with new value
+      const updatedDetection = { 
         ...hpfSedimentDetection, 
-        ...editedHPFCounts
+        [field]: value
       } as HPFSedimentDetection
-      setHpfSedimentDetection(correctedDetection)
       
       // Save to database
       await upsertImageAnalysis({
@@ -781,38 +917,23 @@ export default function Report() {
         power_mode: 'HPF',
         image_index: imageIndex,
         image_url: imageUrl,
-        hpf_rbc: correctedDetection.rbc,
-        hpf_wbc: correctedDetection.wbc,
-        hpf_epithelial_cells: correctedDetection.epithelial_cells,
-        hpf_crystals: correctedDetection.crystals,
-        hpf_bacteria: correctedDetection.bacteria,
-        hpf_yeast: correctedDetection.yeast,
-        hpf_sperm: correctedDetection.sperm,
-        hpf_parasites: correctedDetection.parasites,
-        confidence: correctedDetection.confidence,
-        analysis_notes: (correctedDetection.analysis_notes || '') + ' (Manually corrected)',
+        hpf_rbc: updatedDetection.rbc,
+        hpf_wbc: updatedDetection.wbc,
+        hpf_epithelial_cells: updatedDetection.epithelial_cells,
+        hpf_crystals: updatedDetection.crystals,
+        hpf_bacteria: updatedDetection.bacteria,
+        hpf_yeast: updatedDetection.yeast,
+        hpf_sperm: updatedDetection.sperm,
+        hpf_parasites: updatedDetection.parasites,
+        confidence: updatedDetection.confidence,
+        analysis_notes: (updatedDetection.analysis_notes || '') + ' (Manually corrected)',
         analyzed_at: new Date().toISOString()
       })
-      
-      setIsEditingHPF(false)
-      setEditedHPFCounts({})
-      
-      setNotificationMessage('HPF counts corrected and saved')
-      setNotificationType('success')
-      setShowNotification(true)
     } catch (error) {
-      console.error('Error saving HPF manual corrections:', error)
-      setNotificationMessage('Failed to save corrections')
-      setNotificationType('error')
-      setShowNotification(true)
+      console.error('Error saving HPF count to database:', error)
     }
   }
 
-  // Function to cancel editing HPF
-  const cancelEditingHPF = () => {
-    setIsEditingHPF(false)
-    setEditedHPFCounts({})
-  }
 
   // Digital staining and segmentation function using the new algorithm
   const performSegmentation = (videoElement: HTMLVideoElement, canvas: HTMLCanvasElement) => {
@@ -1029,15 +1150,26 @@ export default function Report() {
     }
   }, [selectedTest])
 
-  // Auto-analyze LPF images when they change
+  // Auto-analyze LPF images when they change - ONLY for currently displayed image
   useEffect(() => {
-    if (lowPowerImages.length > 0 && currentLPFIndex < lowPowerImages.length && selectedTest) {
+    if (lowPowerImages.length > 0 && currentLPFIndex < lowPowerImages.length && selectedTest && !isDeletingImage) {
+      console.log(`🔄 LPF Image changed - checking image ${currentLPFIndex + 1}/${lowPowerImages.length}`)
+      
+      // Clear previous analysis data immediately when switching images
+      setLpfSedimentDetection(null)
+      
+      // Clear loading state for previous image
+      setIsAnalyzingLPF(prev => ({ ...prev, [currentLPFIndex]: false }))
+      
       // Check for existing analysis for this specific image
       const checkExistingAnalysis = async () => {
         try {
+          console.log(`📊 Checking database for existing LPF analysis: test=${selectedTest.id}, index=${currentLPFIndex}`)
           const existingAnalysis = await getImageAnalysisByIndex(selectedTest.id, 'LPF', currentLPFIndex)
+          
           if (existingAnalysis) {
-            console.log('Loading LPF AI analysis from database for image', currentLPFIndex)
+            console.log('✅ Found existing LPF analysis in database - loading from cache')
+            console.log('📝 LPF Analysis text:', existingAnalysis.analysis_notes)
             setLpfSedimentDetection({
               epithelial_cells: typeof existingAnalysis.lpf_epithelial_cells === 'number' ? existingAnalysis.lpf_epithelial_cells : 0,
               mucus_threads: typeof existingAnalysis.lpf_mucus_threads === 'number' ? existingAnalysis.lpf_mucus_threads : 0,
@@ -1048,11 +1180,13 @@ export default function Report() {
               analysis_notes: existingAnalysis.analysis_notes || ''
             })
           } else {
+            console.log('❌ No existing LPF analysis found - calling Gemini API for current image only')
             // Only call API if no database data exists for this specific image
             analyzeLPFImage(lowPowerImages[currentLPFIndex], currentLPFIndex)
           }
         } catch (error) {
           console.error('Error checking existing LPF analysis:', error)
+          console.log('⚠️ Database check failed - calling Gemini API as fallback')
           // Fallback to API call if database check fails
           analyzeLPFImage(lowPowerImages[currentLPFIndex], currentLPFIndex)
         }
@@ -1060,19 +1194,32 @@ export default function Report() {
       
       checkExistingAnalysis()
     } else {
+      console.log('🔄 LPF images cleared or no current image - clearing detection state')
       setLpfSedimentDetection(null)
+      setIsAnalyzingLPF({})
     }
-  }, [lowPowerImages, currentLPFIndex, selectedTest])
+  }, [lowPowerImages, currentLPFIndex, selectedTest, isDeletingImage])
 
-  // Auto-analyze HPF images when they change
+  // Auto-analyze HPF images when they change - ONLY for currently displayed image
   useEffect(() => {
-    if (highPowerImages.length > 0 && currentHPFIndex < highPowerImages.length && selectedTest) {
+    if (highPowerImages.length > 0 && currentHPFIndex < highPowerImages.length && selectedTest && !isDeletingImage) {
+      console.log(`🔄 HPF Image changed - checking image ${currentHPFIndex + 1}/${highPowerImages.length}`)
+      
+      // Clear previous analysis data immediately when switching images
+      setHpfSedimentDetection(null)
+      
+      // Clear loading state for previous image
+      setIsAnalyzingHPF(prev => ({ ...prev, [currentHPFIndex]: false }))
+      
       // Check for existing analysis for this specific image
       const checkExistingAnalysis = async () => {
         try {
+          console.log(`📊 Checking database for existing HPF analysis: test=${selectedTest.id}, index=${currentHPFIndex}`)
           const existingAnalysis = await getImageAnalysisByIndex(selectedTest.id, 'HPF', currentHPFIndex)
+          
           if (existingAnalysis) {
-            console.log('Loading HPF AI analysis from database for image', currentHPFIndex)
+            console.log('✅ Found existing HPF analysis in database - loading from cache')
+            console.log('📝 HPF Analysis text:', existingAnalysis.analysis_notes)
             setHpfSedimentDetection({
               rbc: typeof existingAnalysis.hpf_rbc === 'number' ? existingAnalysis.hpf_rbc : 0,
               wbc: typeof existingAnalysis.hpf_wbc === 'number' ? existingAnalysis.hpf_wbc : 0,
@@ -1086,11 +1233,13 @@ export default function Report() {
               analysis_notes: existingAnalysis.analysis_notes || ''
             })
           } else {
+            console.log('❌ No existing HPF analysis found - calling Gemini API for current image only')
             // Only call API if no database data exists for this specific image
             analyzeHPFImage(highPowerImages[currentHPFIndex], currentHPFIndex)
           }
         } catch (error) {
           console.error('Error checking existing HPF analysis:', error)
+          console.log('⚠️ Database check failed - calling Gemini API as fallback')
           // Fallback to API call if database check fails
           analyzeHPFImage(highPowerImages[currentHPFIndex], currentHPFIndex)
         }
@@ -1098,9 +1247,11 @@ export default function Report() {
       
       checkExistingAnalysis()
     } else {
+      console.log('🔄 HPF images cleared or no current image - clearing detection state')
       setHpfSedimentDetection(null)
+      setIsAnalyzingHPF({})
     }
-  }, [highPowerImages, currentHPFIndex, selectedTest])
+  }, [highPowerImages, currentHPFIndex, selectedTest, isDeletingImage])
 
 
   // Ensure camera stream is attached to video element when test changes
@@ -1977,18 +2128,6 @@ export default function Report() {
                 <div className="flex items-center justify-between mb-1.5">
                    <h1 className="text-sm md:text-base font-bold text-gray-900">Microscopic Urine Analysis Report - {selectedTest?.test_code || 'N/A'}</h1>
                    <div className="flex items-center gap-1.5">
-                     <button
-                       onClick={() => setShowHistory((v) => !v)}
-                       className={`h-6 inline-flex items-center gap-1 px-2 rounded transition-colors text-xs ${
-                         showHistory 
-                           ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' 
-                           : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                       }`}
-                       title={showHistory ? 'Hide patient history' : 'Show patient history'}
-                     >
-                       <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-                       <span>{showHistory ? 'Hide' : 'Show'}</span>
-                     </button>
                      <button 
                        onClick={handleEditToggle}
                        className={`h-6 inline-flex items-center gap-1 px-2 rounded transition-colors text-xs ${
@@ -2125,17 +2264,6 @@ export default function Report() {
                    </div>
                   </div>
                   
-                  {/* Patient History (integrated within main card) */}
-                  {showHistory && (
-                    <div className="border-t border-gray-200 pt-2 mt-2">
-                      <PatientTestHistory 
-                        selectedPatient={selectedPatient}
-                        selectedTest={selectedTest}
-                        patientTests={selectedPatient ? tests.filter(test => test.patient_id === selectedPatient.id) : []}
-                        onTestSelect={handleTestSelection}
-                      />
-                    </div>
-                  )}
 
                </div>
               ) : (
@@ -2245,7 +2373,6 @@ export default function Report() {
                              LPF Sediment Analysis
                            </h4>
                            
-                           
                            {/* Field-based Sediment Analysis Table */}
                            <div className="overflow-x-auto">
                              <table className="w-full text-xs">
@@ -2267,11 +2394,20 @@ export default function Report() {
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                         {isAnalyzingLPF ? (
-                                           <div className="flex items-center justify-center">
-                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                           </div>
-                                         ) : formatSedimentCount(lpfSedimentDetection?.epithelial_cells, isAnalyzingLPF)}
+                                         <input
+                                           type="number"
+                                           min="0"
+                                           value={lpfSedimentDetection?.epithelial_cells || 0}
+                                           onChange={(e) => {
+                                             const newValue = parseInt(e.target.value) || 0
+                                             setLpfSedimentDetection(prev => prev ? { ...prev, epithelial_cells: newValue } : null)
+                                             // Auto-save to database
+                                             if (selectedTest) {
+                                               saveLPFCountToDatabase('epithelial_cells', newValue)
+                                             }
+                                           }}
+                                           className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                         />
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
@@ -2280,11 +2416,20 @@ export default function Report() {
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                         {isAnalyzingLPF ? (
-                                           <div className="flex items-center justify-center">
-                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                           </div>
-                                         ) : formatSedimentCount(lpfSedimentDetection?.mucus_threads, isAnalyzingLPF)}
+                                         <input
+                                           type="number"
+                                           min="0"
+                                           value={lpfSedimentDetection?.mucus_threads || 0}
+                                           onChange={(e) => {
+                                             const newValue = parseInt(e.target.value) || 0
+                                             setLpfSedimentDetection(prev => prev ? { ...prev, mucus_threads: newValue } : null)
+                                             // Auto-save to database
+                                             if (selectedTest) {
+                                               saveLPFCountToDatabase('mucus_threads', newValue)
+                                             }
+                                           }}
+                                           className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                         />
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
@@ -2293,11 +2438,20 @@ export default function Report() {
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                         {isAnalyzingLPF ? (
-                                           <div className="flex items-center justify-center">
-                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                           </div>
-                                         ) : formatSedimentCount(lpfSedimentDetection?.casts, isAnalyzingLPF)}
+                                         <input
+                                           type="number"
+                                           min="0"
+                                           value={lpfSedimentDetection?.casts || 0}
+                                           onChange={(e) => {
+                                             const newValue = parseInt(e.target.value) || 0
+                                             setLpfSedimentDetection(prev => prev ? { ...prev, casts: newValue } : null)
+                                             // Auto-save to database
+                                             if (selectedTest) {
+                                               saveLPFCountToDatabase('casts', newValue)
+                                             }
+                                           }}
+                                           className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                         />
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
@@ -2306,11 +2460,20 @@ export default function Report() {
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                         {isAnalyzingLPF ? (
-                                           <div className="flex items-center justify-center">
-                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                           </div>
-                                         ) : formatSedimentCount(lpfSedimentDetection?.squamous_epithelial, isAnalyzingLPF)}
+                                         <input
+                                           type="number"
+                                           min="0"
+                                           value={lpfSedimentDetection?.squamous_epithelial || 0}
+                                           onChange={(e) => {
+                                             const newValue = parseInt(e.target.value) || 0
+                                             setLpfSedimentDetection(prev => prev ? { ...prev, squamous_epithelial: newValue } : null)
+                                             // Auto-save to database
+                                             if (selectedTest) {
+                                               saveLPFCountToDatabase('squamous_epithelial', newValue)
+                                             }
+                                           }}
+                                           className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                         />
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
@@ -2319,11 +2482,20 @@ export default function Report() {
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                         {isAnalyzingLPF ? (
-                                           <div className="flex items-center justify-center">
-                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                           </div>
-                                         ) : formatSedimentCount(lpfSedimentDetection?.abnormal_crystals, isAnalyzingLPF)}
+                                         <input
+                                           type="number"
+                                           min="0"
+                                           value={lpfSedimentDetection?.abnormal_crystals || 0}
+                                           onChange={(e) => {
+                                             const newValue = parseInt(e.target.value) || 0
+                                             setLpfSedimentDetection(prev => prev ? { ...prev, abnormal_crystals: newValue } : null)
+                                             // Auto-save to database
+                                             if (selectedTest) {
+                                               saveLPFCountToDatabase('abnormal_crystals', newValue)
+                                             }
+                                           }}
+                                           className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                         />
                                            </div>
                                          </td>
                                        </tr>
@@ -2348,6 +2520,16 @@ export default function Report() {
                                  <span className="text-blue-600">
                                    {lpfSedimentDetection.analysis_notes}
                                  </span>
+                               </div>
+                             </div>
+                           )}
+
+                           {/* Loading indicator for LPF analysis */}
+                           {isAnalyzingLPF[currentLPFIndex] === true && (
+                             <div className="mt-3 p-3 bg-orange-50 rounded-lg">
+                               <div className="flex items-center justify-center">
+                                 <div className="w-4 h-4 border-2 border-orange-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                                 <span className="text-sm text-orange-700 font-medium">Analyzing LPF image...</span>
                                </div>
                              </div>
                            )}
@@ -2459,7 +2641,6 @@ export default function Report() {
                              HPF Sediment Analysis
                            </h4>
                            
-                           
                            {/* Field-based Sediment Analysis Table */}
                            <div className="overflow-x-auto">
                              <table className="w-full text-xs">
@@ -2484,11 +2665,20 @@ export default function Report() {
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                         {isAnalyzingHPF ? (
-                                           <div className="flex items-center justify-center">
-                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                           </div>
-                                         ) : formatSedimentCount(hpfSedimentDetection?.rbc, isAnalyzingHPF)}
+                                         <input
+                                           type="number"
+                                           min="0"
+                                           value={hpfSedimentDetection?.rbc || 0}
+                                           onChange={(e) => {
+                                             const newValue = parseInt(e.target.value) || 0
+                                             setHpfSedimentDetection(prev => prev ? { ...prev, rbc: newValue } : null)
+                                             // Auto-save to database
+                                             if (selectedTest) {
+                                               saveHPFCountToDatabase('rbc', newValue)
+                                             }
+                                           }}
+                                           className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                         />
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
@@ -2497,11 +2687,20 @@ export default function Report() {
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                         {isAnalyzingHPF ? (
-                                           <div className="flex items-center justify-center">
-                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                           </div>
-                                         ) : formatSedimentCount(hpfSedimentDetection?.wbc, isAnalyzingHPF)}
+                                         <input
+                                           type="number"
+                                           min="0"
+                                           value={hpfSedimentDetection?.wbc || 0}
+                                           onChange={(e) => {
+                                             const newValue = parseInt(e.target.value) || 0
+                                             setHpfSedimentDetection(prev => prev ? { ...prev, wbc: newValue } : null)
+                                             // Auto-save to database
+                                             if (selectedTest) {
+                                               saveHPFCountToDatabase('wbc', newValue)
+                                             }
+                                           }}
+                                           className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                         />
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
@@ -2510,37 +2709,43 @@ export default function Report() {
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                         {isAnalyzingHPF ? (
-                                           <div className="flex items-center justify-center">
-                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                           </div>
-                                         ) : formatSedimentCount(hpfSedimentDetection?.epithelial_cells, isAnalyzingHPF)}
+                                         <input
+                                           type="number"
+                                           min="0"
+                                           value={hpfSedimentDetection?.epithelial_cells || 0}
+                                           onChange={(e) => {
+                                             const newValue = parseInt(e.target.value) || 0
+                                             setHpfSedimentDetection(prev => prev ? { ...prev, epithelial_cells: newValue } : null)
+                                             // Auto-save to database
+                                             if (selectedTest) {
+                                               saveHPFCountToDatabase('epithelial_cells', newValue)
+                                             }
+                                           }}
+                                           className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                         />
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
-                                            {isEditingHPF ? (
-                                              <input
-                                                type="number"
-                                                min="0"
-                                                max="1000"
-                                                value={editedHPFCounts.crystals || hpfSedimentDetection?.crystals || 0}
-                                                onChange={(e) => setEditedHPFCounts(prev => ({ ...prev, crystals: parseInt(e.target.value) || 0 }))}
-                                                className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-center"
-                                                placeholder="0"
-                                              />
-                                            ) : (
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                                (hpfSedimentDetection?.crystals || 0) > 0
+                                             (hpfSedimentDetection?.crystals || 0) > 0
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                                {isAnalyzingHPF ? (
-                                                  <div className="flex items-center justify-center">
-                                                    <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                             <input
+                                               type="number"
+                                               min="0"
+                                               value={hpfSedimentDetection?.crystals || 0}
+                                               onChange={(e) => {
+                                                 const newValue = parseInt(e.target.value) || 0
+                                                 setHpfSedimentDetection(prev => prev ? { ...prev, crystals: newValue } : null)
+                                                 // Auto-save to database
+                                                 if (selectedTest) {
+                                                   saveHPFCountToDatabase('crystals', newValue)
+                                                 }
+                                               }}
+                                               className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                             />
                                            </div>
-                                                ) : formatSedimentCount(hpfSedimentDetection?.crystals, isAnalyzingHPF)}
-                                              </div>
-                                            )}
                                          </td>
                                          <td className="text-center py-2 px-2">
                                            <div className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
@@ -2548,11 +2753,20 @@ export default function Report() {
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                         {isAnalyzingHPF ? (
-                                           <div className="flex items-center justify-center">
-                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                           </div>
-                                         ) : formatSedimentCount(hpfSedimentDetection?.bacteria, isAnalyzingHPF)}
+                                         <input
+                                           type="number"
+                                           min="0"
+                                           value={hpfSedimentDetection?.bacteria || 0}
+                                           onChange={(e) => {
+                                             const newValue = parseInt(e.target.value) || 0
+                                             setHpfSedimentDetection(prev => prev ? { ...prev, bacteria: newValue } : null)
+                                             // Auto-save to database
+                                             if (selectedTest) {
+                                               saveHPFCountToDatabase('bacteria', newValue)
+                                             }
+                                           }}
+                                           className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                         />
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
@@ -2561,11 +2775,20 @@ export default function Report() {
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                         {isAnalyzingHPF ? (
-                                           <div className="flex items-center justify-center">
-                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                           </div>
-                                         ) : formatSedimentCount(hpfSedimentDetection?.yeast, isAnalyzingHPF)}
+                                         <input
+                                           type="number"
+                                           min="0"
+                                           value={hpfSedimentDetection?.yeast || 0}
+                                           onChange={(e) => {
+                                             const newValue = parseInt(e.target.value) || 0
+                                             setHpfSedimentDetection(prev => prev ? { ...prev, yeast: newValue } : null)
+                                             // Auto-save to database
+                                             if (selectedTest) {
+                                               saveHPFCountToDatabase('yeast', newValue)
+                                             }
+                                           }}
+                                           className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                         />
                                            </div>
                                          </td>
                                          <td className="text-center py-2 px-2">
@@ -2574,11 +2797,20 @@ export default function Report() {
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                            }`}>
-                                         {isAnalyzingHPF ? (
-                                           <div className="flex items-center justify-center">
-                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                           </div>
-                                         ) : formatSedimentCount(hpfSedimentDetection?.sperm, isAnalyzingHPF)}
+                                         <input
+                                           type="number"
+                                           min="0"
+                                           value={hpfSedimentDetection?.sperm || 0}
+                                           onChange={(e) => {
+                                             const newValue = parseInt(e.target.value) || 0
+                                             setHpfSedimentDetection(prev => prev ? { ...prev, sperm: newValue } : null)
+                                             // Auto-save to database
+                                             if (selectedTest) {
+                                               saveHPFCountToDatabase('sperm', newValue)
+                                             }
+                                           }}
+                                           className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                         />
                                        </div>
                                      </td>
                                      <td className="text-center py-2 px-2">
@@ -2587,11 +2819,20 @@ export default function Report() {
                                                ? 'bg-green-100 text-green-700' 
                                                : 'bg-gray-50 text-gray-500'
                                        }`}>
-                                         {isAnalyzingHPF ? (
-                                           <div className="flex items-center justify-center">
-                                             <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                           </div>
-                                         ) : formatSedimentCount(hpfSedimentDetection?.parasites, isAnalyzingHPF)}
+                                         <input
+                                           type="number"
+                                           min="0"
+                                           value={hpfSedimentDetection?.parasites || 0}
+                                           onChange={(e) => {
+                                             const newValue = parseInt(e.target.value) || 0
+                                             setHpfSedimentDetection(prev => prev ? { ...prev, parasites: newValue } : null)
+                                             // Auto-save to database
+                                             if (selectedTest) {
+                                               saveHPFCountToDatabase('parasites', newValue)
+                                             }
+                                           }}
+                                           className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                         />
                                            </div>
                                          </td>
                                        </tr>
@@ -2620,34 +2861,16 @@ export default function Report() {
                              </div>
                            )}
 
-                           {/* Manual Correction Controls */}
-                           {hpfSedimentDetection && (
-                             <div className="mt-3 flex gap-2">
-                               {!isEditingHPF ? (
-                                 <button
-                                   onClick={startEditingHPF}
-                                   className="px-3 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600 transition-colors"
-                                 >
-                                   Edit Counts
-                                 </button>
-                               ) : (
-                                 <>
-                                   <button
-                                     onClick={saveHPFManualCorrections}
-                                     className="px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 transition-colors"
-                                   >
-                                     Save
-                                   </button>
-                                   <button
-                                     onClick={cancelEditingHPF}
-                                     className="px-3 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600 transition-colors"
-                                   >
-                                     Cancel
-                                   </button>
-                                 </>
-                               )}
+                           {/* Loading indicator for HPF analysis */}
+                           {isAnalyzingHPF[currentHPFIndex] === true && (
+                             <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                               <div className="flex items-center justify-center">
+                                 <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                                 <span className="text-sm text-blue-700 font-medium">Analyzing HPF image...</span>
+                               </div>
                              </div>
                            )}
+
                          </div>
                        </div>
                      </div>
@@ -3136,6 +3359,56 @@ export default function Report() {
   
                </div>
 
+              {/* Text-only Urinalysis Summary (based on provided report) */}
+              <div className="bg-white rounded-lg p-3 shadow-sm mt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold text-gray-900">Urinalysis Summary</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  {/* Microscopic */}
+                  <div className="space-y-2">
+                    <div className="text-[11px] uppercase tracking-wide text-gray-500">Microscopic</div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-800">Red Blood Cells (RBC)</span>
+                      <select value={urinalysisText.rbc} onChange={(e) => updateUrinalysisText('rbc', e.target.value)} className="w-40 text-right text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-gray-900">
+                        {getDropdownOptions('rbcs').map(option => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-800">Pus Cells (WBC)</span>
+                      <select value={urinalysisText.pusCells} onChange={(e) => updateUrinalysisText('pusCells', e.target.value)} className="w-40 text-right text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-gray-900">
+                        {getDropdownOptions('rbcs').map(option => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-800">Epithelial Cells</span>
+                      <select value={urinalysisText.epithelialCells} onChange={(e) => updateUrinalysisText('epithelialCells', e.target.value)} className="w-40 text-right text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-gray-900">
+                        {getDropdownOptions('epithelialCells').map(option => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-800">Bacteria</span>
+                      <select value={urinalysisText.bacteria} onChange={(e) => updateUrinalysisText('bacteria', e.target.value)} className="w-40 text-right text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-gray-900">
+                        {getDropdownOptions('bacteria').map(option => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Remarks */}
+                  <div className="space-y-2 md:col-span-2">
+                    <div className="text-[11px] uppercase tracking-wide text-gray-500">Remarks</div>
+                    <textarea value={urinalysisText.remarks} onChange={(e) => updateUrinalysisText('remarks', e.target.value)} placeholder="Enter remarks here" className="w-full resize-y min-h-[60px] text-xs bg-transparent border border-gray-200 rounded-md p-2 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  </div>
+                </div>
+              </div>
 
             </>
           )}

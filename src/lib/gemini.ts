@@ -10,23 +10,50 @@ const primaryModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 const fallbackModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
 // Helper function to try primary model first, then fallback if overloaded
-async function generateContentWithFallback(prompt: string, imageData: any) {
+async function generateContentWithFallback(prompt: string, imageData: any, abortSignal?: AbortSignal) {
+  // Check if request was aborted before starting
+  if (abortSignal?.aborted) {
+    const abortError = new Error('Request aborted')
+    abortError.name = 'AbortError'
+    throw abortError
+  }
+  
   try {
     console.log('Trying primary model (Gemini 2.5 Flash)...')
     const result = await primaryModel.generateContent([prompt, imageData])
     console.log('✅ Primary model successful')
     return result
   } catch (error: any) {
+    // Check if request was aborted
+    if (abortSignal?.aborted) {
+      const abortError = new Error('Request aborted')
+      abortError.name = 'AbortError'
+      throw abortError
+    }
+    
     console.warn('Primary model failed:', error.message)
     
     // Check if it's an overload error (503) or similar
     if (error.message?.includes('overloaded') || error.message?.includes('503') || error.message?.includes('try again later')) {
       console.log('Primary model overloaded, trying fallback model (Gemini 1.5 Flash)...')
       try {
+        // Check if request was aborted before fallback
+        if (abortSignal?.aborted) {
+          const abortError = new Error('Request aborted')
+          abortError.name = 'AbortError'
+          throw abortError
+        }
+        
         const result = await fallbackModel.generateContent([prompt, imageData])
         console.log('✅ Fallback model successful')
         return result
-      } catch (fallbackError) {
+      } catch (fallbackError: any) {
+        // Check if request was aborted
+        if (abortSignal?.aborted) {
+          const abortError = new Error('Request aborted')
+          abortError.name = 'AbortError'
+          throw abortError
+        }
         console.error('Both models failed:', fallbackError)
         throw fallbackError
       }
@@ -75,7 +102,7 @@ export interface HPFSedimentDetection {
   analysis_notes: string
 }
 
-export async function analyzeUrinalysisImage(imageFile: File): Promise<UrinalysisResult> {
+export async function analyzeUrinalysisImage(imageFile: File, abortSignal?: AbortSignal): Promise<UrinalysisResult> {
   try {
     // Convert image to base64
     const base64Image = await fileToBase64(imageFile)
@@ -106,7 +133,7 @@ Please analyze the image carefully and provide accurate counts, morphology descr
         mimeType: imageFile.type,
         data: base64Image.split(',')[1] // Remove data:image/...;base64, prefix
       }
-    })
+    }, abortSignal)
 
     const response = await result.response
     const text = response.text()
@@ -148,7 +175,7 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 // Function to detect LPF sediments using Gemini AI
-export async function detectLPFSediments(imageFile: File): Promise<LPFSedimentDetection> {
+export async function detectLPFSediments(imageFile: File, abortSignal?: AbortSignal): Promise<LPFSedimentDetection> {
   try {
     // Convert image to base64
     const base64Image = await fileToBase64(imageFile)
@@ -183,7 +210,7 @@ Provide accurate counts for each sediment type. Use 0 if none are present. Be co
         mimeType: imageFile.type,
         data: base64Image.split(',')[1] // Remove data:image/...;base64, prefix
       }
-    })
+    }, abortSignal)
 
     const response = await result.response
     const text = response.text()
@@ -208,14 +235,19 @@ Provide accurate counts for each sediment type. Use 0 if none are present. Be co
     const detection = JSON.parse(jsonText) as LPFSedimentDetection
     
     return detection
-  } catch (error) {
+  } catch (error: any) {
+    if (abortSignal?.aborted || error.message === 'Request aborted') {
+      const abortError = new Error('Request aborted')
+      abortError.name = 'AbortError'
+      throw abortError
+    }
     console.error('Error detecting LPF sediments with Gemini:', error)
     throw new Error('Failed to analyze LPF sediments. Please try again.')
   }
 }
 
 // Function to detect HPF sediments using Gemini AI with improved accuracy
-export async function detectHPFSediments(imageFile: File): Promise<HPFSedimentDetection> {
+export async function detectHPFSediments(imageFile: File, abortSignal?: AbortSignal): Promise<HPFSedimentDetection> {
   try {
     // Convert image to base64
     const base64Image = await fileToBase64(imageFile)
@@ -269,6 +301,13 @@ Provide accurate counts for each sediment type. Use 0 if none are present. Be ex
     const results: HPFSedimentDetection[] = []
     
     for (let i = 0; i < attempts; i++) {
+      // Check if request was aborted before each attempt
+      if (abortSignal?.aborted) {
+        const abortError = new Error('Request aborted')
+        abortError.name = 'AbortError'
+        throw abortError
+      }
+      
       try {
         console.log(`HPF Analysis attempt ${i + 1}/${attempts}`)
         
@@ -278,7 +317,7 @@ Provide accurate counts for each sediment type. Use 0 if none are present. Be ex
             mimeType: imageFile.type,
             data: base64Image.split(',')[1] // Remove data:image/...;base64, prefix
           }
-        })
+        }, abortSignal)
 
         const response = await result.response
         const text = response.text()
@@ -319,7 +358,14 @@ Provide accurate counts for each sediment type. Use 0 if none are present. Be ex
           await new Promise(resolve => setTimeout(resolve, 1000))
         }
         
-      } catch (attemptError) {
+      } catch (attemptError: any) {
+        // Check if request was aborted
+        if (abortSignal?.aborted || attemptError.message === 'Request aborted') {
+          const abortError = new Error('Request aborted')
+          abortError.name = 'AbortError'
+          throw abortError
+        }
+        
         console.error(`Attempt ${i + 1} failed:`, attemptError)
       }
     }
@@ -337,7 +383,12 @@ Provide accurate counts for each sediment type. Use 0 if none are present. Be ex
     console.log('All attempts:', results)
     
     return bestResult
-  } catch (error) {
+  } catch (error: any) {
+    if (abortSignal?.aborted || error.message === 'Request aborted') {
+      const abortError = new Error('Request aborted')
+      abortError.name = 'AbortError'
+      throw abortError
+    }
     console.error('Error detecting HPF sediments with Gemini:', error)
     throw new Error('Failed to analyze HPF sediments. Please try again.')
   }
