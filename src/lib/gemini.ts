@@ -1,67 +1,67 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 // Initialize Gemini API
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '')
+const genAI = new GoogleGenerativeAI(
+  process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
+)
 
-// Get the primary Gemini 2.5 Flash model for image analysis
-const primaryModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+// Model selection: allow env override, then try a strongest-to-fastest fallback list
+// You can set NEXT_PUBLIC_GEMINI_MODEL to a single model or comma-separated list to control order
+const envModelPreference = (process.env.NEXT_PUBLIC_GEMINI_MODEL || '').trim()
+const configuredModels = envModelPreference
+  ? envModelPreference.split(',').map(m => m.trim()).filter(Boolean)
+  : []
 
-// Get the fallback Gemini 1.5 Flash model for when primary is overloaded
-const fallbackModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+// Default preference order (attempt in sequence until one succeeds)
+const defaultModelPreference = [
+  'gemini-2.5-pro',
+  'gemini-2.0-pro',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-pro',
+  'gemini-1.5-flash',
+]
 
-// Helper function to try primary model first, then fallback if overloaded
+const modelPreference = configuredModels.length > 0 ? configuredModels : defaultModelPreference
+
+function getModelInstance(modelName: string) {
+  return genAI.getGenerativeModel({ model: modelName })
+}
+
+// Helper function to try models in order until one works (handles overloads and general failures)
 async function generateContentWithFallback(prompt: string, imageData: any, abortSignal?: AbortSignal) {
-  // Check if request was aborted before starting
   if (abortSignal?.aborted) {
     const abortError = new Error('Request aborted')
     abortError.name = 'AbortError'
     throw abortError
   }
-  
-  try {
-    console.log('Trying primary model (Gemini 2.5 Flash)...')
-    const result = await primaryModel.generateContent([prompt, imageData])
-    console.log('✅ Primary model successful')
-    return result
-  } catch (error: any) {
-    // Check if request was aborted
+
+  let lastError: any = null
+
+  for (const modelName of modelPreference) {
     if (abortSignal?.aborted) {
       const abortError = new Error('Request aborted')
       abortError.name = 'AbortError'
       throw abortError
     }
-    
-    console.warn('Primary model failed:', error.message)
-    
-    // Check if it's an overload error (503) or similar
-    if (error.message?.includes('overloaded') || error.message?.includes('503') || error.message?.includes('try again later')) {
-      console.log('Primary model overloaded, trying fallback model (Gemini 1.5 Flash)...')
-      try {
-        // Check if request was aborted before fallback
-        if (abortSignal?.aborted) {
-          const abortError = new Error('Request aborted')
-          abortError.name = 'AbortError'
-          throw abortError
-        }
-        
-        const result = await fallbackModel.generateContent([prompt, imageData])
-        console.log('✅ Fallback model successful')
-        return result
-      } catch (fallbackError: any) {
-        // Check if request was aborted
-        if (abortSignal?.aborted) {
-          const abortError = new Error('Request aborted')
-          abortError.name = 'AbortError'
-          throw abortError
-        }
-        console.error('Both models failed:', fallbackError)
-        throw fallbackError
-      }
-    } else {
-      // If it's not an overload error, throw the original error
-      throw error
+
+    try {
+      console.log(`Trying model: ${modelName} ...`)
+      const model = getModelInstance(modelName)
+      const result = await model.generateContent([prompt, imageData])
+      console.log(`✅ Model succeeded: ${modelName}`)
+      return result
+    } catch (error: any) {
+      lastError = error
+      const message = typeof error?.message === 'string' ? error.message : String(error)
+      console.warn(`Model failed: ${modelName} -> ${message}`)
+      // Continue to next model on any failure
+      continue
     }
   }
+
+  console.error('All configured Gemini models failed in fallback chain')
+  throw lastError || new Error('All Gemini models failed')
 }
 
 export interface UrinalysisResult {

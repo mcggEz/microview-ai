@@ -22,9 +22,14 @@ export default function Home() {
               </div>
               <h1 className="text-2xl font-bold text-gray-900">MicroView AI</h1>
             </div>
-            <div className="hidden md:flex items-center space-x-6">
-              <a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors">About</a>
-              <a href="#contact" className="text-gray-600 hover:text-gray-900 transition-colors">Contact</a>
+            <div className="hidden md:flex items-center">
+              <button
+                onClick={handleDemoClick}
+                className="px-5 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-green-700 transition-all duration-200 shadow-md"
+              >
+                <TestTube className="w-4 h-4 inline mr-2" />
+                Try Demo
+              </button>
             </div>
           </div>
         </div>

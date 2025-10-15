@@ -16,7 +16,7 @@ import { updatePatient, updateTest, testDatabaseConnection, deleteTest, deleteIm
 import { supabase } from '@/lib/supabase'
 import { loadOpenCV, isOpenCVReady } from '@/lib/opencv-loader'
 import { applyDigitalStain, matToImageData, cleanupSegmentationResult, type SegmentationResult } from '@/lib/digital-staining'
-import { detectLPFSediments, detectHPFSediments, type LPFSedimentDetection, type HPFSedimentDetection } from '@/lib/gemini'
+import type { LPFSedimentDetection, HPFSedimentDetection } from '@/lib/gemini'
 import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown, Upload, ChevronLeft, ChevronRight, Search, ArrowLeft, Menu, RefreshCw } from 'lucide-react'
 import ImageModal from '@/components/ImageModal'
 import ConfirmationModal from '@/components/ConfirmationModal'
@@ -223,9 +223,12 @@ export default function Report() {
       const blob = await response.blob()
       const file = new File([blob], 'lpf-image.jpg', { type: 'image/jpeg' })
 
-      console.log(`📤 Sending LPF image ${imageIndex + 1} to Gemini API...`)
-      // Analyze with Gemini AI (pass abort signal)
-      const detection = await detectLPFSediments(file, abortController.signal)
+      console.log(`📤 Sending LPF image ${imageIndex + 1} to server API...`)
+      const form = new FormData()
+      form.append('image', file)
+      const res = await fetch('/api/analyze-lpf', { method: 'POST', body: form, signal: abortController.signal })
+      if (!res.ok) throw new Error('LPF API failed')
+      const { detection } = await res.json() as { success: boolean; detection: LPFSedimentDetection }
       console.log(`✅ LPF analysis complete for image ${imageIndex + 1}:`, detection)
       console.log('📝 New LPF Analysis text:', detection.analysis_notes)
       setLpfSedimentDetection(detection)
@@ -296,9 +299,12 @@ export default function Report() {
       const blob = await response.blob()
       const file = new File([blob], 'hpf-image.jpg', { type: 'image/jpeg' })
 
-      console.log(`📤 Sending HPF image ${imageIndex + 1} to Gemini API...`)
-      // Analyze with Gemini AI (pass abort signal)
-      const detection = await detectHPFSediments(file, abortController.signal)
+      console.log(`📤 Sending HPF image ${imageIndex + 1} to server API...`)
+      const form = new FormData()
+      form.append('image', file)
+      const res = await fetch('/api/analyze-hpf', { method: 'POST', body: form, signal: abortController.signal })
+      if (!res.ok) throw new Error('HPF API failed')
+      const { detection } = await res.json() as { success: boolean; detection: HPFSedimentDetection }
       console.log(`✅ HPF analysis complete for image ${imageIndex + 1}:`, detection)
       console.log('📝 New HPF Analysis text:', detection.analysis_notes)
       setHpfSedimentDetection(detection)
