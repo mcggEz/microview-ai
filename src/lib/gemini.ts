@@ -166,11 +166,29 @@ Please analyze the image carefully and provide accurate counts, morphology descr
 
 // Helper function to convert file to base64
 function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.readAsDataURL(file)
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = error => reject(error)
+  // Works in both browser and server (Node) runtimes
+  if (typeof window !== 'undefined' && typeof FileReader !== 'undefined') {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = error => reject(error)
+    })
+  }
+
+  // Node.js/Edge runtime path
+  return new Promise(async (resolve, reject) => {
+    try {
+      // Use arrayBuffer() available on Blob/File, then convert via Buffer
+      const arrayBuffer = await (file as any).arrayBuffer()
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const buf = Buffer.from(arrayBuffer)
+      const mime = (file as any).type || 'application/octet-stream'
+      const base64 = buf.toString('base64')
+      resolve(`data:${mime};base64,${base64}`)
+    } catch (err) {
+      reject(err)
+    }
   })
 }
 
