@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react'
+import { X } from 'lucide-react'
 
 interface NotificationProps {
   message: string
@@ -27,18 +27,6 @@ export default function Notification({
     return () => clearTimeout(timer)
   }, [duration, onClose])
 
-  const getIcon = () => {
-    switch (type) {
-      case 'success':
-        return <CheckCircle className="h-5 w-5 text-green-500" />
-      case 'error':
-        return <XCircle className="h-5 w-5 text-red-500" />
-      case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-yellow-500" />
-      default:
-        return <Info className="h-5 w-5 text-blue-500" />
-    }
-  }
 
   const getBackgroundColor = () => {
     switch (type) {
@@ -47,7 +35,7 @@ export default function Notification({
       case 'error':
         return 'bg-red-50 border-red-200'
       case 'warning':
-        return 'bg-yellow-50 border-yellow-200'
+        return 'bg-amber-50 border-amber-200'
       default:
         return 'bg-blue-50 border-blue-200'
     }
@@ -60,9 +48,22 @@ export default function Notification({
       case 'error':
         return 'text-red-800'
       case 'warning':
-        return 'text-yellow-800'
+        return 'text-amber-800'
       default:
         return 'text-blue-800'
+    }
+  }
+
+  const getCloseButtonColor = () => {
+    switch (type) {
+      case 'success':
+        return 'text-green-600 hover:bg-green-100'
+      case 'error':
+        return 'text-red-600 hover:bg-red-100'
+      case 'warning':
+        return 'text-amber-600 hover:bg-amber-100'
+      default:
+        return 'text-blue-600 hover:bg-blue-100'
     }
   }
 
@@ -72,11 +73,8 @@ export default function Notification({
         isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
       }`}
     >
-      <div className={`flex items-center p-4 rounded-lg border shadow-lg max-w-sm ${getBackgroundColor()}`}>
-        <div className="flex-shrink-0">
-          {getIcon()}
-        </div>
-        <div className="ml-3 flex-1">
+      <div className={`flex items-center p-4 rounded-xl border shadow-lg max-w-sm backdrop-blur-sm ${getBackgroundColor()}`}>
+        <div className="flex-1">
           <p className={`text-sm font-medium ${getTextColor()}`}>
             {message}
           </p>
@@ -87,7 +85,7 @@ export default function Notification({
               setIsVisible(false)
               setTimeout(onClose, 300)
             }}
-            className={`inline-flex rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2 ${getTextColor()} hover:bg-opacity-20 hover:bg-current`}
+            className={`inline-flex rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${getCloseButtonColor()}`}
           >
             <X className="h-4 w-4" />
           </button>

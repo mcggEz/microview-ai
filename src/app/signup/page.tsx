@@ -74,8 +74,13 @@ export default function SignupPage() {
   const isFormValid = formData.email && formData.password && formData.confirmPassword && formData.fullName && formData.password === formData.confirmPassword
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white shadow-xl rounded-2xl border border-gray-200 p-8">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 flex items-center justify-center px-4">
+      {/* animated background blobs */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 -left-24 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl animate-[float_18s_linear_infinite]" />
+        <div className="absolute -bottom-24 -right-16 h-96 w-96 rounded-full bg-green-600/20 blur-3xl animate-[float_22s_linear_infinite_reverse]" />
+      </div>
+      <div className="relative w-full max-w-md bg-white/95 backdrop-blur-md shadow-2xl rounded-2xl border border-white/20 p-6 sm:p-8">
         {/* Back button */}
         <button
           onClick={() => router.back()}
@@ -92,7 +97,7 @@ export default function SignupPage() {
           <h1 className="text-2xl font-bold text-gray-900">MicroView AI</h1>
         </div>
 
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Create Account</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Create Account</h2>
         <p className="text-sm text-gray-700 mb-6">Sign up for MedTech access to the urinalysis workspace</p>
 
         {error && (
@@ -174,7 +179,7 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={isSubmitting || !isFormValid}
-            className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold rounded-md shadow-sm hover:from-blue-700 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 transition disabled:opacity-60"
+            className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold rounded-md shadow hover:shadow-lg hover:-translate-y-0.5 transition disabled:opacity-60"
           >
             {isSubmitting ? 'Creating Account…' : 'Create Account'}
           </button>
@@ -192,6 +197,10 @@ export default function SignupPage() {
           </p>
         </div>
       </div>
+      {/* keyframes */}
+      <style jsx>{`
+        @keyframes float { 0% { transform: translateY(10px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(10px); } }
+      `}</style>
     </div>
   )
 }

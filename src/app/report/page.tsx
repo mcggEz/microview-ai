@@ -18,8 +18,8 @@ import { loadOpenCV, isOpenCVReady } from '@/lib/opencv-loader'
 import { applyDigitalStain, matToImageData, cleanupSegmentationResult, type SegmentationResult } from '@/lib/digital-staining'
 import type { LPFSedimentDetection, HPFSedimentDetection } from '@/lib/gemini'
 import { Calendar, Download, Microscope, Edit, CheckCircle, Save, X, Plus, Camera, Trash2, ChevronDown, Upload, ChevronLeft, ChevronRight, Search, ArrowLeft, Menu, RefreshCw } from 'lucide-react'
+import GetSamplesButton from '@/components/GetSamplesButton'
 import ImageModal from '@/components/ImageModal'
-import ConfirmationModal from '@/components/ConfirmationModal'
 import CameraCaptureModal from '@/components/CameraCaptureModal'
 import Notification from '@/components/Notification'
 import Image from 'next/image'
@@ -53,7 +53,6 @@ export default function Report() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null) // Used in handleImageCapture - keeping for future use
   const [capturedImages, setCapturedImages] = useState<string[]>([]) // Store multiple captured images
   const [focusMode, setFocusMode] = useState<'field' | 'report'>('field') // Focus mode for UI
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState('')
   const [notificationType, setNotificationType] = useState<'success' | 'error' | 'warning' | 'info'>('success')
@@ -367,7 +366,9 @@ export default function Report() {
     setSelectedPatient,
     clearError,
     preloadByDate,
-    addPatientWithTest
+    addPatientWithTest,
+    loadTestsForPatient,
+    loadPatients
   } = useDashboard()
 
   // Function to generate shareable URL for current test
@@ -632,7 +633,7 @@ export default function Report() {
         // Check if we've reached 10 LPF images and auto-switch to HPF
         if (powerMode === 'low' && lowPowerImages.length + 1 >= 10) {
           setPowerMode('high')
-          setNotificationMessage(`✅ Captured LPF image ${lowPowerImages.length + 1}/10. Automatically switched to HPF mode for detailed analysis.`)
+          setNotificationMessage(`Captured LPF image ${lowPowerImages.length + 1}/10. Automatically switched to HPF mode for detailed analysis.`)
           setNotificationType('success')
         } else {
           setNotificationMessage(`Image captured and saved successfully! (${currentImageCount + 1}/10 ${powerMode === 'high' ? 'HPF' : 'LPF'})`)
@@ -1364,7 +1365,7 @@ export default function Report() {
       const result = await addPatientWithTest(patientData, dateParam || new Date().toISOString().split('T')[0])
       
       if (result.test && result.patient) {
-        setNotificationMessage(`✅ Success! New test "${result.test.test_code}" created successfully.`)
+        setNotificationMessage(`Success! New test "${result.test.test_code}" created successfully.`)
         setNotificationType('success')
         setShowNotification(true)
         
@@ -1460,7 +1461,35 @@ export default function Report() {
 
   const handleDeleteTest = async () => {
     if (!selectedTest) return
-    setShowDeleteConfirm(true)
+    
+    try {
+      await deleteTest(selectedTest.id)
+      console.log('Test deleted successfully')
+      
+      // Refresh the data - always refresh regardless of dateParam
+      if (dateParam) {
+        await preloadByDate(dateParam)
+      } else if (selectedPatient) {
+        // If viewing by patient, refresh the patient's tests
+        await loadTestsForPatient(selectedPatient.id)
+      } else {
+        // Fallback: reload all patients
+        await loadPatients()
+      }
+      
+      // Clear selected test and patient
+      setSelectedTest(null)
+      setSelectedPatient(null)
+      
+      setNotificationMessage('Test deleted successfully!')
+      setNotificationType('success')
+      setShowNotification(true)
+    } catch (error) {
+      console.error('Error deleting test:', error)
+      setNotificationMessage('Failed to delete test. Please try again.')
+      setNotificationType('error')
+      setShowNotification(true)
+    }
   }
 
   const handleValidateTest = async () => {
@@ -1485,32 +1514,6 @@ export default function Report() {
     }
   }
 
-  const confirmDeleteTest = async () => {
-    if (!selectedTest) return
-    
-    try {
-      await deleteTest(selectedTest.id)
-      console.log('Test deleted successfully')
-      
-      // Refresh the data for the current date
-      if (dateParam) {
-        await preloadByDate(dateParam)
-      }
-      
-      // Clear selected test and patient
-      setSelectedTest(null)
-      setSelectedPatient(null)
-      
-      setNotificationMessage('Test deleted successfully!')
-      setNotificationType('success')
-      setShowNotification(true)
-    } catch (error) {
-      console.error('Error deleting test:', error)
-      setNotificationMessage('Failed to delete test. Please try again.')
-      setNotificationType('error')
-      setShowNotification(true)
-    }
-  }
 
 
   const handlePatientCreated = async (patientData: { name: string; age: string; gender: string; patient_id: string }) => {
@@ -1526,15 +1529,15 @@ export default function Report() {
       const result = await addPatientWithTest(patientData, dateParam || new Date().toISOString().split('T')[0])
       
       if (result.test && result.patient) {
-        setNotificationMessage(`✅ Success! Patient "${result.patient.name}" and test "${result.test.test_code}" created successfully.`)
+        setNotificationMessage(`Success! Patient "${result.patient.name}" and test "${result.test.test_code}" created successfully.`)
         setNotificationType('success')
         setShowNotification(true)
       } else if (result.patient) {
-        setNotificationMessage(`⚠️ Patient "${result.patient.name}" created but test creation failed. Check console for details.`)
+        setNotificationMessage(`Patient "${result.patient.name}" created but test creation failed. Check console for details.`)
         setNotificationType('warning')
         setShowNotification(true)
       } else {
-        setNotificationMessage(`❌ Failed to create patient and test. Check console for details.`)
+        setNotificationMessage(`Failed to create patient and test. Check console for details.`)
         setNotificationType('error')
         setShowNotification(true)
       }
@@ -1561,14 +1564,14 @@ export default function Report() {
         console.warn('Patient not found for test:', test.patient_id)
         // Try to load the patient if not in current list
         // This could happen if the test is from a different date
-        setNotificationMessage(`⚠️ Test loaded, but patient data may be incomplete.`)
+        setNotificationMessage(`Test loaded, but patient data may be incomplete.`)
         setNotificationType('warning')
         setShowNotification(true)
         return
       }
       
       // Show success notification
-      setNotificationMessage(`✅ Loaded test "${test.test_code}" for ${testPatient?.name || 'patient'} successfully!`)
+      setNotificationMessage(`Loaded test "${test.test_code}" for ${testPatient?.name || 'patient'} successfully!`)
       setNotificationType('success')
       setShowNotification(true)
       
@@ -1661,11 +1664,11 @@ export default function Report() {
       if (testPatient) {
         setSelectedPatient(testPatient)
       } else {
-        setNotificationMessage(`⚠️ Patient data not found for test: ${newSelectedTest.test_code}`)
+        setNotificationMessage(`Patient data not found for test: ${newSelectedTest.test_code}`)
         setNotificationType('warning')
         setShowNotification(true)
       }
-      setNotificationMessage(`✅ Navigated to test "${newSelectedTest.test_code}" for ${testPatient?.name || 'patient'}`)
+      setNotificationMessage(`Navigated to test "${newSelectedTest.test_code}" for ${testPatient?.name || 'patient'}`)
       setNotificationType('success')
       setShowNotification(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1761,6 +1764,30 @@ export default function Report() {
               <Plus className="h-3 w-3" />
               <span className="text-xs hidden sm:inline">Add Test</span>
             </button>
+
+          {/* Get Samples - attempts request but shows friendly error */}
+          <button
+            onClick={async () => {
+              try {
+                const base = process.env.NEXT_PUBLIC_MOTOR_API_BASE || 'http://127.0.0.1:3001'
+                const res = await fetch(`${base}/get_samples`, { method: 'POST' })
+                if (!res.ok) throw new Error(`Motor server error ${res.status}`)
+                setNotificationMessage('Sample collection completed successfully!')
+                setNotificationType('success')
+                setShowNotification(true)
+              } catch (e) {
+                // Show user-friendly message instead of technical error
+                setNotificationMessage('Motor control is not supported in this configuration.')
+                setNotificationType('warning')
+                setShowNotification(true)
+              }
+            }}
+            className="px-2 py-1 rounded border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors flex items-center space-x-1"
+            title="Move stage to sample positions"
+          >
+            <Microscope className="h-3 w-3" />
+            <span className="text-xs hidden sm:inline">Get Samples</span>
+          </button>
             
             
             
@@ -1784,7 +1811,7 @@ export default function Report() {
                 document.getElementById('report-content')?.scrollIntoView({ behavior: 'smooth' })
               }}
               className={`flex items-center space-x-1 px-2 py-1 rounded shadow-sm border transition-colors ${
-                focusMode === 'report' ? 'bg-green-600 text-white border-green-600 hover:bg-green-700' : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
+                focusMode === 'report' ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
               }`}
               title="Focus on report"
             >
@@ -3441,19 +3468,6 @@ export default function Report() {
 
 
 
-        {/* Delete Confirmation Modal */}
-        <div className="z-[9999]">
-          <ConfirmationModal
-            isOpen={showDeleteConfirm}
-            onClose={() => setShowDeleteConfirm(false)}
-            onConfirm={confirmDeleteTest}
-            title="Delete Test"
-            message="Are you sure you want to delete this test? This action cannot be undone."
-            type="danger"
-            confirmText="Delete"
-            cancelText="Cancel"
-          />
-        </div>
 
         {/* Notification */}
         {showNotification && (

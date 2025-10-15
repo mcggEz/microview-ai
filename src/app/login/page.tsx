@@ -43,8 +43,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white shadow-xl rounded-2xl border border-gray-200 p-8">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 flex items-center justify-center px-4">
+      {/* animated background blobs */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 -left-24 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl animate-[float_18s_linear_infinite]" />
+        <div className="absolute -bottom-24 -right-16 h-96 w-96 rounded-full bg-green-600/20 blur-3xl animate-[float_22s_linear_infinite_reverse]" />
+      </div>
+      <div className="relative w-full max-w-md bg-white/95 backdrop-blur-md shadow-2xl rounded-2xl border border-white/20 p-6 sm:p-8">
         {/* Back button */}
         <button
           onClick={() => router.back()}
@@ -60,7 +65,7 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-gray-900">MicroView AI</h1>
         </div>
 
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Sign in</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Sign in</h2>
         <p className="text-sm text-gray-700 mb-6">MedTech access to the urinalysis workspace</p>
 
         {error && (
@@ -70,7 +75,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           <div>
             <label className="block text-[13px] font-medium text-gray-900 mb-1.5">Email</label>
             <input
@@ -106,7 +111,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold rounded-md shadow-sm hover:from-blue-700 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 transition disabled:opacity-60"
+            className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold rounded-md shadow hover:shadow-lg hover:-translate-y-0.5 transition disabled:opacity-60"
           >
             {isSubmitting ? 'Signing in…' : 'Sign in'}
           </button>
@@ -120,7 +125,7 @@ export default function LoginPage() {
 
         <button
           onClick={continueAsDemo}
-          className="w-full px-4 py-3 border border-gray-300 text-gray-900 font-semibold rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 transition"
+          className="w-full px-4 py-3 border border-gray-300 text-gray-900 font-semibold rounded-md hover:bg-gray-50 transition"
         >
           <TestTube className="w-4 h-4 inline mr-2" />
           Continue as Demo
@@ -138,6 +143,10 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+      {/* keyframes */}
+      <style jsx>{`
+        @keyframes float { 0% { transform: translateY(10px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(10px); } }
+      `}</style>
     </div>
   )
 }
