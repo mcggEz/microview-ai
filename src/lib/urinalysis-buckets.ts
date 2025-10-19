@@ -4,13 +4,14 @@ import {
   UrinalysisBucketKey,
   DEFAULT_URINALYSIS_BUCKETS,
   BUCKET_DISPLAY_NAMES,
-  URINALYSIS_BUCKETS
 } from '@/types/database'
+
+type UrinalysisTestData = Record<string, string | number | null | undefined>
 
 /**
  * Convert database test data to bucket format
  */
-export const convertTestToBuckets = (test: any): UrinalysisBuckets => {
+export const convertTestToBuckets = (test: UrinalysisTestData): UrinalysisBuckets => {
   return {
     red_blood_cells: {
       count: test.rbc_count || '0',
@@ -98,7 +99,7 @@ export const convertTestToBuckets = (test: any): UrinalysisBuckets => {
 /**
  * Convert bucket data back to database format
  */
-export const convertBucketsToTest = (buckets: UrinalysisBuckets): any => {
+export const convertBucketsToTest = (buckets: UrinalysisBuckets): UrinalysisTestData => {
   return {
     rbc_count: buckets.red_blood_cells.count,
     rbc_unit: buckets.red_blood_cells.unit,

@@ -64,8 +64,9 @@ export default function SignupPage() {
         throw new Error(data?.error || 'Signup failed')
       }
       router.push('/login?message=Account created successfully')
-    } catch (err: any) {
-      setError(err?.message || 'Signup failed')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Signup failed'
+      setError(message)
     } finally {
       setIsSubmitting(false)
     }

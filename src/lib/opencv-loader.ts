@@ -3,10 +3,11 @@
  */
 
 import { useState, useEffect } from 'react'
+import type { OpenCV } from '@/types/opencv'
 
 declare global {
   interface Window {
-    cv: any
+    cv: OpenCV | null
     opencvLoadingPromise?: Promise<boolean>
   }
 }
@@ -73,7 +74,7 @@ export function loadOpenCV(): Promise<boolean> {
     script.onload = () => {
       if (window.cv) {
         // Set up runtime initialization callback
-        window.cv['onRuntimeInitialized'] = () => {
+        window.cv.onRuntimeInitialized = () => {
           console.log('OpenCV.js loaded and initialized successfully')
           resolve(true)
         }

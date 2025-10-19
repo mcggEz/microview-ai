@@ -24,19 +24,36 @@ const defaultModelPreference = [
 
 const modelPreference = configuredModels.length > 0 ? configuredModels : defaultModelPreference
 
+type InlineImageData = {
+  inlineData: {
+    mimeType: string
+    data: string
+  }
+}
+
+const isAbortError = (error: unknown): boolean => {
+  if (error instanceof Error) {
+    return error.name === 'AbortError' || error.message === 'Request aborted'
+  }
+  if (typeof DOMException !== 'undefined' && error instanceof DOMException) {
+    return error.name === 'AbortError'
+  }
+  return false
+}
+
 function getModelInstance(modelName: string) {
   return genAI.getGenerativeModel({ model: modelName })
 }
 
 // Helper function to try models in order until one works (handles overloads and general failures)
-async function generateContentWithFallback(prompt: string, imageData: any, abortSignal?: AbortSignal) {
+async function generateContentWithFallback(prompt: string, imageData: InlineImageData, abortSignal?: AbortSignal) {
   if (abortSignal?.aborted) {
     const abortError = new Error('Request aborted')
     abortError.name = 'AbortError'
     throw abortError
   }
 
-  let lastError: any = null
+  let lastError: unknown = null
 
   for (const modelName of modelPreference) {
     if (abortSignal?.aborted) {
@@ -51,9 +68,9 @@ async function generateContentWithFallback(prompt: string, imageData: any, abort
       const result = await model.generateContent([prompt, imageData])
       console.log(`✅ Model succeeded: ${modelName}`)
       return result
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error
-      const message = typeof error?.message === 'string' ? error.message : String(error)
+      const message = error instanceof Error ? error.message : String(error)
       console.warn(`Model failed: ${modelName} -> ${message}`)
       // Continue to next model on any failure
       continue
@@ -61,7 +78,10 @@ async function generateContentWithFallback(prompt: string, imageData: any, abort
   }
 
   console.error('All configured Gemini models failed in fallback chain')
-  throw lastError || new Error('All Gemini models failed')
+  if (lastError instanceof Error) {
+    throw lastError
+  }
+  throw new Error('All Gemini models failed')
 }
 
 export interface UrinalysisResult {
@@ -180,10 +200,10 @@ function fileToBase64(file: File): Promise<string> {
   return new Promise(async (resolve, reject) => {
     try {
       // Use arrayBuffer() available on Blob/File, then convert via Buffer
-      const arrayBuffer = await (file as any).arrayBuffer()
+      const arrayBuffer = await file.arrayBuffer()
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const buf = Buffer.from(arrayBuffer)
-      const mime = (file as any).type || 'application/octet-stream'
+      const mime = file.type || 'application/octet-stream'
       const base64 = buf.toString('base64')
       resolve(`data:${mime};base64,${base64}`)
     } catch (err) {
@@ -253,8 +273,8 @@ Provide accurate counts for each sediment type. Use 0 if none are present. Be co
     const detection = JSON.parse(jsonText) as LPFSedimentDetection
     
     return detection
-  } catch (error: any) {
-    if (abortSignal?.aborted || error.message === 'Request aborted') {
+  } catch (error) {
+    if (abortSignal?.aborted || isAbortError(error)) {
       const abortError = new Error('Request aborted')
       abortError.name = 'AbortError'
       throw abortError
@@ -376,9 +396,9 @@ Provide accurate counts for each sediment type. Use 0 if none are present. Be ex
           await new Promise(resolve => setTimeout(resolve, 1000))
         }
         
-      } catch (attemptError: any) {
+      } catch (attemptError) {
         // Check if request was aborted
-        if (abortSignal?.aborted || attemptError.message === 'Request aborted') {
+        if (abortSignal?.aborted || isAbortError(attemptError)) {
           const abortError = new Error('Request aborted')
           abortError.name = 'AbortError'
           throw abortError
@@ -401,8 +421,8 @@ Provide accurate counts for each sediment type. Use 0 if none are present. Be ex
     console.log('All attempts:', results)
     
     return bestResult
-  } catch (error: any) {
-    if (abortSignal?.aborted || error.message === 'Request aborted') {
+  } catch (error) {
+    if (abortSignal?.aborted || isAbortError(error)) {
       const abortError = new Error('Request aborted')
       abortError.name = 'AbortError'
       throw abortError

@@ -1,18 +1,24 @@
-'use client'
+"use client";
 
-import { X } from 'lucide-react'
-import Image from 'next/image'
+import { X } from "lucide-react";
+import Image from "next/image";
 
 interface ImageModalProps {
-  isOpen: boolean
-  onClose: () => void
-  imageSrc: string
-  imageAlt: string
-  title: string
+  isOpen: boolean;
+  onClose: () => void;
+  imageSrc: string;
+  imageAlt: string;
+  title: string;
 }
 
-export default function ImageModal({ isOpen, onClose, imageSrc, imageAlt, title }: ImageModalProps) {
-  if (!isOpen) return null
+export default function ImageModal({
+  isOpen,
+  onClose,
+  imageSrc,
+  imageAlt,
+  title,
+}: ImageModalProps) {
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -26,27 +32,30 @@ export default function ImageModal({ isOpen, onClose, imageSrc, imageAlt, title 
             <X className="h-5 w-5 text-gray-600" />
           </button>
         </div>
-                 <div className="p-4">
-           {imageSrc.startsWith('data:') ? (
-             // Handle base64 images
-             <img
-               src={imageSrc}
-               alt={imageAlt}
-               className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
-             />
-           ) : (
-             // Handle URL images
-             <Image
-               src={imageSrc}
-               alt={imageAlt}
-               width={800}
-               height={600}
-               className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
-               unoptimized={imageSrc.startsWith('http')}
-             />
-           )}
-         </div>
+        <div className="p-4">
+          {imageSrc.startsWith("data:") ? (
+            // Handle base64 images
+            <Image
+              src={imageSrc}
+              alt={imageAlt}
+              width={800}
+              height={600}
+              className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
+              unoptimized={imageSrc.startsWith("http")}
+            />
+          ) : (
+            // Handle URL images
+            <Image
+              src={imageSrc}
+              alt={imageAlt}
+              width={800}
+              height={600}
+              className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
+              unoptimized={imageSrc.startsWith("http")}
+            />
+          )}
+        </div>
       </div>
     </div>
-  )
+  );
 }

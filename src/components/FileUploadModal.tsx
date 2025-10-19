@@ -30,8 +30,8 @@ export default function FileUploadModal({
     document.body.style.overflow = 'unset'
   }
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+  const processFiles = (files: FileList | null) => {
+    const file = files?.[0]
     setError(null)
 
     if (!file) {
@@ -54,6 +54,10 @@ export default function FileUploadModal({
     }
 
     setSelectedFile(file)
+  }
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    processFiles(event.target.files ?? null)
   }
 
   const handleUpload = async () => {
@@ -83,19 +87,12 @@ export default function FileUploadModal({
     onClose()
   }
 
-  const handleDrop = (event: React.DragEvent) => {
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()
-    const file = event.dataTransfer.files[0]
-    if (file) {
-      const input = fileInputRef.current
-      if (input) {
-        input.files = event.dataTransfer.files
-        handleFileSelect({ target: { files: event.dataTransfer.files } } as any)
-      }
-    }
+    processFiles(event.dataTransfer.files)
   }
 
-  const handleDragOver = (event: React.DragEvent) => {
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()
   }
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X, User, Calendar, Hash, Users, ChevronDown, Trash2 } from 'lucide-react'
 import { getPatients, deletePatient, checkPatientHasTests } from '@/lib/api'
+import type { Patient } from '@/types/database'
 
 interface NewPatientModalProps {
   isOpen: boolean
@@ -20,7 +21,7 @@ export default function NewPatientModal({ isOpen, onClose, onPatientCreated, cur
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [previousPatients, setPreviousPatients] = useState<any[]>([])
+  const [previousPatients, setPreviousPatients] = useState<Patient[]>([])
   const [showPreviousPatients, setShowPreviousPatients] = useState(false)
   const [loadingPatients, setLoadingPatients] = useState(false)
   const [deletingPatient, setDeletingPatient] = useState<string | null>(null)
@@ -53,7 +54,7 @@ export default function NewPatientModal({ isOpen, onClose, onPatientCreated, cur
     }
   }
 
-  const selectPreviousPatient = (patient: any) => {
+  const selectPreviousPatient = (patient: Patient) => {
     setFormData({
       patient_id: patient.patient_id,
       name: patient.name,

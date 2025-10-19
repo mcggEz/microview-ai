@@ -1,6 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getPatients, updatePatient, getTestsByPatient, getTestsByDate, createPatient, createTest } from '@/lib/api'
 import { Patient, UrineTest, ReportStatus } from '@/types/database'
+import type { Gender } from '@/types/database'
+
+export type AddPatientWithTestInput = {
+  name: string
+  age: string
+  gender: Gender
+  patient_id: string
+}
 
 export const useDashboard = () => {
   const [patients, setPatients] = useState<Patient[]>([])
@@ -138,7 +146,7 @@ export const useDashboard = () => {
     }
   }, [])
 
-    const addPatientWithTest = async (patientData: { name: string; age: string; gender: string; patient_id: string }, date: string) => {
+  const addPatientWithTest = async (patientData: AddPatientWithTestInput, date: string) => {
     try {
       setLoading(true)
       setError(null)
@@ -164,7 +172,7 @@ export const useDashboard = () => {
         patientToUse = await createPatient({
           name: patientData.name,
           age: Number(patientData.age) || 0,
-          gender: patientData.gender as any,
+          gender: patientData.gender,
           patient_id: patientData.patient_id,
         })
         console.log('New patient created:', patientToUse)

@@ -4,11 +4,12 @@
  */
 
 import { isOpenCVReady } from './opencv-loader'
+import type { CVMat, CVMatVector } from '@/types/opencv'
 
 export interface SegmentationResult {
-  originalImage: any // OpenCV Mat
-  segmentedImage: any // OpenCV Mat
-  contours: any // OpenCV MatVector
+  originalImage: CVMat | null
+  segmentedImage: CVMat | null
+  contours: CVMatVector | null
   contourCount: number
   success: boolean
   error?: string
@@ -49,7 +50,7 @@ export function applyDigitalStain(
   }
 
   try {
-    let src: any
+    let src: CVMat | null = null
 
     // Convert different input types to OpenCV Mat
     if (imageData instanceof ImageData) {
@@ -67,7 +68,7 @@ export function applyDigitalStain(
       throw new Error('Unsupported image data type')
     }
 
-    if (src.empty()) {
+    if (!src || (typeof src.empty === 'function' && src.empty())) {
       throw new Error('Failed to load image')
     }
 
@@ -83,7 +84,7 @@ export function applyDigitalStain(
     const kernel = window.cv.getStructuringElement(
       window.cv.MORPH_RECT,
       new window.cv.Size(kernelSize, kernelSize)
-    )
+    ) as CVMat
 
     // 4. Apply morphological operations
     // Opening: removes small noise
@@ -101,7 +102,9 @@ export function applyDigitalStain(
 
     // 6. Filter contours by area and create segmented image (filled sediments mask)
     // Use 4-channel image with alpha so background stays transparent
-    const segmentedImage = new window.cv.Mat.zeros(src.rows, src.cols, window.cv.CV_8UC4)
+    const segmentedImage = window.cv.Mat.zeros
+      ? (window.cv.Mat.zeros(src.rows, src.cols, window.cv.CV_8UC4) as CVMat)
+      : (new window.cv.Mat() as CVMat)
     let validContourCount = 0
 
     for (let i = 0; i < contours.size(); i++) {
@@ -163,7 +166,7 @@ export function applyDigitalStain(
 /**
  * Converts OpenCV Mat to ImageData for canvas display
  */
-export function matToImageData(mat: any): ImageData | null {
+export function matToImageData(mat: CVMat | null): ImageData | null {
   if (!isOpenCVReady() || !window.cv || !mat) {
     return null
   }
@@ -187,7 +190,7 @@ export function matToImageData(mat: any): ImageData | null {
 /**
  * Converts OpenCV Mat to base64 image string
  */
-export function matToBase64(mat: any, format: string = 'image/png'): string | null {
+export function matToBase64(mat: CVMat | null, format: string = 'image/png'): string | null {
   if (!isOpenCVReady() || !window.cv || !mat) {
     return null
   }
@@ -255,4 +258,3 @@ export function cleanupSegmentationResult(result: SegmentationResult): void {
     result.contours.delete()
   }
 }
-

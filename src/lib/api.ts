@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { Patient, UrineTest, ResultStatus, SedimentAnalysis, PowerMode, ImageAnalysis } from '@/types/database'
+import { Patient, UrineTest, SedimentAnalysis, PowerMode, ImageAnalysis } from '@/types/database'
 
 // Patients
 export const getPatients = async (): Promise<Patient[]> => {
@@ -341,7 +341,7 @@ export const uploadImageToStorage = async (file: File, testId: string, imageType
     const fileName = `${testId}/${imageType}_${timestamp}.${fileExtension}`
     
     // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('urine-images')
       .upload(fileName, file, {
         cacheControl: '3600',
@@ -457,7 +457,6 @@ export const deleteImageFromStorage = async (imageUrl: string): Promise<void> =>
     // Extract file path from URL
     const url = new URL(imageUrl)
     const pathParts = url.pathname.split('/')
-    const fileName = pathParts[pathParts.length - 1]
     const folderPath = pathParts.slice(-2).join('/') // Get folder/filename
     
     // Delete from Supabase Storage
@@ -690,7 +689,7 @@ export const upsertImageAnalysis = async (
   console.log('Upserting image analysis with data:', JSON.stringify(analysisData, null, 2))
   
   // First, check if the image_analysis table exists
-  const { data: tableCheck, error: tableError } = await supabase
+  const { error: tableError } = await supabase
     .from('image_analysis')
     .select('id')
     .limit(1)

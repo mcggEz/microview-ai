@@ -1,139 +1,142 @@
-'use client'
+"use client";
 
-import { useState, useRef, useEffect } from 'react'
-import { Camera, X, RotateCcw, Check } from 'lucide-react'
+import { useState, useRef, useEffect } from "react";
+import { Camera, X, RotateCcw, Check } from "lucide-react";
+import Image from "next/image";
 
 interface CameraCaptureModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onCapture: (imageData: string) => void
+  isOpen: boolean;
+  onClose: () => void;
+  onCapture: (imageData: string) => void;
 }
 
 export default function CameraCaptureModal({
   isOpen,
   onClose,
-  onCapture
+  onCapture,
 }: CameraCaptureModalProps) {
-  const [stream, setStream] = useState<MediaStream | null>(null)
-  const [capturedImage, setCapturedImage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Prevent background scrolling when modal is open
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden'
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = 'unset'
+      document.body.style.overflow = "unset";
     }
 
     // Cleanup function to restore scrolling when component unmounts
     return () => {
-      document.body.style.overflow = 'unset'
-    }
-  }, [isOpen])
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && !stream) {
-      startCamera()
+      startCamera();
     }
     return () => {
       if (stream) {
-        stream.getTracks().forEach(track => track.stop())
+        stream.getTracks().forEach((track) => track.stop());
       }
-    }
-  }, [isOpen, stream])
+    };
+  }, [isOpen, stream]);
 
   const startCamera = async () => {
     try {
-      setError(null)
-      setIsLoading(true)
-      console.log('Starting camera...')
-      
+      setError(null);
+      setIsLoading(true);
+      console.log("Starting camera...");
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: 'environment', // Use back camera if available
+          facingMode: "environment", // Use back camera if available
           width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      })
-      
-      console.log('Camera stream obtained:', mediaStream)
-      setStream(mediaStream)
-      
+          height: { ideal: 720 },
+        },
+      });
+
+      console.log("Camera stream obtained:", mediaStream);
+      setStream(mediaStream);
+
       if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream
-        console.log('Video element updated with stream')
-        
+        videoRef.current.srcObject = mediaStream;
+        console.log("Video element updated with stream");
+
         // Add event listeners to debug video loading
         videoRef.current.onloadedmetadata = () => {
-          console.log('Video metadata loaded')
-        }
+          console.log("Video metadata loaded");
+        };
         videoRef.current.oncanplay = () => {
-          console.log('Video can play')
-          setIsLoading(false)
-        }
+          console.log("Video can play");
+          setIsLoading(false);
+        };
         videoRef.current.onerror = (e) => {
-          console.error('Video error:', e)
-          setIsLoading(false)
-          setError('Video playback error')
-        }
+          console.error("Video error:", e);
+          setIsLoading(false);
+          setError("Video playback error");
+        };
       } else {
-        console.error('Video ref is null')
-        setIsLoading(false)
+        console.error("Video ref is null");
+        setIsLoading(false);
       }
     } catch (err) {
-      console.error('Error accessing camera:', err)
-      setIsLoading(false)
-      setError('Unable to access camera. Please check permissions and try again.')
+      console.error("Error accessing camera:", err);
+      setIsLoading(false);
+      setError(
+        "Unable to access camera. Please check permissions and try again."
+      );
     }
-  }
+  };
 
   const captureImage = () => {
     if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current
-      const canvas = canvasRef.current
-      const context = canvas.getContext('2d')
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d");
 
       if (context) {
         // Set canvas size to match video dimensions
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
 
         // Draw the video frame to canvas
-        context.drawImage(video, 0, 0, canvas.width, canvas.height)
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
         // Convert to base64
-        const imageData = canvas.toDataURL('image/jpeg', 0.8)
-        setCapturedImage(imageData)
+        const imageData = canvas.toDataURL("image/jpeg", 0.8);
+        setCapturedImage(imageData);
       }
     }
-  }
+  };
 
   const retakePhoto = () => {
-    setCapturedImage(null)
-  }
+    setCapturedImage(null);
+  };
 
   const confirmCapture = () => {
     if (capturedImage) {
-      onCapture(capturedImage)
-      onClose()
+      onCapture(capturedImage);
+      onClose();
     }
-  }
+  };
 
   const handleClose = () => {
     if (stream) {
-      stream.getTracks().forEach(track => track.stop())
-      setStream(null)
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
     }
-    setCapturedImage(null)
-    setError(null)
-    onClose()
-  }
+    setCapturedImage(null);
+    setError(null);
+    onClose();
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black">
@@ -156,10 +159,13 @@ export default function CameraCaptureModal({
           ) : capturedImage ? (
             <div className="flex-1 flex flex-col">
               <div className="flex-1 relative bg-black">
-                <img
+                <Image
                   src={capturedImage}
                   alt="Captured specimen"
+                  width={1920}
+                  height={1080}
                   className="w-full h-full object-contain"
+                  unoptimized
                 />
               </div>
               <div className="bg-black bg-opacity-80 p-4">
@@ -191,16 +197,16 @@ export default function CameraCaptureModal({
                   </div>
                 </div>
               )}
-              
+
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
                 muted
                 className="w-full h-full object-cover"
-                style={{ display: isLoading ? 'none' : 'block' }}
+                style={{ display: isLoading ? "none" : "block" }}
               />
-              
+
               {/* Back button - top left corner */}
               <button
                 onClick={handleClose}
@@ -208,7 +214,7 @@ export default function CameraCaptureModal({
               >
                 <X className="h-5 w-5" />
               </button>
-              
+
               {/* Take Sample button - bottom center, overlaid on video */}
               <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[10000]">
                 <button
@@ -228,5 +234,5 @@ export default function CameraCaptureModal({
         <canvas ref={canvasRef} className="hidden" />
       </div>
     </div>
-  )
+  );
 }
