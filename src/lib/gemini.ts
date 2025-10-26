@@ -1,5 +1,9 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
+// Request throttling to prevent excessive API calls
+const requestThrottle = new Map<string, number>()
+const THROTTLE_DELAY = 2000 // 2 seconds between requests for same image
+
 // Initialize Gemini API
 const genAI = new GoogleGenerativeAI(
   process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
@@ -215,6 +219,20 @@ function fileToBase64(file: File): Promise<string> {
 // Function to detect LPF sediments using Gemini AI
 export async function detectLPFSediments(imageFile: File, abortSignal?: AbortSignal): Promise<LPFSedimentDetection> {
   try {
+    // Create a unique key for this image to prevent duplicate requests
+    const imageKey = `lpf-${imageFile.name}-${imageFile.size}-${imageFile.lastModified}`
+    const lastRequestTime = requestThrottle.get(imageKey)
+    const now = Date.now()
+    
+    // Check if we're making requests too frequently
+    if (lastRequestTime && (now - lastRequestTime) < THROTTLE_DELAY) {
+      console.log(`⏳ Throttling LPF request - too soon after last request (${now - lastRequestTime}ms ago)`)
+      throw new Error('Request throttled - please wait before trying again')
+    }
+    
+    // Update throttle timestamp
+    requestThrottle.set(imageKey, now)
+    
     // Convert image to base64
     const base64Image = await fileToBase64(imageFile)
     
@@ -287,6 +305,20 @@ Provide accurate counts for each sediment type. Use 0 if none are present. Be co
 // Function to detect HPF sediments using Gemini AI with improved accuracy
 export async function detectHPFSediments(imageFile: File, abortSignal?: AbortSignal): Promise<HPFSedimentDetection> {
   try {
+    // Create a unique key for this image to prevent duplicate requests
+    const imageKey = `${imageFile.name}-${imageFile.size}-${imageFile.lastModified}`
+    const lastRequestTime = requestThrottle.get(imageKey)
+    const now = Date.now()
+    
+    // Check if we're making requests too frequently
+    if (lastRequestTime && (now - lastRequestTime) < THROTTLE_DELAY) {
+      console.log(`⏳ Throttling HPF request - too soon after last request (${now - lastRequestTime}ms ago)`)
+      throw new Error('Request throttled - please wait before trying again')
+    }
+    
+    // Update throttle timestamp
+    requestThrottle.set(imageKey, now)
+    
     // Convert image to base64
     const base64Image = await fileToBase64(imageFile)
     
@@ -334,93 +366,68 @@ IMPORTANT: Return ONLY the JSON object below, no additional text or explanations
 
 Provide accurate counts for each sediment type. Use 0 if none are present. Be extremely conservative in your counting - only count items you are 100% confident about. Set confidence as a percentage (0-100) based on image quality and clarity.`
 
-    // Try multiple attempts for better accuracy
-    const attempts = 2
-    const results: HPFSedimentDetection[] = []
+    // Single attempt with better error handling (removed multiple attempts to reduce API calls)
+    console.log('🔬 Starting HPF analysis with Gemini API...')
     
-    for (let i = 0; i < attempts; i++) {
-      // Check if request was aborted before each attempt
-      if (abortSignal?.aborted) {
+    // Check if request was aborted
+    if (abortSignal?.aborted) {
+      const abortError = new Error('Request aborted')
+      abortError.name = 'AbortError'
+      throw abortError
+    }
+    
+    try {
+      // Generate content with image using fallback mechanism
+      const result = await generateContentWithFallback(prompt, {
+        inlineData: {
+          mimeType: imageFile.type,
+          data: base64Image.split(',')[1] // Remove data:image/...;base64, prefix
+        }
+      }, abortSignal)
+
+      const response = await result.response
+      const text = response.text()
+      
+      // Extract JSON from response - handle various formats
+      let jsonText = text.trim()
+      
+      // Remove markdown code blocks
+      if (jsonText.startsWith('```json')) {
+        jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+      } else if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '')
+      }
+      
+      // Look for JSON object in the text (handle cases where AI adds explanatory text)
+      const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        jsonText = jsonMatch[0]
+      }
+      
+      // Parse JSON response
+      const detection = JSON.parse(jsonText) as HPFSedimentDetection
+      
+      console.log('✅ HPF analysis completed successfully:', detection)
+      
+      // Validate the response
+      if (typeof detection.crystals === 'number' && detection.crystals >= 0) {
+        return detection
+      } else {
+        throw new Error('Invalid response format from Gemini API')
+      }
+      
+    } catch (attemptError) {
+      // Check if request was aborted
+      if (abortSignal?.aborted || isAbortError(attemptError)) {
         const abortError = new Error('Request aborted')
         abortError.name = 'AbortError'
         throw abortError
       }
       
-      try {
-        console.log(`HPF Analysis attempt ${i + 1}/${attempts}`)
-        
-        // Generate content with image using fallback mechanism
-        const result = await generateContentWithFallback(prompt, {
-          inlineData: {
-            mimeType: imageFile.type,
-            data: base64Image.split(',')[1] // Remove data:image/...;base64, prefix
-          }
-        }, abortSignal)
-
-        const response = await result.response
-        const text = response.text()
-        
-        // Extract JSON from response - handle various formats
-        let jsonText = text.trim()
-        
-        // Remove markdown code blocks
-        if (jsonText.startsWith('```json')) {
-          jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
-        } else if (jsonText.startsWith('```')) {
-          jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '')
-        }
-        
-        // Look for JSON object in the text (handle cases where AI adds explanatory text)
-        const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
-        if (jsonMatch) {
-          jsonText = jsonMatch[0]
-        }
-        
-        // Parse JSON response
-        const detection = JSON.parse(jsonText) as HPFSedimentDetection
-        
-        // Log the raw response for debugging
-        console.log(`Attempt ${i + 1} - Raw AI Response:`, text)
-        console.log(`Attempt ${i + 1} - Extracted JSON:`, jsonText)
-        console.log(`Attempt ${i + 1} - Parsed Detection:`, detection)
-        
-        // Validate the response
-        if (typeof detection.crystals === 'number' && detection.crystals >= 0) {
-          results.push(detection)
-        } else {
-          console.warn(`Attempt ${i + 1} - Invalid crystal count received:`, detection.crystals)
-        }
-        
-        // Add small delay between attempts
-        if (i < attempts - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000))
-        }
-        
-      } catch (attemptError) {
-        // Check if request was aborted
-        if (abortSignal?.aborted || isAbortError(attemptError)) {
-          const abortError = new Error('Request aborted')
-          abortError.name = 'AbortError'
-          throw abortError
-        }
-        
-        console.error(`Attempt ${i + 1} failed:`, attemptError)
-      }
+      console.error('HPF analysis failed:', attemptError)
+      throw attemptError
     }
     
-    if (results.length === 0) {
-      throw new Error('All analysis attempts failed')
-    }
-    
-    // Use the result with highest confidence, or first result if all have same confidence
-    const bestResult = results.reduce((best, current) => 
-      current.confidence > best.confidence ? current : best
-    )
-    
-    console.log('Final HPF Detection Result:', bestResult)
-    console.log('All attempts:', results)
-    
-    return bestResult
   } catch (error) {
     if (abortSignal?.aborted || isAbortError(error)) {
       const abortError = new Error('Request aborted')

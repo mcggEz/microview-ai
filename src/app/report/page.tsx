@@ -55,6 +55,7 @@ import {
   Search,
   Menu,
   RefreshCw,
+  Settings,
 } from "lucide-react";
 import ImageModal from "@/components/ImageModal";
 import Notification from "@/components/Notification";
@@ -263,10 +264,34 @@ export default function Report() {
     }
   };
 
+  // Debouncing refs to prevent rapid-fire API calls
+  const lpfDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const hpfDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const DEBOUNCE_DELAY = 2000; // 2 seconds debounce (increased from 1s)
+  
+  // Analysis state tracking to prevent duplicate calls
+  const analysisStateRef = useRef<{
+    lpf: { [key: string]: boolean };
+    hpf: { [key: string]: boolean };
+  }>({ lpf: {}, hpf: {} });
+
+
   // Function to analyze LPF image for sediments - ONLY for current image
   const analyzeLPFImage = useCallback(
     async (imageUrl: string, imageIndex: number) => {
       if (!imageUrl || !selectedTest) return;
+
+      // Create unique key for this analysis
+      const analysisKey = `${selectedTest.id}-LPF-${imageIndex}`;
+      
+      // Check if analysis is already in progress
+      if (analysisStateRef.current.lpf[analysisKey]) {
+        console.log(`⏳ LPF analysis already in progress for ${analysisKey} - skipping`);
+        return;
+      }
+
+      // Mark analysis as in progress
+      analysisStateRef.current.lpf[analysisKey] = true;
 
       console.log(
         `🔬 Starting LPF analysis for image ${
@@ -353,6 +378,9 @@ export default function Report() {
     } finally {
       setIsAnalyzingLPF((prev) => ({ ...prev, [imageIndex]: false }));
       setLpfAbortController(null); // Clear the abort controller
+      
+      // Clear analysis state
+      analysisStateRef.current.lpf[analysisKey] = false;
     }
     },
     [
@@ -371,6 +399,18 @@ export default function Report() {
   const analyzeHPFImage = useCallback(
     async (imageUrl: string, imageIndex: number) => {
       if (!imageUrl || !selectedTest) return;
+
+      // Create unique key for this analysis
+      const analysisKey = `${selectedTest.id}-HPF-${imageIndex}`;
+      
+      // Check if analysis is already in progress
+      if (analysisStateRef.current.hpf[analysisKey]) {
+        console.log(`⏳ HPF analysis already in progress for ${analysisKey} - skipping`);
+        return;
+      }
+
+      // Mark analysis as in progress
+      analysisStateRef.current.hpf[analysisKey] = true;
 
     console.log(
       `🔬 Starting HPF analysis for image ${
@@ -460,6 +500,9 @@ export default function Report() {
     } finally {
       setIsAnalyzingHPF((prev) => ({ ...prev, [imageIndex]: false }));
       setHpfAbortController(null); // Clear the abort controller
+      
+      // Clear analysis state
+      analysisStateRef.current.hpf[analysisKey] = false;
     }
   }, [
     hpfAbortController,
@@ -470,6 +513,18 @@ export default function Report() {
     setNotificationType,
     setShowNotification,
   ]);
+
+  // Cleanup function to clear debounce timeouts
+  useEffect(() => {
+    return () => {
+      if (lpfDebounceRef.current) {
+        clearTimeout(lpfDebounceRef.current);
+      }
+      if (hpfDebounceRef.current) {
+        clearTimeout(hpfDebounceRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (dateParam) {
@@ -1315,17 +1370,27 @@ export default function Report() {
       // Clear loading state for previous image
       setIsAnalyzingLPF((prev) => ({ ...prev, [currentLPFIndex]: false }));
 
-      // Check for existing analysis for this specific image
-      const checkExistingAnalysis = async () => {
+      // Clear any existing debounce timeout
+      if (lpfDebounceRef.current) {
+        clearTimeout(lpfDebounceRef.current);
+      }
+
+      // Debounce the analysis to prevent rapid-fire API calls
+      lpfDebounceRef.current = setTimeout(() => {
+        // Check for existing analysis for this specific image
+        const checkExistingAnalysis = async () => {
         try {
           console.log(
             `📊 Checking database for existing LPF analysis: test=${selectedTest.id}, index=${currentLPFIndex}`
           );
-          const existingAnalysis = await getImageAnalysisByIndex(
-            selectedTest.id,
-            "LPF",
-            currentLPFIndex
-          );
+          
+          // Add timeout to database query to prevent hanging
+          const existingAnalysis = await Promise.race([
+            getImageAnalysisByIndex(selectedTest.id, "LPF", currentLPFIndex),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Database query timeout')), 5000)
+            )
+          ]) as any;
 
           if (existingAnalysis) {
             console.log(
@@ -1368,15 +1433,27 @@ export default function Report() {
           }
         } catch (error) {
           console.error("Error checking existing LPF analysis:", error);
-          console.log(
-            "⚠️ Database check failed - calling Gemini API as fallback"
-          );
+          
+          // Check if it's a specific database error
+          if (error instanceof Error) {
+            if (error.message.includes('timeout')) {
+              console.log("⏰ Database query timed out - calling Gemini API as fallback");
+            } else if (error.message.includes('406') || error.message.includes('Not Acceptable')) {
+              console.log("🚫 Database query rejected (406) - calling Gemini API as fallback");
+            } else {
+              console.log("⚠️ Database check failed - calling Gemini API as fallback");
+            }
+          } else {
+            console.log("⚠️ Unknown database error - calling Gemini API as fallback");
+          }
+          
           // Fallback to API call if database check fails
           analyzeLPFImage(lowPowerImages[currentLPFIndex], currentLPFIndex);
         }
       };
 
-      checkExistingAnalysis();
+        checkExistingAnalysis();
+      }, DEBOUNCE_DELAY);
     } else {
       console.log(
         "🔄 LPF images cleared or no current image - clearing detection state"
@@ -1412,17 +1489,27 @@ export default function Report() {
       // Clear loading state for previous image
       setIsAnalyzingHPF((prev) => ({ ...prev, [currentHPFIndex]: false }));
 
-      // Check for existing analysis for this specific image
-      const checkExistingAnalysis = async () => {
+      // Clear any existing debounce timeout
+      if (hpfDebounceRef.current) {
+        clearTimeout(hpfDebounceRef.current);
+      }
+
+      // Debounce the analysis to prevent rapid-fire API calls
+      hpfDebounceRef.current = setTimeout(() => {
+        // Check for existing analysis for this specific image
+        const checkExistingAnalysis = async () => {
         try {
           console.log(
             `📊 Checking database for existing HPF analysis: test=${selectedTest.id}, index=${currentHPFIndex}`
           );
-          const existingAnalysis = await getImageAnalysisByIndex(
-            selectedTest.id,
-            "HPF",
-            currentHPFIndex
-          );
+          
+          // Add timeout to database query to prevent hanging
+          const existingAnalysis = await Promise.race([
+            getImageAnalysisByIndex(selectedTest.id, "HPF", currentHPFIndex),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Database query timeout')), 5000)
+            )
+          ]) as any;
 
           if (existingAnalysis) {
             console.log(
@@ -1477,15 +1564,27 @@ export default function Report() {
           }
         } catch (error) {
           console.error("Error checking existing HPF analysis:", error);
-          console.log(
-            "⚠️ Database check failed - calling Gemini API as fallback"
-          );
+          
+          // Check if it's a specific database error
+          if (error instanceof Error) {
+            if (error.message.includes('timeout')) {
+              console.log("⏰ Database query timed out - calling Gemini API as fallback");
+            } else if (error.message.includes('406') || error.message.includes('Not Acceptable')) {
+              console.log("🚫 Database query rejected (406) - calling Gemini API as fallback");
+            } else {
+              console.log("⚠️ Database check failed - calling Gemini API as fallback");
+            }
+          } else {
+            console.log("⚠️ Unknown database error - calling Gemini API as fallback");
+          }
+          
           // Fallback to API call if database check fails
           analyzeHPFImage(highPowerImages[currentHPFIndex], currentHPFIndex);
         }
       };
 
       checkExistingAnalysis();
+      }, DEBOUNCE_DELAY);
     } else {
       console.log(
         "🔄 HPF images cleared or no current image - clearing detection state"
@@ -1992,11 +2091,24 @@ export default function Report() {
 
             {/* Main Sidebar Content */}
             <div className="p-3 flex-1 overflow-y-auto">
-              {/* Date Selection */}
+              {/* Date Selection and Management */}
               <div className="mb-3">
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Select Date
-                </label>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <label className="text-xs font-medium text-gray-700">
+                    Select Date
+                  </label>
+                  <button
+                    onClick={() => router.push('/management')}
+                    className="ml-auto px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors flex items-center gap-1"
+                    title="Go to Management"
+                  >
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Management
+                  </button>
+                </div>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
