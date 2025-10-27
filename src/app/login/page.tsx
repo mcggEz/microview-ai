@@ -166,7 +166,7 @@ export default function LoginPage() {
               type="submit"
               disabled={isSubmitting}
               size="lg"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+              className="w-full bg-gray-900 hover:bg-black text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200"
             >
               {isSubmitting ? (
                 <div className="flex items-center gap-2">
