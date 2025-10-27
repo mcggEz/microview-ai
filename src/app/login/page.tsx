@@ -54,16 +54,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center px-4 py-8">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute inset-0 bg-dot-pattern"></div>
-      </div>
-      
+    <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center px-4 py-8">
       {/* Main content */}
-      <div className="relative w-full max-w-md">
-        {/* Header Card */}
-        <div className="rounded-2xl bg-white/80 backdrop-blur-sm border border-white/20 shadow-xl p-8 mb-6">
+      <div className="w-full max-w-md">
+        {/* Single Login Card */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-8">
           {/* Back button */}
           <button
             onClick={() => router.back()}
@@ -107,7 +102,7 @@ export default function LoginPage() {
 
           {/* Error message */}
           {error && (
-            <div className="mb-6 rounded-xl border border-red-200 bg-red-50/80 backdrop-blur-sm p-4">
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                 <div className="text-sm font-medium text-red-800">
@@ -131,7 +126,7 @@ export default function LoginPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 placeholder-gray-500 bg-white/50 backdrop-blur-sm transition-all"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 placeholder-gray-500 bg-white transition-all"
                     placeholder="you@example.com"
                     required
                   />
@@ -148,7 +143,7 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 placeholder-gray-500 bg-white/50 backdrop-blur-sm transition-all"
+                    className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 placeholder-gray-500 bg-white transition-all"
                     placeholder="Enter your password"
                     required
                   />
@@ -171,7 +166,7 @@ export default function LoginPage() {
               type="submit"
               disabled={isSubmitting}
               size="lg"
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200"
             >
               {isSubmitting ? (
                 <div className="flex items-center gap-2">
@@ -189,11 +184,11 @@ export default function LoginPage() {
 
           {/* Divider */}
           <div className="flex items-center my-6">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+            <div className="flex-1 h-px bg-gray-200"></div>
             <span className="px-4 text-xs text-gray-500 uppercase tracking-wider font-mono">
               Or continue with
             </span>
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+            <div className="flex-1 h-px bg-gray-200"></div>
           </div>
 
           {/* Google Login */}
@@ -201,7 +196,7 @@ export default function LoginPage() {
             onClick={handleGoogleLogin}
             variant="outline"
             size="lg"
-            className="w-full border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl font-medium transition-all duration-200 hover:shadow-md"
+            className="w-full border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl font-medium transition-all duration-200 hover:shadow-md mb-4"
           >
             <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -211,35 +206,35 @@ export default function LoginPage() {
             </svg>
             Continue with Google
           </Button>
-        </div>
 
-        {/* Demo Access Card */}
-        <div className="rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200/50 p-6 shadow-lg">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <TestTube className="w-5 h-5 text-green-600" />
-              <h3 className="text-lg font-semibold text-green-900">Demo Access</h3>
+          {/* Demo Access Section */}
+          <div className="border-t border-gray-100 pt-6">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <TestTube className="w-5 h-5 text-green-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Demo Access</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Explore the platform without credentials
+              </p>
+              <Button
+                onClick={continueAsDemo}
+                variant="outline"
+                size="lg"
+                className="w-full border-green-300 text-green-700 hover:bg-green-50 rounded-xl font-medium transition-all duration-200"
+              >
+                <TestTube className="w-4 h-4 mr-2" />
+                Launch Demo
+              </Button>
             </div>
-            <p className="text-sm text-green-700 mb-4">
-              Explore the platform without credentials
-            </p>
-            <Button
-              onClick={continueAsDemo}
-              variant="outline"
-              size="lg"
-              className="w-full border-green-300 text-green-700 hover:bg-green-100 rounded-xl font-medium transition-all duration-200"
-            >
-              <TestTube className="w-4 h-4 mr-2" />
-              Launch Demo
-            </Button>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="text-center mt-8">
-          <p className="text-xs text-gray-500">
-            Secure access • HIPAA compliant • Enterprise ready
-          </p>
+          {/* Footer */}
+          <div className="text-center mt-6 pt-4 border-t border-gray-100">
+            <p className="text-xs text-gray-500">
+              Secure access • HIPAA compliant • Enterprise ready
+            </p>
+          </div>
         </div>
       </div>
     </div>
