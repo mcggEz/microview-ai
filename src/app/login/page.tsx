@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { TestTube, ArrowLeft, Eye, EyeOff, Mail, Lock, Shield, Microscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -56,12 +57,7 @@ export default function LoginPage() {
         <div className="hidden md:block relative">
           <div className="absolute inset-0 bg-black via-indigo-600/50 to-cyan-500/50" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,0.15),rgba(0,0,0,0)_40%),radial-gradient(ellipse_at_bottom_right,rgba(255,255,255,0.12),rgba(0,0,0,0)_40%)]" />
-          <div className="relative h-full w-full p-10 flex flex-col justify-end">
-            <div className="text-white/90">
-              <p className="text-2xl font-light">Be a Part of</p>
-              <p className="text-4xl font-extrabold tracking-tight">Something Beautiful</p>
-            </div>
-          </div>
+          <div className="relative h-full w-full p-10" />
         </div>
 
         {/* Form panel */}
@@ -173,6 +169,13 @@ export default function LoginPage() {
                 </div>
               )}
             </Button>
+
+                {/* Sign up button */}
+                <div className="mt-3">
+                  <Button asChild variant="outline" size="lg" className="w-full rounded-2xl">
+                    <Link href="/signup">Create an account</Link>
+                  </Button>
+                </div>
               </form>
 
               {/* Demo Access Section */}
