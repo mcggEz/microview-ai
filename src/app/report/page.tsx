@@ -1862,7 +1862,7 @@ export default function Report() {
               >
                 <Microscope className="h-3 w-3" />
                 <span className="tracking-tight">Get Samples</span>
-                <div className="h-1.5 w-1.5 bg-red-500 rounded-full border border-white shadow-sm"></div>
+                <div className="h-1.5 w-1.5 bg-red-500 rounded-full shadow-sm"></div>
               </Button>
 
               <div className="flex items-center">
@@ -2311,7 +2311,7 @@ export default function Report() {
                               ? highPowerImages.length >= 10
                               : lowPowerImages.length >= 10)
                           }
-                          className="min-w-[170px] px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold flex items-center justify-center gap-2 disabled:bg-gray-600 disabled:cursor-not-allowed shadow-lg border-2 border-green-500"
+                          className="min-w-[170px] px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold flex items-center justify-center gap-2 disabled:bg-gray-600 disabled:cursor-not-allowed disabled:border-transparent shadow-lg border-2 border-green-500"
                         >
                           <Plus className="h-4 w-4 flex-shrink-0" />
                           <span className="whitespace-nowrap">
@@ -2575,7 +2575,11 @@ export default function Report() {
                                 : "bg-gray-100 text-gray-700 border border-gray-200"
                             }`}
                           >
-                            {selectedTest?.status
+                            {selectedTest?.status === "reviewed"
+                              ? "VERIFIED"
+                              : selectedTest?.status === "completed"
+                              ? "UNVERIFIED"
+                              : selectedTest?.status
                               ?.replace("_", " ")
                               .toUpperCase() || "N/A"}
                           </span>
@@ -3849,94 +3853,96 @@ export default function Report() {
 
 
                 {/* Text-only Urinalysis Summary (based on provided report) */}
-                <div className="bg-white rounded-lg p-3 shadow-sm mt-3">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="bg-white rounded-xl p-3 sm:p-4 shadow-md border border-gray-100 mt-3">
+                  <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-gray-900">
                       Urinalysis Summary
                     </h3>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Microscopic */}
-                    <div className="space-y-2">
-                      <div className="text-[11px] uppercase tracking-wide text-gray-500">
+                    <div className="space-y-1">
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-700 mb-1">
                         Microscopic
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-800">
-                          Red Blood Cells (RBC)
-                        </span>
-                        <select
-                          value={urinalysisText.rbc}
-                          onChange={(e) =>
-                            updateUrinalysisText("rbc", e.target.value)
-                          }
-                          className="w-40 text-right text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-gray-900"
-                        >
-                          {getDropdownOptions("rbcs").map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-800">Pus Cells (WBC)</span>
-                        <select
-                          value={urinalysisText.pusCells}
-                          onChange={(e) =>
-                            updateUrinalysisText("pusCells", e.target.value)
-                          }
-                          className="w-40 text-right text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-gray-900"
-                        >
-                          {getDropdownOptions("rbcs").map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-800">Epithelial Cells</span>
-                        <select
-                          value={urinalysisText.epithelialCells}
-                          onChange={(e) =>
-                            updateUrinalysisText(
-                              "epithelialCells",
-                              e.target.value
-                            )
-                          }
-                          className="w-40 text-right text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-gray-900"
-                        >
-                          {getDropdownOptions("epithelialCells").map(
-                            (option) => (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-3 py-0.5">
+                          <span className="text-xs font-medium text-gray-800">
+                            Red Blood Cells (RBC)
+                          </span>
+                          <select
+                            value={urinalysisText.rbc}
+                            onChange={(e) =>
+                              updateUrinalysisText("rbc", e.target.value)
+                            }
+                            className="w-28 text-xs text-gray-900 bg-white border border-gray-300 rounded-md px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer hover:border-gray-400"
+                          >
+                            {getDropdownOptions("rbcs").map((option) => (
                               <option key={option} value={option}>
                                 {option}
                               </option>
-                            )
-                          )}
-                        </select>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-800">Bacteria</span>
-                        <select
-                          value={urinalysisText.bacteria}
-                          onChange={(e) =>
-                            updateUrinalysisText("bacteria", e.target.value)
-                          }
-                          className="w-40 text-right text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-gray-900"
-                        >
-                          {getDropdownOptions("bacteria").map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 py-0.5">
+                          <span className="text-xs font-medium text-gray-800">Pus Cells (WBC)</span>
+                          <select
+                            value={urinalysisText.pusCells}
+                            onChange={(e) =>
+                              updateUrinalysisText("pusCells", e.target.value)
+                            }
+                            className="w-28 text-xs text-gray-900 bg-white border border-gray-300 rounded-md px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer hover:border-gray-400"
+                          >
+                            {getDropdownOptions("rbcs").map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 py-0.5">
+                          <span className="text-xs font-medium text-gray-800">Epithelial Cells</span>
+                          <select
+                            value={urinalysisText.epithelialCells}
+                            onChange={(e) =>
+                              updateUrinalysisText(
+                                "epithelialCells",
+                                e.target.value
+                              )
+                            }
+                            className="w-28 text-xs text-gray-900 bg-white border border-gray-300 rounded-md px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer hover:border-gray-400"
+                          >
+                            {getDropdownOptions("epithelialCells").map(
+                              (option) => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              )
+                            )}
+                          </select>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 py-0.5">
+                          <span className="text-xs font-medium text-gray-800">Bacteria</span>
+                          <select
+                            value={urinalysisText.bacteria}
+                            onChange={(e) =>
+                              updateUrinalysisText("bacteria", e.target.value)
+                            }
+                            className="w-28 text-xs text-gray-900 bg-white border border-gray-300 rounded-md px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer hover:border-gray-400"
+                          >
+                            {getDropdownOptions("bacteria").map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                     </div>
 
                     {/* Remarks */}
-                    <div className="space-y-2 md:col-span-2">
-                      <div className="text-[11px] uppercase tracking-wide text-gray-500">
+                    <div className="space-y-1 md:col-span-2">
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-700 mb-1">
                         Remarks
                       </div>
                       <textarea
@@ -3945,7 +3951,7 @@ export default function Report() {
                           updateUrinalysisText("remarks", e.target.value)
                         }
                         placeholder="Enter remarks here"
-                        className="w-full resize-y min-h-[60px] text-xs bg-transparent border border-gray-200 rounded-md p-2 focus:outline-none focus:ring-1 focus:ring-gray-500"
+                        className="w-full resize-y min-h-[60px] text-xs text-gray-900 bg-gray-50 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:text-gray-400"
                       />
                     </div>
                   </div>

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TestTube, ArrowLeft, Eye, EyeOff, Mail, Lock, Shield, Microscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -54,7 +53,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#f5f5f5] text-gray-900 flex items-center justify-center p-4">
+    <div className="h-screen w-screen bg-[#f5f5f5] text-gray-900 flex items-center justify-center p-4 relative">
+      {/* Back button - positioned outside card */}
+      <button
+        onClick={() => router.back()}
+        className="absolute top-4 left-4 sm:top-6 sm:left-6 md:top-8 md:left-8 flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 text-sm font-medium text-gray-700 hover:text-gray-900 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:bg-white transition-all duration-200 group z-10"
+      >
+        <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-x-1 transition-transform" />
+        <span className="hidden sm:inline">Back</span>
+      </button>
+
       {/* Auth card */}
       <div className="w-full max-w-md rounded-2xl overflow-hidden border border-gray-200 shadow-xl bg-white">
         {/* Form panel */}
@@ -62,15 +70,6 @@ export default function LoginPage() {
           <div className="h-full w-full p-6 sm:p-8 md:p-10 overflow-y-auto">
             {/* Single Login Card */}
             <div className="max-w-md mx-auto">
-          {/* Back button */}
-              <button
-            onClick={() => router.back()}
-                className="flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6 transition-colors group"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" />
-            Back
-          </button>
-          
           {/* Logo and title */}
             <div className="text-center mb-8">
               <div className="flex items-center justify-center gap-3 mb-4">
