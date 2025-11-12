@@ -56,5 +56,32 @@ flowchart LR
 - **Traditional Authentication** - Email/password authentication using `med_tech` table with bcrypt password hashing
 
 
+## 🔌 Hardware Setup Overview
+
+```mermaid
+flowchart TB
+  subgraph Microscope Assembly
+    MICRO[Compound Microscope]
+    CAM[Digital Camera Sensor]
+    MICRO -- Optical coupling --> CAM
+  end
+
+  CAM -->|HDMI cable| CAP[HDMI Capture Card]
+  CAP -->|USB 3.0| PI[Raspberry Pi]
+
+  PI -->|HDMI cable| MON[External Monitor]
+  PI -->|USB| KEYB[USB Keyboard]
+  PI -->|USB cable or 2.4 GHz dongle| MOUSE[Mouse]
+  PI -->|Wi-Fi / Ethernet| NET[(Local Network)]
+  PI -->|5V PSU| POWER[Dedicated Power Supply]
+```
+
+- **Raspberry Pi workstation**: Runs the web application and handles image ingestion from the HDMI capture card; powered by a dedicated 5 V supply.
+- **Microscope + camera sensor**: The camera sensor is mounted on the microscope eyepiece; its HDMI feed is routed through the capture card before reaching the Raspberry Pi.
+- **Display**: External monitor connected via standard HDMI cable for the lab technician interface.
+- **Input devices**: USB keyboard plus a wired mouse (or a mouse connected through a 2.4 GHz dongle) for direct control; no servo motors or automated stages are used.
+- **Connectivity**: Raspberry Pi links to the broader network over Wi-Fi or Ethernet for Supabase access and Gemini API requests.
+
+
 *This document serves as the comprehensive academic record of the undergraduate thesis project in Bachelor of Science in Computer Engineering at Pamantasang ng Lungsod ng Maynila, focusing on the development and validation of a cost-effective, Raspberry Pi–based augmentative system enhanced with Vision-Language Models for urine microscopy analysis.*
 #
