@@ -20,10 +20,9 @@ This research contributes to the advancement of accessible medical diagnostics a
 flowchart LR
   U[User or Lab Technician] -->|uses| UI[Web App - Next.js and React]
 
-  UI -->|auth| AUTH[Supabase Auth]
+  UI -->|auth| AUTH[Traditional Auth - med_tech table]
   UI -->|CRUD| DB[(Supabase Database)]
   UI -->|files| ST[(Supabase Storage)]
-  UI -->|visual retrieval| RAG[VisRAG]
   UI -->|analysis| VLM[Google Gemini VLM]
 
   CAM[Raspberry Pi Camera] --> CAP[Image Capture]
@@ -32,7 +31,6 @@ flowchart LR
   UP --> ST
   ST --> UI
 
-  RAG --> VLM
   VLM --> ANA[Reasoning and Findings]
   ANA --> EXP[Explanations and Recommendations]
 
@@ -42,6 +40,7 @@ flowchart LR
 
   REP --> DB
   AUD --> DB
+  AUTH --> DB
 ```
 
 ### Frontend Stack
@@ -52,9 +51,9 @@ flowchart LR
 
 
 ### Backend & Services
-- **Supabase** - Backend-as-a-Service for database and authentication
-- **Google Gemini AI** - Large Language Model for image analysis
-- **VisRAG** - Visual retrieval augmentation for contextual image analysis
+- **Supabase** - Backend-as-a-Service for database, storage, and traditional table-based authentication
+- **Google Gemini AI** - Large Language Model for image analysis and urinalysis interpretation
+- **Traditional Authentication** - Email/password authentication using `med_tech` table with bcrypt password hashing
 
 
 *This document serves as the comprehensive academic record of the undergraduate thesis project in Bachelor of Science in Computer Engineering at Pamantasang ng Lungsod ng Maynila, focusing on the development and validation of a cost-effective, Raspberry Pi–based augmentative system enhanced with Vision-Language Models for urine microscopy analysis.*
