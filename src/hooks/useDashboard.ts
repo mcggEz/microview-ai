@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getPatients, updatePatient, getTestsByPatient, getTestsByDate, createPatient, createTest } from '@/lib/api'
+import { getPatients, updatePatient, getTestsByPatient, getTestsByDate, createPatient, createTest } from '@/lib/api-client'
 import { Patient, UrineTest, ReportStatus } from '@/types/database'
 import type { Gender } from '@/types/database'
 
@@ -222,6 +222,18 @@ export const useDashboard = () => {
         return testCode
       }
       
+      // Get user's name from localStorage for technician field
+      let technicianName = 'Lab Tech' // Default fallback
+      try {
+        const userData = localStorage.getItem('user')
+        if (userData) {
+          const user = JSON.parse(userData)
+          technicianName = user.full_name || user.email || 'Lab Tech'
+        }
+      } catch (error) {
+        console.warn('Failed to get user name from localStorage, using default:', error)
+      }
+
       const testData = {
         patient_id: patientToUse.id,
         test_code: await generateTestCode(date, patientToUse.name, now),
@@ -229,7 +241,7 @@ export const useDashboard = () => {
         status: 'pending' as ReportStatus,
         // Add minimal required fields
         collection_time: now.toTimeString().slice(0, 8), // Use actual current time
-        technician: 'Lab Tech'
+        technician: technicianName
         // Note: AI counts are no longer stored in urine_tests table
         // All AI analysis results are stored in image_analysis table
       }

@@ -52,7 +52,7 @@ export function Navbar({ onDemoClick }: NavbarProps) {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
               </span>
-              Live Demo
+              Login
             </Button>
             <Button
               variant="ghost"
@@ -100,7 +100,7 @@ export function Navbar({ onDemoClick }: NavbarProps) {
               }}
               className="h-11 w-full bg-zinc-900 text-white hover:bg-zinc-800"
             >
-              Live Demo
+             Let's test it out!
             </Button>
           </div>
         </div>

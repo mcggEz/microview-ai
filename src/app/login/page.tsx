@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { TestTube, ArrowLeft, Eye, EyeOff, Mail, Lock, Shield, Microscope } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Mail, Lock, Shield, Microscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -48,9 +48,6 @@ export default function LoginPage() {
     }
   };
 
-  const continueAsDemo = () => {
-    router.push("/report");
-  };
 
   return (
     <div className="h-screen w-screen bg-[#f5f5f5] text-gray-900 flex items-center justify-center p-4 relative">
@@ -173,21 +170,6 @@ export default function LoginPage() {
                   </Button>
                 </div>
               </form>
-
-              {/* Demo Section */}
-              <div className="border-t border-gray-100 pt-6 mt-6">
-                <div className="text-center">
-                  <div className="text-xs uppercase tracking-wider text-gray-500 mb-4">Or</div>
-                  <Button
-                    onClick={continueAsDemo}
-                    size="lg"
-                    className="w-full rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 bg-gray-800 hover:bg-gray-900 text-white"
-                  >
-                    <TestTube className="w-4 h-4 mr-2" />
-                    Launch Demo
-                  </Button>
-                </div>
-              </div>
             </div>
           </div>
         </div>

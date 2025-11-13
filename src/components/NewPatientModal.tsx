@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, User, Calendar, Hash, Users, ChevronDown, Trash2 } from 'lucide-react'
-import { getPatients, deletePatient, checkPatientHasTests } from '@/lib/api'
+import { getPatients, deletePatient, checkPatientHasTests } from '@/lib/api-client'
 import type { Patient } from '@/types/database'
 
 interface NewPatientModalProps {

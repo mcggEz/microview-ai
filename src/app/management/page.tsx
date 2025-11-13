@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Calendar, ChevronLeft, ChevronRight, ArrowLeft, BarChart3, TrendingUp, Activity, Home } from 'lucide-react'
-import { getTestsInRange } from '@/lib/api'
+import { getTestsInRange } from '@/lib/api-client'
 import { useRouter } from 'next/navigation'
 import type { UrineTest } from '@/types/database'
 import { Button } from '@/components/ui/button'
@@ -347,9 +347,9 @@ export default function Management() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/report')}
               className="flex items-center gap-2 hover:bg-gray-50"
-              title="Back to Dashboard"
+              title="Back to Report"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>Back</span>

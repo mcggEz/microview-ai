@@ -32,8 +32,16 @@ export async function POST(req: NextRequest) {
     }
 
     const res = NextResponse.json({ success: true, user: { id: user.id, email: user.email, role: user.role, full_name: user.full_name } })
-    // Minimal session cookie; replace with JWT/secure token later
+    // Store session and user ID cookies
     res.cookies.set('app_session', 'valid', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 60 * 60 * 24, // 1 day
+    })
+    // Store user ID for authentication checks
+    res.cookies.set('user_id', user.id, {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',

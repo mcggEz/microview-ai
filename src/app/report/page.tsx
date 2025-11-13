@@ -16,6 +16,8 @@ import {
   updatePatient,
   updateTest,
   deleteTest,
+} from "@/lib/api-client";
+import {
   deleteImageFromTest,
   deleteImageFromStorage,
   addImageToTest,
@@ -44,6 +46,7 @@ import {
   BookOpenCheck,
   FileSearch,
   ClipboardList,
+  LogOut,
 } from "lucide-react";
 import ImageModal from "@/components/ImageModal";
 import Notification from "@/components/Notification";
@@ -79,17 +82,48 @@ export default function Report() {
   const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState<{ full_name?: string; email?: string } | null>(null);
 
-  // Load user data from localStorage on mount
+  // Check authentication and load user data on mount
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
+    const checkAuth = async () => {
+      const userData = localStorage.getItem('user');
+      
+      // If no user data in localStorage, redirect to login
+      if (!userData) {
+        router.push('/login?redirect=/report');
+        return;
+      }
+
       try {
-        setUser(JSON.parse(userData));
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        
+        // Verify session is still valid by making a simple API call
+        // If the API call fails with 401, redirect to login
+        try {
+          const response = await fetch('/api/patients', {
+            credentials: 'include'
+          });
+          
+          if (response.status === 401) {
+            // Session expired or invalid, redirect to login
+            localStorage.removeItem('user');
+            router.push('/login?redirect=/report');
+            return;
+          }
+        } catch (error) {
+          // Network error or other issue, but we have user data so continue
+          console.warn('Could not verify session, but user data exists:', error);
+        }
       } catch (e) {
         console.error('Failed to parse user data:', e);
+        localStorage.removeItem('user');
+        router.push('/login?redirect=/report');
+        return;
       }
-    }
-  }, []);
+    };
+
+    checkAuth();
+  }, [router]);
 
   const [showStrasingerModal, setShowStrasingerModal] = useState(false);
   const strasingerButtonRef = useRef<HTMLButtonElement>(null);
@@ -300,6 +334,7 @@ export default function Report() {
         method: "POST",
         body: form,
         signal: abortController.signal,
+        credentials: 'include',
       });
       if (!res.ok) throw new Error("LPF API failed");
       const { detection } = (await res.json()) as {
@@ -419,6 +454,7 @@ export default function Report() {
         method: "POST",
         body: form,
         signal: abortController.signal,
+        credentials: 'include',
       });
       if (!res.ok) throw new Error("HPF API failed");
       const { detection } = (await res.json()) as {
@@ -1754,9 +1790,9 @@ export default function Report() {
 
   return (
     <Suspense fallback={null}>
-      <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+      <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-3 md:px-4 py-2 md:py-3 relative z-[60]">
+        <div className="flex-shrink-0 bg-white border-b border-gray-200 px-3 md:px-4 py-2 md:py-3 relative z-[60]">
           <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
             {/* Left side - Back button and test info */}
             <div className="flex items-center gap-2 md:gap-4 order-1">
@@ -1926,7 +1962,7 @@ export default function Report() {
           </div>
         </div>
 
-        <div className="flex h-[calc(100vh-72px)] overflow-hidden">
+        <div className="flex flex-1 overflow-hidden min-h-0">
           {/* Mobile Overlay */}
           {!sidebarCollapsed && (
             <div
@@ -1939,7 +1975,7 @@ export default function Report() {
           <div
             className={`${
               sidebarCollapsed ? "hidden" : "w-80"
-            } bg-white border-r border-gray-200 h-full flex flex-col transition-all duration-300 ease-in-out fixed top-0 left-0 z-[55] lg:relative lg:top-auto lg:left-auto`}
+            } bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out fixed top-0 left-0 z-[55] lg:relative lg:top-auto lg:left-auto min-h-0`}
           >
             {/* Mobile Close Button */}
             <div className="lg:hidden flex justify-end p-3 border-b border-gray-200">
@@ -2027,7 +2063,7 @@ export default function Report() {
             </div>
 
             {/* Scrollable Sidebar Content */}
-            <div className="flex-1 overflow-y-auto p-3">
+            <div className="flex-1 overflow-y-auto p-3 min-h-0">
               {/* Results Count */}
               <div className="mb-3 text-xs text-gray-600">
                 {selectedDate && (
@@ -2128,10 +2164,11 @@ export default function Report() {
             </div>
 
             {/* Bottom Sidebar - User Info and Logout */}
-            <div className="p-3 border-t border-gray-200 mt-auto bg-gray-50">
+            <div className="p-4 border-t border-gray-200 mt-auto bg-gradient-to-br from-gray-50 to-gray-100">
               <div className="flex items-center justify-between gap-3">
                 {/* User Info */}
                 <div className="flex-1 min-w-0">
+                  <div className="text-xs text-gray-500 mb-0.5">Signed in as</div>
                   <div className="text-sm font-semibold text-gray-900 truncate">
                     {user?.full_name || user?.email || 'User'}
                   </div>
@@ -2141,33 +2178,30 @@ export default function Report() {
                   onClick={async () => {
                     try {
                       // Call logout API
-                      await fetch('/api/auth/logout', { method: 'POST' });
+                      await fetch('/api/auth/logout', { 
+                        method: 'POST',
+                        credentials: 'include'
+                      });
                       // Clear localStorage
                       localStorage.removeItem('user');
+                      localStorage.removeItem('demo_account');
+                      localStorage.removeItem('demo_expires_at');
                       // Redirect to home
                       router.push("/");
                     } catch {
                       // Fallback: clear localStorage and redirect
                       localStorage.removeItem('user');
+                      localStorage.removeItem('demo_account');
+                      localStorage.removeItem('demo_expires_at');
                       window.location.href = "/";
                     }
                   }}
-                  variant="secondary"
-                  className="flex-shrink-0 h-8 px-3 rounded-md bg-gray-200 text-gray-900 hover:bg-gray-300 transition-colors text-xs font-semibold shadow-sm border border-gray-200"
+                  variant="outline"
+                  className="flex-shrink-0 h-9 px-3.5 rounded-lg bg-white text-gray-700 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all duration-200 text-xs font-medium shadow-sm border border-gray-300 group"
+                  title="Logout"
                 >
-                  <svg
-                    className="h-3.5 w-3.5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                    <polyline points="16,17 21,12 16,7" />
-                    <line x1="21" y1="12" x2="9" y2="12" />
-                  </svg>
+                  <LogOut className="h-3.5 w-3.5 mr-1.5 group-hover:translate-x-0.5 transition-transform" />
+                  <span className="hidden sm:inline">Logout</span>
                 </Button>
               </div>
             </div>
@@ -2175,7 +2209,7 @@ export default function Report() {
 
           {/* Main Content */}
           <div
-            className="flex-1 overflow-y-auto relative h-full"
+            className="flex-1 overflow-y-auto relative min-h-0"
             key={selectedPatient?.id || "no-patient"}
           >
             {loading ? (
@@ -2202,10 +2236,6 @@ export default function Report() {
                   <p className="text-sm text-gray-600 mb-4 leading-relaxed">
                     There are no tests available for the selected date. Create a new test to get started.
                   </p>
-                  <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-                    <Plus className="w-4 h-4" />
-                    <span>Click "Add Test" to create a new test</span>
-                  </div>
                 </div>
               </div>
             ) : (
@@ -3853,7 +3883,7 @@ export default function Report() {
 
 
                 {/* Text-only Urinalysis Summary (based on provided report) */}
-                <div className="bg-white rounded-xl p-3 sm:p-4 shadow-md border border-gray-100 mt-3">
+                <div className="bg-white rounded-t-xl p-3 sm:p-4 shadow-md border border-gray-100 mt-3">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-gray-900">
                       Urinalysis Summary

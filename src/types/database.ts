@@ -10,6 +10,7 @@ export interface Patient {
   name: string
   age: number
   gender: Gender
+  med_tech_id?: string // User who owns this patient
   created_at: string
   updated_at: string
 }
@@ -18,6 +19,7 @@ export interface UrineTest {
   id: string
   test_code: string
   patient_id: string
+  med_tech_id?: string // User who owns this test
 
   collection_time?: string
   analysis_date: string

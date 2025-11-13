@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 // Public paths that never require auth
-const PUBLIC_PATHS: readonly string[] = ['/', '/login', '/favicon.ico']
+const PUBLIC_PATHS: readonly string[] = ['/', '/login', '/signup', '/favicon.ico']
 
 // Static asset prefixes
 const PUBLIC_PREFIXES: readonly string[] = ['/assets', '/_next', '/static', '/images', '/public']
@@ -14,7 +14,23 @@ function isPublicPath(pathname: string): boolean {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Always skip API routes from auth middleware
+  // Public API routes (auth endpoints)
+  const publicApiRoutes = ['/api/auth/login', '/api/auth/signup']
+  const isPublicApiRoute = publicApiRoutes.some(route => pathname.startsWith(route))
+
+  // Protect API routes (except public auth routes)
+  if (pathname.startsWith('/api/') && !isPublicApiRoute) {
+    const session = req.cookies.get('app_session')?.value
+    const userId = req.cookies.get('user_id')?.value
+    
+    if (!session || !userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    return NextResponse.next()
+  }
+
+  // Skip middleware for other API routes (they handle their own auth)
   if (pathname.startsWith('/api/')) {
     return NextResponse.next()
   }
@@ -23,8 +39,11 @@ export function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
+  // Check authentication for all other routes
   const session = req.cookies.get('app_session')?.value
-  if (!session) {
+  const userId = req.cookies.get('user_id')?.value
+  
+  if (!session || !userId) {
     const loginUrl = new URL('/login', req.url)
     if (pathname && pathname !== '/login') {
       loginUrl.searchParams.set('redirect', pathname)

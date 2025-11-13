@@ -74,13 +74,56 @@ export default function Home() {
                 </p>
               </div>
               <div className="mt-8 flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Button onClick={handleDemoClick} size="lg">
+                <button
+                  onClick={handleDemoClick}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    height: '2.5rem',
+                    paddingLeft: '2rem',
+                    paddingRight: '2rem',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    backgroundColor: 'rgb(17, 24, 39)',
+                    color: 'white',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(31, 41, 55)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(17, 24, 39)'}
+                >
                   <TestTube className="h-4 w-4" />
-                  Launch Live Demo
-                </Button>
-                <Button asChild variant="outline" size="lg">
-                  <Link href="#mission">Explore the Mission</Link>
-                </Button>
+                  Let's test it out!
+                </button>
+                <Link href="#mission">
+                  <button
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      height: '2.5rem',
+                      paddingLeft: '2rem',
+                      paddingRight: '2rem',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      backgroundColor: 'white',
+                      color: 'rgb(17, 24, 39)',
+                      border: '1px solid rgb(229, 231, 235)',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(249, 250, 251)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                  >
+                    Explore the Mission
+                  </button>
+                </Link>
               </div>
             </div>
 
@@ -202,18 +245,56 @@ export default function Home() {
               sync, and preserves documentation that meets clinical scrutiny.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-2 sm:flex-row">
-              <Button onClick={handleDemoClick} size="lg">
-                <TestTube className="h-4 w-4" />
-                Start the Demo
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="bg-white hover:bg-gray-100"
+              <button
+                onClick={handleDemoClick}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  height: '2.5rem',
+                  paddingLeft: '2rem',
+                  paddingRight: '2rem',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  backgroundColor: 'rgb(17, 24, 39)',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(31, 41, 55)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(17, 24, 39)'}
               >
-                <Link href="#overview">Back to Overview</Link>
-              </Button>
+                <TestTube className="h-4 w-4" />
+                Let's test it out!
+              </button>
+              <Link href="#overview">
+                <button
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    height: '2.5rem',
+                    paddingLeft: '2rem',
+                    paddingRight: '2rem',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    backgroundColor: 'white',
+                    color: 'rgb(17, 24, 39)',
+                    border: '1px solid rgb(229, 231, 235)',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(249, 250, 251)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                >
+                  Back to Overview
+                </button>
+              </Link>
             </div>
           </div>
         </section>

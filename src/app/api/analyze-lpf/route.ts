@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { detectLPFSediments } from '@/lib/gemini'
+import { requireAuth } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
+  // Require authentication
+  try {
+    await requireAuth(request)
+  } catch (error) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   try {
     const formData = await request.formData()
     const imageFile = formData.get('image') as File
