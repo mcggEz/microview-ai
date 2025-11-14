@@ -97,7 +97,7 @@ export function loadOpenCV(): Promise<boolean> {
  * Checks if OpenCV is ready to use
  */
 export function isOpenCVReady(): boolean {
-  return typeof window !== 'undefined' && window.cv && window.cv.Mat
+  return typeof window !== 'undefined' && !!(window.cv && window.cv.Mat)
 }
 
 /**

@@ -51,6 +51,7 @@ import {
 import ImageModal from "@/components/ImageModal";
 import Notification from "@/components/Notification";
 import StrasingerReferenceTable from "@/components/StrasingerReferenceTable";
+import YOLODetectionOverlay from "@/components/YOLODetectionOverlay";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
@@ -85,7 +86,7 @@ export default function Report() {
   // Check authentication and load user data on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const userData = localStorage.getItem('user');
+    const userData = localStorage.getItem('user');
       
       // If no user data in localStorage, redirect to login
       if (!userData) {
@@ -128,6 +129,9 @@ export default function Report() {
   const [showStrasingerModal, setShowStrasingerModal] = useState(false);
   const strasingerButtonRef = useRef<HTMLButtonElement>(null);
   const strasingerDropdownRef = useRef<HTMLDivElement>(null);
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const settingsDropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -152,6 +156,29 @@ export default function Report() {
     };
   }, [showStrasingerModal]);
 
+  // Close settings dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showSettingsDropdown &&
+        settingsButtonRef.current &&
+        settingsDropdownRef.current &&
+        !settingsButtonRef.current.contains(event.target as Node) &&
+        !settingsDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowSettingsDropdown(false);
+      }
+    };
+
+    if (showSettingsDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSettingsDropdown]);
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showHeader] = useState(true);
   const [liveStreamActive, setLiveStreamActive] = useState(false);
@@ -164,6 +191,11 @@ export default function Report() {
   const [currentLPFIndex, setCurrentLPFIndex] = useState(0);
   const [currentHPFIndex, setCurrentHPFIndex] = useState(0);
   const [dateParam, setDateParam] = useState<string | null>(null);
+  const [confThreshold, setConfThreshold] = useState(0.25);
+  const [detectionInterval, setDetectionInterval] = useState(500); // ms between detections
+  const [showOverlay, setShowOverlay] = useState(true);
+  const [showBoundingBox, setShowBoundingBox] = useState(true);
+  const [showCrystalName, setShowCrystalName] = useState(true);
 
   const {
     patients,
@@ -2254,8 +2286,15 @@ export default function Report() {
                         muted
                         className="w-full h-full object-cover"
                       />
-
-                      
+                      <YOLODetectionOverlay
+                        videoRef={videoRef}
+                        isActive={liveStreamActive && showOverlay}
+                        confThreshold={confThreshold}
+                        detectionInterval={detectionInterval}
+                        showOverlay={showOverlay}
+                        showBoundingBox={showBoundingBox}
+                        showCrystalName={showCrystalName}
+                      />
                     </>
                   ) : (
                     /* Camera placeholder when not available */
@@ -2312,18 +2351,18 @@ export default function Report() {
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20 z-10">
                     {/* Bottom Controls */}
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
-                      <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md rounded-md px-6 py-3 border border-white/20 shadow-lg">
+                      <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md rounded-md px-3 py-2 border border-white/20 shadow-lg">
                         <button
                           onClick={() =>
                             setPowerMode((v) => (v === "high" ? "low" : "high"))
                           }
-                          className={`min-w-[170px] px-3 py-2 rounded-md transition-colors flex items-center justify-center gap-2 text-sm font-medium ${
+                          className={`px-3 py-1.5 rounded-md transition-colors flex items-center justify-center gap-1.5 text-xs font-medium ${
                             powerMode === "high"
                               ? "bg-blue-600 text-white hover:bg-blue-700"
                               : "bg-red-600 text-white hover:bg-red-700"
                           }`}
                         >
-                          <Microscope className="h-4 w-4 flex-shrink-0" />
+                          <Microscope className="h-3.5 w-3.5 flex-shrink-0" />
                           <span className="whitespace-nowrap">
                             {powerMode === "high" ? "HPF" : "LPF"} (
                             {powerMode === "high"
@@ -2341,17 +2380,108 @@ export default function Report() {
                               ? highPowerImages.length >= 10
                               : lowPowerImages.length >= 10)
                           }
-                          className="min-w-[170px] px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold flex items-center justify-center gap-2 disabled:bg-gray-600 disabled:cursor-not-allowed disabled:border-transparent shadow-lg border-2 border-green-500"
+                          className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs font-medium flex items-center justify-center gap-1.5 disabled:bg-gray-600 disabled:cursor-not-allowed shadow-lg"
                         >
-                          <Plus className="h-4 w-4 flex-shrink-0" />
+                          <Plus className="h-3.5 w-3.5 flex-shrink-0" />
                           <span className="whitespace-nowrap">
-                            Capture {powerMode === "high" ? "HPF" : "LPF"} (
-                            {powerMode === "high"
-                              ? highPowerImages.length
-                              : lowPowerImages.length}
-                            /10)
+                            Capture
                           </span>
                         </button>
+                        {/* Settings Button */}
+                        <div className="relative">
+                          <button
+                            ref={settingsButtonRef}
+                            onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+                            className="px-2.5 py-1.5 bg-gray-700/80 hover:bg-gray-600/80 text-white rounded-md transition-colors flex items-center justify-center"
+                            title="Settings"
+                          >
+                            <Settings className="h-3.5 w-3.5" />
+                          </button>
+                          {/* Settings Dropdown */}
+                          {showSettingsDropdown && (
+                            <div
+                              ref={settingsDropdownRef}
+                              className="absolute bottom-full right-0 mb-2 w-64 bg-gray-800/95 backdrop-blur-md rounded-lg border border-white/20 shadow-xl p-4 z-50"
+                            >
+                              <h4 className="text-white text-sm font-semibold mb-3 flex items-center gap-2">
+                                <Settings className="h-4 w-4" />
+                                Detection Settings
+                              </h4>
+                              <div className="space-y-4">
+                                {/* Confidence Threshold */}
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-300 mb-2">
+                                    Confidence: {confThreshold}
+                                  </label>
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.05"
+                                    value={confThreshold}
+                                    onChange={(e) => setConfThreshold(parseFloat(e.target.value))}
+                                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                                  />
+                                </div>
+                                {/* Detection Rate */}
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-300 mb-2">
+                                    Detection Rate: {Math.round(1000 / detectionInterval)} FPS ({detectionInterval}ms)
+                                  </label>
+                                  <input
+                                    type="range"
+                                    min="200"
+                                    max="1000"
+                                    step="100"
+                                    value={detectionInterval}
+                                    onChange={(e) =>
+                                      setDetectionInterval(parseInt(e.target.value))
+                                    }
+                                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                                  />
+                                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                                    <span>1 FPS</span>
+                                    <span>5 FPS</span>
+                                  </div>
+                                </div>
+                                {/* Overlay Settings */}
+                                <div className="pt-2 border-t border-white/10">
+                                  <label className="flex items-center gap-2 text-xs font-medium text-gray-300 mb-3">
+                                    <input
+                                      type="checkbox"
+                                      checked={showOverlay}
+                                      onChange={(e) => setShowOverlay(e.target.checked)}
+                                      className="w-4 h-4 rounded accent-blue-500"
+                                    />
+                                    Show Overlay
+                                  </label>
+                                  {showOverlay && (
+                                    <div className="ml-6 space-y-2">
+                                      <label className="flex items-center gap-2 text-xs font-medium text-gray-400">
+                                        <input
+                                          type="checkbox"
+                                          checked={showBoundingBox}
+                                          onChange={(e) => setShowBoundingBox(e.target.checked)}
+                                          className="w-3.5 h-3.5 rounded accent-blue-500"
+                                        />
+                                        Bounding Box
+                                      </label>
+                                      <label className="flex items-center gap-2 text-xs font-medium text-gray-400">
+                                        <input
+                                          type="checkbox"
+                                          checked={showCrystalName}
+                                          onChange={(e) => setShowCrystalName(e.target.checked)}
+                                          className="w-3.5 h-3.5 rounded accent-blue-500"
+                                        />
+                                        Crystal Name
+                                      </label>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -3011,11 +3141,11 @@ export default function Report() {
                                 </td>
                               </tr>
                               {/* Average Row for 10 Fields - Always at bottom */}
-                              <tr className="border-t-2 border-gray-300 bg-gray-100">
+                              {/* <tr className="border-t-2 border-gray-300 bg-gray-100">
                                 <td colSpan={5} className="text-left py-1.5 px-2 text-[10px] font-semibold text-gray-600 uppercase">
                                   Average (10 Fields)
                                 </td>
-                              </tr>
+                              </tr> */}
                               <tr className="bg-gray-100">
                                 <td className="text-center py-2 px-2 font-semibold text-gray-900">
                                   0.0
