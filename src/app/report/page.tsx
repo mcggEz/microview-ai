@@ -47,11 +47,14 @@ import {
   FileSearch,
   ClipboardList,
   LogOut,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import ImageModal from "@/components/ImageModal";
 import Notification from "@/components/Notification";
 import StrasingerReferenceTable from "@/components/StrasingerReferenceTable";
 import YOLODetectionOverlay from "@/components/YOLODetectionOverlay";
+import BoundingBoxOverlay from "@/components/BoundingBoxOverlay";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
@@ -185,6 +188,8 @@ export default function Report() {
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const lpfImageRef = useRef<HTMLImageElement | null>(null);
+  const hpfImageRef = useRef<HTMLImageElement | null>(null);
   const [powerMode, setPowerMode] = useState<"high" | "low">("low");
   const [highPowerImages, setHighPowerImages] = useState<string[]>([]);
   const [lowPowerImages, setLowPowerImages] = useState<string[]>([]);
@@ -196,6 +201,43 @@ export default function Report() {
   const [showOverlay, setShowOverlay] = useState(true);
   const [showBoundingBox, setShowBoundingBox] = useState(true);
   const [showCrystalName, setShowCrystalName] = useState(true);
+  
+  // YOLO detections and cropped images state
+  const [lpfYoloDetections, setLpfYoloDetections] = useState<{
+    predictions: Array<{
+      x: number
+      y: number
+      width: number
+      height: number
+      confidence: number
+      class: string
+      class_id: number
+      detection_id: string
+    }>
+    summary: {
+      total_detections: number
+      by_class: Record<string, number>
+    }
+  } | null>(null)
+  const [hpfYoloDetections, setHpfYoloDetections] = useState<{
+    predictions: Array<{
+      x: number
+      y: number
+      width: number
+      height: number
+      confidence: number
+      class: string
+      class_id: number
+      detection_id: string
+    }>
+    summary: {
+      total_detections: number
+      by_class: Record<string, number>
+    }
+  } | null>(null)
+  const [lpfCroppedImages, setLpfCroppedImages] = useState<Record<string, string>>({}) // detection_id -> base64 cropped image
+  const [hpfCroppedImages, setHpfCroppedImages] = useState<Record<string, string>>({})
+  const [highlightedDetection, setHighlightedDetection] = useState<string | null>(null) // detection_id to highlight
 
   const {
     patients,
@@ -318,6 +360,242 @@ export default function Report() {
     hpf: { [key: string]: boolean };
   }>({ lpf: {}, hpf: {} });
 
+  // Function to crop image based on bounding box
+  const cropImageFromBoundingBox = useCallback(async (
+    imageUrl: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new window.Image()
+      
+      // Try to set crossOrigin, but handle CORS errors gracefully
+      try {
+        img.crossOrigin = 'anonymous'
+      } catch (e) {
+        console.warn('Could not set crossOrigin, may have CORS issues:', e)
+      }
+      
+      // Set timeout for image loading
+      const timeout = setTimeout(() => {
+        reject(new Error('Image load timeout'))
+      }, 10000) // 10 second timeout
+      
+      img.onload = () => {
+        clearTimeout(timeout)
+        try {
+          const canvas = document.createElement('canvas')
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            reject(new Error('Could not get canvas context'))
+            return
+          }
+
+          // Calculate crop coordinates (ensure they're within image bounds)
+          const cropX = Math.max(0, Math.min(x, img.width))
+          const cropY = Math.max(0, Math.min(y, img.height))
+          const cropWidth = Math.min(Math.max(1, width), img.width - cropX)
+          const cropHeight = Math.min(Math.max(1, height), img.height - cropY)
+
+          // Validate dimensions
+          if (cropWidth <= 0 || cropHeight <= 0) {
+            reject(new Error(`Invalid crop dimensions: ${cropWidth}x${cropHeight}`))
+            return
+          }
+
+          // Set canvas size to crop dimensions
+          canvas.width = cropWidth
+          canvas.height = cropHeight
+
+          // Draw the cropped portion
+          ctx.drawImage(
+            img,
+            cropX, cropY, cropWidth, cropHeight, // Source
+            0, 0, cropWidth, cropHeight // Destination
+          )
+
+          // Convert to base64
+          const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.9)
+          if (!croppedDataUrl || croppedDataUrl.length < 100) {
+            reject(new Error('Failed to generate cropped image data URL'))
+            return
+          }
+          resolve(croppedDataUrl)
+        } catch (error) {
+          console.error('Error in cropImageFromBoundingBox:', error)
+          reject(error)
+        }
+      }
+      
+      img.onerror = (e) => {
+        clearTimeout(timeout)
+        console.error('Image load error:', e, 'URL:', imageUrl)
+        reject(new Error(`Failed to load image: ${imageUrl}`))
+      }
+      
+      img.src = imageUrl
+    })
+  }, [])
+
+  // Helper function to get cropped images by class name for LPF
+  const getLPFCroppedImagesByClass = useCallback((className: string): Array<{ id: string; image: string; confidence: number }> => {
+    // Debug logging
+    console.log(`🔍 getLPFCroppedImagesByClass called for: ${className}`)
+    console.log(`  - lpfYoloDetections:`, lpfYoloDetections ? `${lpfYoloDetections.predictions?.length || 0} predictions` : 'null')
+    console.log(`  - lpfCroppedImages:`, lpfCroppedImages ? `${Object.keys(lpfCroppedImages).length} images` : 'null')
+    
+    if (!lpfYoloDetections || !lpfCroppedImages || Object.keys(lpfCroppedImages).length === 0) {
+      console.log(`  ❌ Early return: missing detections or cropped images`)
+      return []
+    }
+    
+    // Map YOLO class names to table column names
+    const classMap: Record<string, string[]> = {
+      'epithelial_cells': ['epith', 'epithn'],
+      'mucus_threads': ['mucus'],
+      'casts': ['cast'],
+      'squamous_epithelial': ['epith', 'epithn'],
+      'abnormal_crystals': ['cryst'],
+    }
+    
+    const yoloClasses = classMap[className] || []
+    if (yoloClasses.length === 0) {
+      console.warn(`⚠️ No YOLO class mapping found for LPF class: ${className}`)
+      return []
+    }
+    
+    console.log(`  - Looking for YOLO classes:`, yoloClasses)
+    console.log(`  - Available YOLO predictions:`, lpfYoloDetections.predictions.map(p => p.class).join(', '))
+    
+    const matchingPredictions = lpfYoloDetections.predictions.filter(pred => {
+      const predClassLower = pred.class.toLowerCase()
+      const matches = yoloClasses.some(yc => {
+        const ycLower = yc.toLowerCase()
+        return predClassLower.includes(ycLower) || predClassLower === ycLower
+      })
+      if (matches) {
+        console.log(`  ✅ Match found: ${pred.class} matches ${className}`)
+      }
+      return matches
+    })
+    
+    console.log(`  - Matching predictions: ${matchingPredictions.length}`)
+    
+    const result = matchingPredictions
+      .map(pred => {
+        const croppedImage = lpfCroppedImages[pred.detection_id]
+        console.log(`  - Checking detection ${pred.detection_id}:`, croppedImage ? `has image (${croppedImage.length} chars)` : 'NO IMAGE')
+        return {
+          id: pred.detection_id,
+          image: croppedImage || '',
+          confidence: pred.confidence
+        }
+      })
+      .filter(item => {
+        const hasImage = item.image && item.image.length > 0
+        if (!hasImage) {
+          console.log(`  ⚠️ Filtered out ${item.id}: no image data`)
+        }
+        return hasImage
+      })
+    
+    console.log(`  ✅ Final result: ${result.length} cropped images for ${className}`)
+    
+    return result
+  }, [lpfYoloDetections, lpfCroppedImages])
+
+  // Helper function to get cropped images by class name for HPF
+  const getHPFCroppedImagesByClass = useCallback((className: string): Array<{ id: string; image: string; confidence: number }> => {
+    // Debug logging
+    console.log(`🔍 getHPFCroppedImagesByClass called for: ${className}`)
+    console.log(`  - hpfYoloDetections:`, hpfYoloDetections ? `${hpfYoloDetections.predictions?.length || 0} predictions` : 'null')
+    console.log(`  - hpfCroppedImages:`, hpfCroppedImages ? `${Object.keys(hpfCroppedImages).length} images` : 'null')
+    
+    if (!hpfYoloDetections || !hpfCroppedImages || Object.keys(hpfCroppedImages).length === 0) {
+      console.log(`  ❌ Early return: missing detections or cropped images`)
+      return []
+    }
+    
+    // Map YOLO class names to table column names
+    const classMap: Record<string, string[]> = {
+      'rbc': ['eryth'],
+      'wbc': ['leuko'],
+      'epithelial_cells': ['epith', 'epithn'],
+      'crystals': ['cryst'],
+      'bacteria': ['bacteria'],
+      'yeast': ['mycete'],
+      'sperm': ['sperm'],
+      'parasites': ['parasite'],
+    }
+    
+    const yoloClasses = classMap[className] || []
+    if (yoloClasses.length === 0) {
+      console.warn(`⚠️ No YOLO class mapping found for HPF class: ${className}`)
+      return []
+    }
+    
+    console.log(`  - Looking for YOLO classes:`, yoloClasses)
+    console.log(`  - Available YOLO predictions:`, hpfYoloDetections.predictions.map(p => p.class).join(', '))
+    
+    const matchingPredictions = hpfYoloDetections.predictions.filter(pred => {
+      const predClassLower = pred.class.toLowerCase()
+      const matches = yoloClasses.some(yc => {
+        const ycLower = yc.toLowerCase()
+        return predClassLower.includes(ycLower) || predClassLower === ycLower
+      })
+      if (matches) {
+        console.log(`  ✅ Match found: ${pred.class} matches ${className}`)
+      }
+      return matches
+    })
+    
+    console.log(`  - Matching predictions: ${matchingPredictions.length}`)
+    
+    const result = matchingPredictions
+      .map(pred => {
+        const croppedImage = hpfCroppedImages[pred.detection_id]
+        console.log(`  - Checking detection ${pred.detection_id}:`, croppedImage ? `has image (${croppedImage.length} chars)` : 'NO IMAGE')
+        return {
+          id: pred.detection_id,
+          image: croppedImage || '',
+          confidence: pred.confidence
+        }
+      })
+      .filter(item => {
+        const hasImage = item.image && item.image.length > 0
+        if (!hasImage) {
+          console.log(`  ⚠️ Filtered out ${item.id}: no image data`)
+        }
+        return hasImage
+      })
+    
+    console.log(`  ✅ Final result: ${result.length} cropped images for ${className}`)
+    
+    return result
+  }, [hpfYoloDetections, hpfCroppedImages])
+
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log('📊 LPF State Update:', {
+      hasYoloDetections: !!lpfYoloDetections,
+      yoloDetectionsCount: lpfYoloDetections?.predictions?.length || 0,
+      croppedImagesCount: Object.keys(lpfCroppedImages).length,
+      croppedImageIds: Object.keys(lpfCroppedImages),
+      yoloDetectionIds: lpfYoloDetections?.predictions?.map(p => p.detection_id) || []
+    })
+  }, [lpfYoloDetections, lpfCroppedImages])
+
+  useEffect(() => {
+    console.log('📊 HPF State Update:', {
+      hasYoloDetections: !!hpfYoloDetections,
+      yoloDetectionsCount: hpfYoloDetections?.predictions?.length || 0,
+      croppedImagesCount: Object.keys(hpfCroppedImages).length,
+      croppedImageIds: Object.keys(hpfCroppedImages),
+      yoloDetectionIds: hpfYoloDetections?.predictions?.map(p => p.detection_id) || []
+    })
+  }, [hpfYoloDetections, hpfCroppedImages])
 
   // Function to analyze LPF image for sediments - ONLY for current image
   const analyzeLPFImage = useCallback(
@@ -359,26 +637,91 @@ export default function Report() {
       const blob = await response.blob();
       const file = new File([blob], "lpf-image.jpg", { type: "image/jpeg" });
 
-      console.log(`📤 Sending LPF image ${imageIndex + 1} to server API...`);
+      console.log(`📤 Sending LPF image ${imageIndex + 1} to YOLO + Gemini pipeline...`);
       const form = new FormData();
       form.append("image", file);
-      const res = await fetch("/api/analyze-lpf", {
+      form.append("conf", confThreshold.toString());
+      
+      // Use YOLO + Gemini pipeline
+      const res = await fetch("/api/analyze-image-yolo", {
         method: "POST",
         body: form,
         signal: abortController.signal,
         credentials: 'include',
       });
-      if (!res.ok) throw new Error("LPF API failed");
-      const { detection } = (await res.json()) as {
+      if (!res.ok) throw new Error("YOLO + Gemini API failed");
+      
+      const result = (await res.json()) as {
         success: boolean;
-        detection: LPFSedimentDetection;
+        analysis: any; // Gemini analysis (we'll map this to LPFSedimentDetection)
+        yolo_detections: {
+          predictions: Array<{
+            x: number
+            y: number
+            width: number
+            height: number
+            confidence: number
+            class: string
+            class_id: number
+            detection_id: string
+          }>
+          summary: {
+            total_detections: number
+            by_class: Record<string, number>
+          }
+        };
       };
-      console.log(
-        `✅ LPF analysis complete for image ${imageIndex + 1}:`,
-        detection
-      );
+      
+      console.log(`✅ YOLO + Gemini analysis complete for image ${imageIndex + 1}`);
+      
+      // Store YOLO detections
+      setLpfYoloDetections(result.yolo_detections);
+      
+      // Map Gemini analysis to LPF format (we'll need to adapt this)
+      // For now, create a basic detection from the analysis
+      const detection: LPFSedimentDetection = {
+        epithelial_cells: parseInt(result.analysis.epithelial_cells?.count || "0") || 0,
+        mucus_threads: parseInt(result.analysis.mucus?.count || "0") || 0,
+        casts: parseInt(result.analysis.casts?.count || "0") || 0,
+        squamous_epithelial: 0, // May need to map from analysis
+        abnormal_crystals: parseInt(result.analysis.crystals?.count || "0") || 0,
+        confidence: result.analysis.overall_accuracy || 85,
+        analysis_notes: result.analysis.summary || result.analysis.analysis_notes || "",
+      };
+      
       console.log("📝 New LPF Analysis text:", detection.analysis_notes);
       setLpfSedimentDetection(detection);
+      
+      // Crop images from YOLO detections
+      if (result.yolo_detections.predictions.length > 0) {
+        console.log(`🖼️ Starting to crop ${result.yolo_detections.predictions.length} images from LPF detections`)
+        const croppedImages: Record<string, string> = {}
+        for (const pred of result.yolo_detections.predictions) {
+          try {
+            console.log(`📸 Cropping image for ${pred.class} (${pred.detection_id}) at (${pred.x}, ${pred.y}, ${pred.width}, ${pred.height})`)
+            const cropped = await cropImageFromBoundingBox(
+              imageUrl,
+              pred.x,
+              pred.y,
+              pred.width,
+              pred.height
+            )
+            if (cropped && cropped.length > 0) {
+              croppedImages[pred.detection_id] = cropped
+              console.log(`✅ Successfully cropped image for ${pred.class} (${pred.detection_id})`)
+            } else {
+              console.warn(`⚠️ Empty cropped image for ${pred.class} (${pred.detection_id})`)
+            }
+          } catch (error) {
+            console.error(`❌ Failed to crop image for detection ${pred.detection_id} (${pred.class}):`, error)
+          }
+        }
+        setLpfCroppedImages(croppedImages)
+        console.log(`✅ Cropped ${Object.keys(croppedImages).length}/${result.yolo_detections.predictions.length} images from LPF detections`)
+        console.log(`📊 Cropped images by class:`, Object.entries(result.yolo_detections.summary.by_class || {}).map(([cls, count]) => `${cls}: ${count}`).join(', '))
+      } else {
+        console.warn('⚠️ No YOLO predictions to crop for LPF image')
+      }
 
       // Save to individual image analysis table
       try {
@@ -394,9 +737,10 @@ export default function Report() {
           lpf_abnormal_crystals: detection.abnormal_crystals,
           confidence: detection.confidence,
           analysis_notes: detection.analysis_notes,
+          yolo_detections: result.yolo_detections, // Save YOLO detections
           analyzed_at: new Date().toISOString(),
         });
-        console.log("LPF AI analysis saved to individual image analysis table");
+        console.log("LPF AI analysis with YOLO detections saved to database");
         setNotificationMessage("LPF image analyzed and saved successfully");
         setNotificationType("success");
         setShowNotification(true);
@@ -479,26 +823,93 @@ export default function Report() {
       const blob = await response.blob();
       const file = new File([blob], "hpf-image.jpg", { type: "image/jpeg" });
 
-      console.log(`📤 Sending HPF image ${imageIndex + 1} to server API...`);
+      console.log(`📤 Sending HPF image ${imageIndex + 1} to YOLO + Gemini pipeline...`);
       const form = new FormData();
       form.append("image", file);
-      const res = await fetch("/api/analyze-hpf", {
+      form.append("conf", confThreshold.toString());
+      
+      // Use YOLO + Gemini pipeline
+      const res = await fetch("/api/analyze-image-yolo", {
         method: "POST",
         body: form,
         signal: abortController.signal,
         credentials: 'include',
       });
-      if (!res.ok) throw new Error("HPF API failed");
-      const { detection } = (await res.json()) as {
+      if (!res.ok) throw new Error("YOLO + Gemini API failed");
+      
+      const result = (await res.json()) as {
         success: boolean;
-        detection: HPFSedimentDetection;
+        analysis: any; // Gemini analysis
+        yolo_detections: {
+          predictions: Array<{
+            x: number
+            y: number
+            width: number
+            height: number
+            confidence: number
+            class: string
+            class_id: number
+            detection_id: string
+          }>
+          summary: {
+            total_detections: number
+            by_class: Record<string, number>
+          }
+        };
       };
-      console.log(
-        `✅ HPF analysis complete for image ${imageIndex + 1}:`,
-        detection
-      );
+      
+      console.log(`✅ YOLO + Gemini analysis complete for image ${imageIndex + 1}`);
+      
+      // Store YOLO detections
+      setHpfYoloDetections(result.yolo_detections);
+      
+      // Map Gemini analysis to HPF format
+      const detection: HPFSedimentDetection = {
+        rbc: parseInt(result.analysis.rbc?.count || "0") || 0,
+        wbc: parseInt(result.analysis.wbc?.count || "0") || 0,
+        epithelial_cells: parseInt(result.analysis.epithelial_cells?.count || "0") || 0,
+        crystals: parseInt(result.analysis.crystals?.count || "0") || 0,
+        bacteria: parseInt(result.analysis.bacteria?.count || "0") || 0,
+        yeast: parseInt(result.analysis.yeast?.count || "0") || 0,
+        sperm: parseInt(result.analysis.sperm?.count || "0") || 0,
+        parasites: parseInt(result.analysis.parasites?.count || "0") || 0,
+        confidence: result.analysis.overall_accuracy || 85,
+        analysis_notes: result.analysis.summary || result.analysis.analysis_notes || "",
+      };
+      
       console.log("📝 New HPF Analysis text:", detection.analysis_notes);
       setHpfSedimentDetection(detection);
+      
+      // Crop images from YOLO detections
+      if (result.yolo_detections.predictions.length > 0) {
+        console.log(`🖼️ Starting to crop ${result.yolo_detections.predictions.length} images from HPF detections`)
+        const croppedImages: Record<string, string> = {}
+        for (const pred of result.yolo_detections.predictions) {
+          try {
+            console.log(`📸 Cropping image for ${pred.class} (${pred.detection_id}) at (${pred.x}, ${pred.y}, ${pred.width}, ${pred.height})`)
+            const cropped = await cropImageFromBoundingBox(
+              imageUrl,
+              pred.x,
+              pred.y,
+              pred.width,
+              pred.height
+            )
+            if (cropped && cropped.length > 0) {
+              croppedImages[pred.detection_id] = cropped
+              console.log(`✅ Successfully cropped image for ${pred.class} (${pred.detection_id})`)
+            } else {
+              console.warn(`⚠️ Empty cropped image for ${pred.class} (${pred.detection_id})`)
+            }
+          } catch (error) {
+            console.error(`❌ Failed to crop image for detection ${pred.detection_id} (${pred.class}):`, error)
+          }
+        }
+        setHpfCroppedImages(croppedImages)
+        console.log(`✅ Cropped ${Object.keys(croppedImages).length}/${result.yolo_detections.predictions.length} images from HPF detections`)
+        console.log(`📊 Cropped images by class:`, Object.entries(result.yolo_detections.summary.by_class || {}).map(([cls, count]) => `${cls}: ${count}`).join(', '))
+      } else {
+        console.warn('⚠️ No YOLO predictions to crop for HPF image')
+      }
 
       // Save to individual image analysis table
       try {
@@ -517,9 +928,10 @@ export default function Report() {
           hpf_parasites: detection.parasites,
           confidence: detection.confidence,
           analysis_notes: detection.analysis_notes,
+          yolo_detections: result.yolo_detections, // Save YOLO detections
           analyzed_at: new Date().toISOString(),
         });
-        console.log("HPF AI analysis saved to individual image analysis table");
+        console.log("HPF AI analysis with YOLO detections saved to database");
         setNotificationMessage("HPF image analyzed and saved successfully");
         setNotificationType("success");
         setShowNotification(true);
@@ -989,6 +1401,8 @@ export default function Report() {
 
       // Clear existing analysis data for new image
       setLpfSedimentDetection(null);
+      setLpfYoloDetections(null);
+      setLpfCroppedImages({});
       setIsAnalyzingLPF({});
 
       // Update local state
@@ -1039,6 +1453,8 @@ export default function Report() {
 
       // Clear existing analysis data for new image
       setHpfSedimentDetection(null);
+      setHpfYoloDetections(null);
+      setHpfCroppedImages({});
       setIsAnalyzingHPF({});
 
       // Update local state
@@ -1079,6 +1495,8 @@ export default function Report() {
           currentLPFIndex
         );
         setLpfSedimentDetection(null);
+        setLpfYoloDetections(null);
+        setLpfCroppedImages({});
         // Re-analyze the current LPF image
         analyzeLPFImage(lowPowerImages[currentLPFIndex], currentLPFIndex);
       } else if (powerMode === "high" && highPowerImages.length > 0) {
@@ -1088,6 +1506,8 @@ export default function Report() {
           currentHPFIndex
         );
         setHpfSedimentDetection(null);
+        setHpfYoloDetections(null);
+        setHpfCroppedImages({});
         // Re-analyze the current HPF image
         analyzeHPFImage(highPowerImages[currentHPFIndex], currentHPFIndex);
       }
@@ -1257,6 +1677,8 @@ export default function Report() {
 
       // Clear previous analysis data immediately when switching images
       setLpfSedimentDetection(null);
+      setLpfYoloDetections(null);
+      setLpfCroppedImages({});
 
       // Clear loading state for previous image
       setIsAnalyzingLPF((prev) => ({ ...prev, [currentLPFIndex]: false }));
@@ -1315,6 +1737,34 @@ export default function Report() {
               confidence: existingAnalysis.confidence || 0,
               analysis_notes: existingAnalysis.analysis_notes || "",
             });
+            
+            // Restore YOLO detections and regenerate cropped images
+            if (existingAnalysis.yolo_detections) {
+              console.log("🔄 Restoring YOLO detections from database");
+              setLpfYoloDetections(existingAnalysis.yolo_detections);
+              
+              // Regenerate cropped images from stored bounding boxes
+              const imageUrl = lowPowerImages[currentLPFIndex];
+              if (imageUrl && existingAnalysis.yolo_detections.predictions?.length > 0) {
+                const croppedImages: Record<string, string> = {}
+                for (const pred of existingAnalysis.yolo_detections.predictions) {
+                  try {
+                    const cropped = await cropImageFromBoundingBox(
+                      imageUrl,
+                      pred.x,
+                      pred.y,
+                      pred.width,
+                      pred.height
+                    )
+                    croppedImages[pred.detection_id] = cropped
+                  } catch (error) {
+                    console.error(`Failed to regenerate cropped image for detection ${pred.detection_id}:`, error)
+                  }
+                }
+                setLpfCroppedImages(croppedImages)
+                console.log(`✅ Regenerated ${Object.keys(croppedImages).length} cropped images from stored YOLO detections`)
+              }
+            }
           } else {
             console.log(
               "❌ No existing LPF analysis found - calling Gemini API for current image only"
@@ -1350,6 +1800,8 @@ export default function Report() {
         "🔄 LPF images cleared or no current image - clearing detection state"
       );
       setLpfSedimentDetection(null);
+      setLpfYoloDetections(null);
+      setLpfCroppedImages({});
       setIsAnalyzingLPF({});
     }
   }, [
@@ -1376,6 +1828,8 @@ export default function Report() {
 
       // Clear previous analysis data immediately when switching images
       setHpfSedimentDetection(null);
+      setHpfYoloDetections(null);
+      setHpfCroppedImages({});
 
       // Clear loading state for previous image
       setIsAnalyzingHPF((prev) => ({ ...prev, [currentHPFIndex]: false }));
@@ -1446,6 +1900,34 @@ export default function Report() {
               confidence: existingAnalysis.confidence || 0,
               analysis_notes: existingAnalysis.analysis_notes || "",
             });
+            
+            // Restore YOLO detections and regenerate cropped images
+            if (existingAnalysis.yolo_detections) {
+              console.log("🔄 Restoring YOLO detections from database");
+              setHpfYoloDetections(existingAnalysis.yolo_detections);
+              
+              // Regenerate cropped images from stored bounding boxes
+              const imageUrl = highPowerImages[currentHPFIndex];
+              if (imageUrl && existingAnalysis.yolo_detections.predictions?.length > 0) {
+                const croppedImages: Record<string, string> = {}
+                for (const pred of existingAnalysis.yolo_detections.predictions) {
+                  try {
+                    const cropped = await cropImageFromBoundingBox(
+                      imageUrl,
+                      pred.x,
+                      pred.y,
+                      pred.width,
+                      pred.height
+                    )
+                    croppedImages[pred.detection_id] = cropped
+                  } catch (error) {
+                    console.error(`Failed to regenerate cropped image for detection ${pred.detection_id}:`, error)
+                  }
+                }
+                setHpfCroppedImages(croppedImages)
+                console.log(`✅ Regenerated ${Object.keys(croppedImages).length} cropped images from stored YOLO detections`)
+              }
+            }
           } else {
             console.log(
               "❌ No existing HPF analysis found - calling Gemini API for current image only"
@@ -1481,6 +1963,8 @@ export default function Report() {
         "🔄 HPF images cleared or no current image - clearing detection state"
       );
       setHpfSedimentDetection(null);
+      setHpfYoloDetections(null);
+      setHpfCroppedImages({});
       setIsAnalyzingHPF({});
     }
   }, [
@@ -2114,12 +2598,17 @@ export default function Report() {
               </div>
 
               {loading ? (
-                <div className="text-center py-4 text-gray-600">
-                  <div className="animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded"></div>
-                  </div>
+                <div className="space-y-1.5 mb-3">
+                  {/* Skeleton test boxes */}
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="group relative p-2 rounded-lg bg-gray-100 animate-pulse"
+                    >
+                      <div className="h-4 bg-gray-200 rounded mb-1.5 w-24"></div>
+                      <div className="h-3 bg-gray-200 rounded w-20"></div>
+                    </div>
+                  ))}
                 </div>
               ) : error ? (
                 <div className="text-center py-4">
@@ -2785,20 +3274,16 @@ export default function Report() {
 
                   {/* LPF Photo Gallery */}
                   <div className="bg-white rounded-lg border-2 border-gray-300 overflow-hidden mb-4">
-                    <div className="flex h-96">
+                    <div className="flex h-[500px]">
                       {/* Main Image Display */}
-                      <div className="w-96 bg-gray-100 flex items-center justify-center relative p-2">
+                      <div className="w-[500px] bg-gray-100 flex items-center justify-center relative py-2">
                         {lowPowerImages.length > 0 ? (
-                          <div className="relative">
-                            <Image
+                          <div className="relative w-full h-full flex items-center justify-center">
+                            <img
+                              ref={lpfImageRef}
                               src={lowPowerImages[currentLPFIndex]}
                               alt="LPF Sample"
-                              width={400}
-                              height={400}
-                              className="max-w-full max-h-full object-contain rounded-lg"
-                              unoptimized={lowPowerImages[
-                                currentLPFIndex
-                              ].startsWith("http")}
+                              className="max-w-full max-h-full object-contain"
                               onError={(e) => {
                                 console.error(
                                   "Failed to load image:",
@@ -2808,6 +3293,28 @@ export default function Report() {
                                 target.style.display = "none";
                               }}
                             />
+                            {lpfYoloDetections && lpfYoloDetections.predictions.length > 0 && (
+                              <BoundingBoxOverlay
+                                imageRef={lpfImageRef}
+                                detections={lpfYoloDetections.predictions}
+                                highlightedDetectionId={highlightedDetection}
+                                showBoundingBoxes={showBoundingBox}
+                              />
+                            )}
+                            {/* Toggle Overlay Button */}
+                            {lpfYoloDetections && lpfYoloDetections.predictions.length > 0 && (
+                              <button
+                                onClick={() => setShowBoundingBox(!showBoundingBox)}
+                                className="absolute top-2 left-2 bg-black/70 text-white p-2 rounded-md hover:bg-black/90 transition-colors z-10"
+                                title={showBoundingBox ? "Hide bounding boxes" : "Show bounding boxes"}
+                              >
+                                {showBoundingBox ? (
+                                  <Eye className="h-4 w-4" />
+                                ) : (
+                                  <EyeOff className="h-4 w-4" />
+                                )}
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <div className="flex items-center justify-center h-full">
@@ -2817,9 +3324,9 @@ export default function Report() {
                           </div>
                         )}
 
-                        {/* Navigation Arrows */}
+                        {/* Navigation Controls - Bottom Center */}
                         {lowPowerImages.length > 1 && (
-                          <>
+                          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
                             <button
                               onClick={() =>
                                 setCurrentLPFIndex((prev) =>
@@ -2828,10 +3335,17 @@ export default function Report() {
                                     : lowPowerImages.length - 1
                                 )
                               }
-                              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-md hover:bg-black/70 transition-colors"
+                              className="bg-black/70 text-white px-3 py-1.5 rounded-md hover:bg-black/90 transition-colors flex items-center justify-center"
                             >
-                              <ChevronLeft className="h-5 w-5" />
+                              <ChevronLeft className="h-4 w-4" />
                             </button>
+                            <div className="bg-black/70 text-white px-3 py-1.5 rounded-md text-sm flex items-center justify-center min-w-[3rem]">
+                              {Math.min(
+                                currentLPFIndex + 1,
+                                lowPowerImages.length
+                              )}{" "}
+                              / {lowPowerImages.length}
+                            </div>
                             <button
                               onClick={() =>
                                 setCurrentLPFIndex((prev) =>
@@ -2840,21 +3354,10 @@ export default function Report() {
                                     : 0
                                 )
                               }
-                              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-md hover:bg-black/70 transition-colors"
+                              className="bg-black/70 text-white px-3 py-1.5 rounded-md hover:bg-black/90 transition-colors flex items-center justify-center"
                             >
-                              <ChevronRight className="h-5 w-5" />
+                              <ChevronRight className="h-4 w-4" />
                             </button>
-                          </>
-                        )}
-
-                        {/* Image Counter */}
-                        {lowPowerImages.length > 1 && (
-                          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-md text-sm">
-                            {Math.min(
-                              currentLPFIndex + 1,
-                              lowPowerImages.length
-                            )}{" "}
-                            / {lowPowerImages.length}
                           </div>
                         )}
 
@@ -2888,14 +3391,21 @@ export default function Report() {
                           LPF Sediment Analysis
                         </h4>
 
+                        {/* Loading Indicator */}
+                        {isAnalyzingLPF[currentLPFIndex] === true && (
+                          <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                            <div className="flex items-center justify-center gap-2 text-xs text-blue-700">
+                              <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                              <span>Analyzing image...</span>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Field-based Sediment Analysis Table */}
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs">
                             <thead>
                               <tr className="border-b border-gray-200">
-                                <th className="text-center py-2 px-2 font-semibold text-gray-700">
-                                  Epithelial Cells
-                                </th>
                                 <th className="text-center py-2 px-2 font-semibold text-gray-700">
                                   Mucus Threads
                                 </th>
@@ -2912,271 +3422,307 @@ export default function Report() {
                             </thead>
                             <tbody className="text-xs">
                               <tr className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="text-center py-2 px-2">
-                                  <div
-                                    className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                      (lpfSedimentDetection?.epithelial_cells ||
-                                        0) > 0
-                                        ? "bg-gray-200 text-gray-700"
-                                        : "bg-gray-50 text-gray-500"
-                                    }`}
-                                  >
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={
-                                        lpfSedimentDetection?.epithelial_cells ||
-                                        0
-                                      }
-                                      onChange={(e) => {
-                                        const newValue =
-                                          parseInt(e.target.value) || 0;
-                                        setLpfSedimentDetection((prev) =>
-                                          prev
-                                            ? {
-                                                ...prev,
-                                                epithelial_cells: newValue,
-                                              }
-                                            : {
-                                                epithelial_cells: newValue,
-                                                mucus_threads: 0,
-                                                casts: 0,
-                                                squamous_epithelial: 0,
-                                                abnormal_crystals: 0,
-                                                confidence: 0,
-                                                analysis_notes: "",
-                                              }
-                                        );
-                                        // Auto-save to database
-                                        if (selectedTest) {
-                                          saveLPFCountToDatabase(
-                                            "epithelial_cells",
-                                            newValue
-                                          );
-                                        }
-                                      }}
-                                      className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
-                                    />
+                                <td className="text-center py-2 px-2 align-top">
+                                  <div className="flex flex-col items-center gap-2 w-full">
+                                    {/* Count input container - fixed width, no stretching */}
+                                    <div className="flex justify-center w-full">
+                                      <div
+                                        className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
+                                          (lpfSedimentDetection?.mucus_threads ||
+                                            0) > 0
+                                            ? "bg-gray-200 text-gray-700"
+                                            : "bg-gray-50 text-gray-500"
+                                        }`}
+                                      >
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={
+                                            lpfSedimentDetection?.mucus_threads || 0
+                                          }
+                                          onChange={(e) => {
+                                            const newValue =
+                                              parseInt(e.target.value) || 0;
+                                            setLpfSedimentDetection((prev) =>
+                                              prev
+                                                ? {
+                                                    ...prev,
+                                                    mucus_threads: newValue,
+                                                  }
+                                                : {
+                                                    epithelial_cells: 0,
+                                                    mucus_threads: newValue,
+                                                    casts: 0,
+                                                    squamous_epithelial: 0,
+                                                    abnormal_crystals: 0,
+                                                    confidence: 0,
+                                                    analysis_notes: "",
+                                                  }
+                                            );
+                                            // Auto-save to database
+                                            if (selectedTest) {
+                                              saveLPFCountToDatabase(
+                                                "mucus_threads",
+                                                newValue
+                                              );
+                                            }
+                                          }}
+                                          className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                        />
+                                      </div>
+                                    </div>
+                                    {/* Cropped images gallery - separate container */}
+                                    {getLPFCroppedImagesByClass('mucus_threads').length > 0 && (
+                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
+                                        {getLPFCroppedImagesByClass('mucus_threads').map((item) => (
+                                          <img
+                                            key={item.id}
+                                            src={item.image}
+                                            alt="Mucus Thread"
+                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
+                                              highlightedDetection === item.id
+                                                ? 'border-red-500 shadow-lg'
+                                                : 'border-gray-300 hover:border-gray-500'
+                                            }`}
+                                            onClick={() => setHighlightedDetection(
+                                              highlightedDetection === item.id ? null : item.id
+                                            )}
+                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
-                                <td className="text-center py-2 px-2">
-                                  <div
-                                    className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                      (lpfSedimentDetection?.mucus_threads ||
-                                        0) > 0
-                                        ? "bg-gray-200 text-gray-700"
-                                        : "bg-gray-50 text-gray-500"
-                                    }`}
-                                  >
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={
-                                        lpfSedimentDetection?.mucus_threads || 0
-                                      }
-                                      onChange={(e) => {
-                                        const newValue =
-                                          parseInt(e.target.value) || 0;
-                                        setLpfSedimentDetection((prev) =>
-                                          prev
-                                            ? {
-                                                ...prev,
-                                                mucus_threads: newValue,
-                                              }
-                                            : {
-                                                epithelial_cells: 0,
-                                                mucus_threads: newValue,
-                                                casts: 0,
-                                                squamous_epithelial: 0,
-                                                abnormal_crystals: 0,
-                                                confidence: 0,
-                                                analysis_notes: "",
-                                              }
-                                        );
-                                        // Auto-save to database
-                                        if (selectedTest) {
-                                          saveLPFCountToDatabase(
-                                            "mucus_threads",
-                                            newValue
-                                          );
-                                        }
-                                      }}
-                                      className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
-                                    />
+                                <td className="text-center py-2 px-2 align-top">
+                                  <div className="flex flex-col items-center gap-2 w-full">
+                                    {/* Count input container - fixed width, no stretching */}
+                                    <div className="flex justify-center w-full">
+                                      <div
+                                        className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
+                                          (lpfSedimentDetection?.casts || 0) > 0
+                                            ? "bg-gray-200 text-gray-700"
+                                            : "bg-gray-50 text-gray-500"
+                                        }`}
+                                      >
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={lpfSedimentDetection?.casts || 0}
+                                          onChange={(e) => {
+                                            const newValue =
+                                              parseInt(e.target.value) || 0;
+                                            setLpfSedimentDetection((prev) =>
+                                              prev
+                                                ? { ...prev, casts: newValue }
+                                                : {
+                                                    epithelial_cells: 0,
+                                                    mucus_threads: 0,
+                                                    casts: newValue,
+                                                    squamous_epithelial: 0,
+                                                    abnormal_crystals: 0,
+                                                    confidence: 0,
+                                                    analysis_notes: "",
+                                                  }
+                                            );
+                                            // Auto-save to database
+                                            if (selectedTest) {
+                                              saveLPFCountToDatabase(
+                                                "casts",
+                                                newValue
+                                              );
+                                            }
+                                          }}
+                                          className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                        />
+                                      </div>
+                                    </div>
+                                    {/* Cropped images gallery - separate container */}
+                                    {getLPFCroppedImagesByClass('casts').length > 0 && (
+                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
+                                        {getLPFCroppedImagesByClass('casts').map((item) => (
+                                          <img
+                                            key={item.id}
+                                            src={item.image}
+                                            alt="Cast"
+                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
+                                              highlightedDetection === item.id
+                                                ? 'border-red-500 shadow-lg'
+                                                : 'border-gray-300 hover:border-gray-500'
+                                            }`}
+                                            onClick={() => setHighlightedDetection(
+                                              highlightedDetection === item.id ? null : item.id
+                                            )}
+                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
-                                <td className="text-center py-2 px-2">
-                                  <div
-                                    className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                      (lpfSedimentDetection?.casts || 0) > 0
-                                        ? "bg-gray-200 text-gray-700"
-                                        : "bg-gray-50 text-gray-500"
-                                    }`}
-                                  >
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={lpfSedimentDetection?.casts || 0}
-                                      onChange={(e) => {
-                                        const newValue =
-                                          parseInt(e.target.value) || 0;
-                                        setLpfSedimentDetection((prev) =>
-                                          prev
-                                            ? { ...prev, casts: newValue }
-                                            : {
-                                                epithelial_cells: 0,
-                                                mucus_threads: 0,
-                                                casts: newValue,
-                                                squamous_epithelial: 0,
-                                                abnormal_crystals: 0,
-                                                confidence: 0,
-                                                analysis_notes: "",
-                                              }
-                                        );
-                                        // Auto-save to database
-                                        if (selectedTest) {
-                                          saveLPFCountToDatabase(
-                                            "casts",
-                                            newValue
-                                          );
-                                        }
-                                      }}
-                                      className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
-                                    />
+                                <td className="text-center py-2 px-2 align-top">
+                                  <div className="flex flex-col items-center gap-2 w-full">
+                                    {/* Count input container - fixed width, no stretching */}
+                                    <div className="flex justify-center w-full">
+                                      <div
+                                        className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
+                                          (lpfSedimentDetection?.squamous_epithelial ||
+                                            0) > 0
+                                            ? "bg-gray-200 text-gray-700"
+                                            : "bg-gray-50 text-gray-500"
+                                        }`}
+                                      >
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={
+                                            lpfSedimentDetection?.squamous_epithelial ||
+                                            0
+                                          }
+                                          onChange={(e) => {
+                                            const newValue =
+                                              parseInt(e.target.value) || 0;
+                                            setLpfSedimentDetection((prev) =>
+                                              prev
+                                                ? {
+                                                    ...prev,
+                                                    squamous_epithelial: newValue,
+                                                  }
+                                                : {
+                                                    epithelial_cells: 0,
+                                                    mucus_threads: 0,
+                                                    casts: 0,
+                                                    squamous_epithelial: newValue,
+                                                    abnormal_crystals: 0,
+                                                    confidence: 0,
+                                                    analysis_notes: "",
+                                                  }
+                                            );
+                                            // Auto-save to database
+                                            if (selectedTest) {
+                                              saveLPFCountToDatabase(
+                                                "squamous_epithelial",
+                                                newValue
+                                              );
+                                            }
+                                          }}
+                                          className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                        />
+                                      </div>
+                                    </div>
+                                    {/* Cropped images gallery - separate container */}
+                                    {getLPFCroppedImagesByClass('squamous_epithelial').length > 0 && (
+                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
+                                        {getLPFCroppedImagesByClass('squamous_epithelial').map((item) => (
+                                          <img
+                                            key={item.id}
+                                            src={item.image}
+                                            alt="Squamous Epithelial"
+                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
+                                              highlightedDetection === item.id
+                                                ? 'border-red-500 shadow-lg'
+                                                : 'border-gray-300 hover:border-gray-500'
+                                            }`}
+                                            onClick={() => setHighlightedDetection(
+                                              highlightedDetection === item.id ? null : item.id
+                                            )}
+                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
-                                <td className="text-center py-2 px-2">
-                                  <div
-                                    className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                      (lpfSedimentDetection?.squamous_epithelial ||
-                                        0) > 0
-                                        ? "bg-gray-200 text-gray-700"
-                                        : "bg-gray-50 text-gray-500"
-                                    }`}
-                                  >
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={
-                                        lpfSedimentDetection?.squamous_epithelial ||
-                                        0
-                                      }
-                                      onChange={(e) => {
-                                        const newValue =
-                                          parseInt(e.target.value) || 0;
-                                        setLpfSedimentDetection((prev) =>
-                                          prev
-                                            ? {
-                                                ...prev,
-                                                squamous_epithelial: newValue,
-                                              }
-                                            : {
-                                                epithelial_cells: 0,
-                                                mucus_threads: 0,
-                                                casts: 0,
-                                                squamous_epithelial: newValue,
-                                                abnormal_crystals: 0,
-                                                confidence: 0,
-                                                analysis_notes: "",
-                                              }
-                                        );
-                                        // Auto-save to database
-                                        if (selectedTest) {
-                                          saveLPFCountToDatabase(
-                                            "squamous_epithelial",
-                                            newValue
-                                          );
-                                        }
-                                      }}
-                                      className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
-                                    />
-                                  </div>
-                                </td>
-                                <td className="text-center py-2 px-2">
-                                  <div
-                                    className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                      (lpfSedimentDetection?.abnormal_crystals ||
-                                        0) > 0
-                                        ? "bg-gray-200 text-gray-700"
-                                        : "bg-gray-50 text-gray-500"
-                                    }`}
-                                  >
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={
-                                        lpfSedimentDetection?.abnormal_crystals ||
-                                        0
-                                      }
-                                      onChange={(e) => {
-                                        const newValue =
-                                          parseInt(e.target.value) || 0;
-                                        setLpfSedimentDetection((prev) =>
-                                          prev
-                                            ? {
-                                                ...prev,
-                                                abnormal_crystals: newValue,
-                                              }
-                                            : {
-                                                epithelial_cells: 0,
-                                                mucus_threads: 0,
-                                                casts: 0,
-                                                squamous_epithelial: 0,
-                                                abnormal_crystals: newValue,
-                                                confidence: 0,
-                                                analysis_notes: "",
-                                              }
-                                        );
-                                        // Auto-save to database
-                                        if (selectedTest) {
-                                          saveLPFCountToDatabase(
-                                            "abnormal_crystals",
-                                            newValue
-                                          );
-                                        }
-                                      }}
-                                      className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
-                                    />
+                                <td className="text-center py-2 px-2 align-top">
+                                  <div className="flex flex-col items-center gap-2 w-full">
+                                    {/* Count input container - fixed width, no stretching */}
+                                    <div className="flex justify-center w-full">
+                                      <div
+                                        className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
+                                          (lpfSedimentDetection?.abnormal_crystals ||
+                                            0) > 0
+                                            ? "bg-gray-200 text-gray-700"
+                                            : "bg-gray-50 text-gray-500"
+                                        }`}
+                                      >
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={
+                                            lpfSedimentDetection?.abnormal_crystals ||
+                                            0
+                                          }
+                                          onChange={(e) => {
+                                            const newValue =
+                                              parseInt(e.target.value) || 0;
+                                            setLpfSedimentDetection((prev) =>
+                                              prev
+                                                ? {
+                                                    ...prev,
+                                                    abnormal_crystals: newValue,
+                                                  }
+                                                : {
+                                                    epithelial_cells: 0,
+                                                    mucus_threads: 0,
+                                                    casts: 0,
+                                                    squamous_epithelial: 0,
+                                                    abnormal_crystals: newValue,
+                                                    confidence: 0,
+                                                    analysis_notes: "",
+                                                  }
+                                            );
+                                            // Auto-save to database
+                                            if (selectedTest) {
+                                              saveLPFCountToDatabase(
+                                                "abnormal_crystals",
+                                                newValue
+                                              );
+                                            }
+                                          }}
+                                          className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                        />
+                                      </div>
+                                    </div>
+                                    {/* Cropped images gallery - separate container */}
+                                    {getLPFCroppedImagesByClass('abnormal_crystals').length > 0 && (
+                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
+                                        {getLPFCroppedImagesByClass('abnormal_crystals').map((item) => (
+                                          <img
+                                            key={item.id}
+                                            src={item.image}
+                                            alt="Abnormal Crystal"
+                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
+                                              highlightedDetection === item.id
+                                                ? 'border-red-500 shadow-lg'
+                                                : 'border-gray-300 hover:border-gray-500'
+                                            }`}
+                                            onClick={() => setHighlightedDetection(
+                                              highlightedDetection === item.id ? null : item.id
+                                            )}
+                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
                               </tr>
-                              {/* Average Row for 10 Fields - Always at bottom */}
-                              {/* <tr className="border-t-2 border-gray-300 bg-gray-100">
-                                <td colSpan={5} className="text-left py-1.5 px-2 text-[10px] font-semibold text-gray-600 uppercase">
-                                  Average (10 Fields)
-                                </td>
-                              </tr> */}
-                              <tr className="bg-gray-100">
-                                <td className="text-center py-2 px-2 font-semibold text-gray-900">
-                                  0.0
-                                </td>
-                                <td className="text-center py-2 px-2 font-semibold text-gray-900">
-                                  0.0
-                                </td>
-                                <td className="text-center py-2 px-2 font-semibold text-gray-900">
-                                  0.0
-                                </td>
-                                <td className="text-center py-2 px-2 font-semibold text-gray-900">
-                                  0.0
-                                </td>
-                                <td className="text-center py-2 px-2 font-semibold text-gray-900">
-                                  0.0
-                                </td>
-                              </tr>
+                              {/* Remarks Row */}
+                              {lpfSedimentDetection && lpfSedimentDetection.analysis_notes && (
+                                <tr className="border-t-2 border-gray-300 bg-gray-50">
+                                  <td colSpan={5} className="py-2 px-3 text-left">
+                                    <div className="text-xs">
+                                      <span className="font-semibold text-gray-700">Remarks: </span>
+                                      <span className="text-gray-600">
+                                        {lpfSedimentDetection.analysis_notes}
+                                      </span>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
                             </tbody>
                           </table>
                         </div>
-
-                        {/* AI Analysis Status */}
-                        {lpfSedimentDetection && lpfSedimentDetection.analysis_notes && (
-                          <div className="mt-3 p-2 bg-gray-100 rounded-lg">
-                            <div className="text-xs">
-                              <span className="text-gray-700">
-                                {lpfSedimentDetection.analysis_notes}
-                              </span>
-                            </div>
-                          </div>
-                        )}
 
                         {/* Loading indicator for LPF analysis */}
                         {isAnalyzingLPF[currentLPFIndex] === true && (
@@ -3229,17 +3775,16 @@ export default function Report() {
 
                 {/* HPF Photo Gallery */}
                 <div className="bg-white rounded-lg border-2 border-gray-300 overflow-hidden mb-4">
-                  <div className="flex h-96">
+                  <div className="flex h-[500px]">
                     {/* Main Image Display */}
-                    <div className="w-96 bg-gray-100 flex items-center justify-center relative p-2">
+                    <div className="w-[500px] bg-gray-100 flex items-center justify-center relative py-2">
                         {highPowerImages.length > 0 ? (
-                          <div className="relative">
-                            <Image
+                          <div className="relative w-full h-full flex items-center justify-center">
+                            <img
+                              ref={hpfImageRef}
                               src={highPowerImages[currentHPFIndex]}
                               alt="HPF Sample"
-                              width={384}
-                              height={384}
-                              className="max-w-full max-h-full object-contain rounded-lg"
+                              className="max-w-full max-h-full object-contain"
                               onError={(e) => {
                                 console.error(
                                   "Failed to load image:",
@@ -3248,6 +3793,28 @@ export default function Report() {
                                 e.currentTarget.style.display = "none";
                               }}
                             />
+                            {hpfYoloDetections && hpfYoloDetections.predictions.length > 0 && (
+                              <BoundingBoxOverlay
+                                imageRef={hpfImageRef}
+                                detections={hpfYoloDetections.predictions}
+                                highlightedDetectionId={highlightedDetection}
+                                showBoundingBoxes={showBoundingBox}
+                              />
+                            )}
+                            {/* Toggle Overlay Button */}
+                            {hpfYoloDetections && hpfYoloDetections.predictions.length > 0 && (
+                              <button
+                                onClick={() => setShowBoundingBox(!showBoundingBox)}
+                                className="absolute top-2 left-2 bg-black/70 text-white p-2 rounded-md hover:bg-black/90 transition-colors z-10"
+                                title={showBoundingBox ? "Hide bounding boxes" : "Show bounding boxes"}
+                              >
+                                {showBoundingBox ? (
+                                  <Eye className="h-4 w-4" />
+                                ) : (
+                                  <EyeOff className="h-4 w-4" />
+                                )}
+                              </button>
+                            )}
                           </div>
                         ) : (
                         <div className="flex items-center justify-center h-full">
@@ -3257,9 +3824,9 @@ export default function Report() {
                         </div>
                       )}
 
-                      {/* Navigation Arrows */}
+                      {/* Navigation Controls - Bottom Center */}
                       {highPowerImages.length > 1 && (
-                        <>
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
                           <button
                             onClick={() =>
                               setCurrentHPFIndex((prev) =>
@@ -3268,10 +3835,17 @@ export default function Report() {
                                   : highPowerImages.length - 1
                               )
                             }
-                            className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-md hover:bg-black/70 transition-colors"
+                            className="bg-black/70 text-white px-3 py-1.5 rounded-md hover:bg-black/90 transition-colors flex items-center justify-center"
                           >
-                            <ChevronLeft className="h-5 w-5" />
+                            <ChevronLeft className="h-4 w-4" />
                           </button>
+                          <div className="bg-black/70 text-white px-3 py-1.5 rounded-md text-sm flex items-center justify-center min-w-[3rem]">
+                            {Math.min(
+                              currentHPFIndex + 1,
+                              highPowerImages.length
+                            )}{" "}
+                            / {highPowerImages.length}
+                          </div>
                           <button
                             onClick={() =>
                               setCurrentHPFIndex((prev) =>
@@ -3280,21 +3854,10 @@ export default function Report() {
                                   : 0
                               )
                             }
-                            className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-md hover:bg-black/70 transition-colors"
+                            className="bg-black/70 text-white px-3 py-1.5 rounded-md hover:bg-black/90 transition-colors flex items-center justify-center"
                           >
-                            <ChevronRight className="h-5 w-5" />
+                            <ChevronRight className="h-4 w-4" />
                           </button>
-                        </>
-                      )}
-
-                      {/* Image Counter */}
-                      {highPowerImages.length > 1 && (
-                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-md text-sm">
-                          {Math.min(
-                            currentHPFIndex + 1,
-                            highPowerImages.length
-                          )}{" "}
-                          / {highPowerImages.length}
                         </div>
                       )}
 
@@ -3327,6 +3890,16 @@ export default function Report() {
                       <h4 className="font-semibold text-gray-900 mb-3 text-sm">
                         HPF Sediment Analysis
                       </h4>
+
+                      {/* Loading Indicator */}
+                      {isAnalyzingHPF[currentHPFIndex] === true && (
+                        <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                          <div className="flex items-center justify-center gap-2 text-xs text-blue-700">
+                            <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                            <span>Analyzing image...</span>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Field-based Sediment Analysis Table */}
                       <div className="overflow-x-auto">
@@ -3361,405 +3934,583 @@ export default function Report() {
                           </thead>
                           <tbody className="text-xs">
                             <tr className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="text-center py-2 px-2">
-                                  <div
-                                    className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                      (hpfSedimentDetection?.rbc || 0) > 0
-                                        ? "bg-gray-200 text-gray-700"
-                                        : "bg-gray-50 text-gray-500"
-                                    }`}
-                                  >
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={hpfSedimentDetection?.rbc || 0}
-                                      onChange={(e) => {
-                                        const newValue =
-                                          parseInt(e.target.value) || 0;
-                                        setHpfSedimentDetection((prev) =>
-                                          prev
-                                            ? { ...prev, rbc: newValue }
-                                            : {
-                                                rbc: newValue,
-                                                wbc: 0,
-                                                epithelial_cells: 0,
-                                                crystals: 0,
-                                                bacteria: 0,
-                                                yeast: 0,
-                                                sperm: 0,
-                                                parasites: 0,
-                                                confidence: 0,
-                                                analysis_notes: "",
-                                              }
-                                        );
-                                        // Auto-save to database
-                                        if (selectedTest) {
-                                          saveHPFCountToDatabase(
-                                            "rbc",
-                                            newValue
-                                          );
-                                        }
-                                      }}
-                                      className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
-                                    />
+                                <td className="text-center py-2 px-2 align-top">
+                                  <div className="flex flex-col items-center gap-2 w-full">
+                                    {/* Count input container - fixed width, no stretching */}
+                                    <div className="flex justify-center w-full">
+                                      <div
+                                        className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
+                                          (hpfSedimentDetection?.rbc || 0) > 0
+                                            ? "bg-gray-200 text-gray-700"
+                                            : "bg-gray-50 text-gray-500"
+                                        }`}
+                                      >
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={hpfSedimentDetection?.rbc || 0}
+                                          onChange={(e) => {
+                                            const newValue =
+                                              parseInt(e.target.value) || 0;
+                                            setHpfSedimentDetection((prev) =>
+                                              prev
+                                                ? { ...prev, rbc: newValue }
+                                                : {
+                                                    rbc: newValue,
+                                                    wbc: 0,
+                                                    epithelial_cells: 0,
+                                                    crystals: 0,
+                                                    bacteria: 0,
+                                                    yeast: 0,
+                                                    sperm: 0,
+                                                    parasites: 0,
+                                                    confidence: 0,
+                                                    analysis_notes: "",
+                                                  }
+                                            );
+                                            // Auto-save to database
+                                            if (selectedTest) {
+                                              saveHPFCountToDatabase(
+                                                "rbc",
+                                                newValue
+                                              );
+                                            }
+                                          }}
+                                          className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                        />
+                                      </div>
+                                    </div>
+                                    {/* Cropped images gallery - separate container */}
+                                    {getHPFCroppedImagesByClass('rbc').length > 0 && (
+                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
+                                        {getHPFCroppedImagesByClass('rbc').map((item) => (
+                                          <img
+                                            key={item.id}
+                                            src={item.image}
+                                            alt="RBC"
+                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
+                                              highlightedDetection === item.id
+                                                ? 'border-red-500 shadow-lg'
+                                                : 'border-gray-300 hover:border-gray-500'
+                                            }`}
+                                            onClick={() => setHighlightedDetection(
+                                              highlightedDetection === item.id ? null : item.id
+                                            )}
+                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
-                                <td className="text-center py-2 px-2">
-                                  <div
-                                    className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                      (hpfSedimentDetection?.wbc || 0) > 0
-                                        ? "bg-gray-200 text-gray-700"
-                                        : "bg-gray-50 text-gray-500"
-                                    }`}
-                                  >
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={hpfSedimentDetection?.wbc || 0}
-                                      onChange={(e) => {
-                                        const newValue =
-                                          parseInt(e.target.value) || 0;
-                                        setHpfSedimentDetection((prev) =>
-                                          prev
-                                            ? { ...prev, wbc: newValue }
-                                            : {
-                                                rbc: 0,
-                                                wbc: newValue,
-                                                epithelial_cells: 0,
-                                                crystals: 0,
-                                                bacteria: 0,
-                                                yeast: 0,
-                                                sperm: 0,
-                                                parasites: 0,
-                                                confidence: 0,
-                                                analysis_notes: "",
-                                              }
-                                        );
-                                        // Auto-save to database
-                                        if (selectedTest) {
-                                          saveHPFCountToDatabase(
-                                            "wbc",
-                                            newValue
-                                          );
-                                        }
-                                      }}
-                                      className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
-                                    />
+                                <td className="text-center py-2 px-2 align-top">
+                                  <div className="flex flex-col items-center gap-2 w-full">
+                                    {/* Count input container - fixed width, no stretching */}
+                                    <div className="flex justify-center w-full">
+                                      <div
+                                        className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
+                                          (hpfSedimentDetection?.wbc || 0) > 0
+                                            ? "bg-gray-200 text-gray-700"
+                                            : "bg-gray-50 text-gray-500"
+                                        }`}
+                                      >
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={hpfSedimentDetection?.wbc || 0}
+                                          onChange={(e) => {
+                                            const newValue =
+                                              parseInt(e.target.value) || 0;
+                                            setHpfSedimentDetection((prev) =>
+                                              prev
+                                                ? { ...prev, wbc: newValue }
+                                                : {
+                                                    rbc: 0,
+                                                    wbc: newValue,
+                                                    epithelial_cells: 0,
+                                                    crystals: 0,
+                                                    bacteria: 0,
+                                                    yeast: 0,
+                                                    sperm: 0,
+                                                    parasites: 0,
+                                                    confidence: 0,
+                                                    analysis_notes: "",
+                                                  }
+                                            );
+                                            // Auto-save to database
+                                            if (selectedTest) {
+                                              saveHPFCountToDatabase(
+                                                "wbc",
+                                                newValue
+                                              );
+                                            }
+                                          }}
+                                          className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                        />
+                                      </div>
+                                    </div>
+                                    {/* Cropped images gallery - separate container */}
+                                    {getHPFCroppedImagesByClass('wbc').length > 0 && (
+                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
+                                        {getHPFCroppedImagesByClass('wbc').map((item) => (
+                                          <img
+                                            key={item.id}
+                                            src={item.image}
+                                            alt="WBC"
+                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
+                                              highlightedDetection === item.id
+                                                ? 'border-red-500 shadow-lg'
+                                                : 'border-gray-300 hover:border-gray-500'
+                                            }`}
+                                            onClick={() => setHighlightedDetection(
+                                              highlightedDetection === item.id ? null : item.id
+                                            )}
+                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
-                                <td className="text-center py-2 px-2">
-                                  <div
-                                    className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                      (hpfSedimentDetection?.epithelial_cells ||
-                                        0) > 0
-                                        ? "bg-gray-200 text-gray-700"
-                                        : "bg-gray-50 text-gray-500"
-                                    }`}
-                                  >
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={
-                                        hpfSedimentDetection?.epithelial_cells ||
-                                        0
-                                      }
-                                      onChange={(e) => {
-                                        const newValue =
-                                          parseInt(e.target.value) || 0;
-                                        setHpfSedimentDetection((prev) =>
-                                          prev
-                                            ? {
-                                                ...prev,
-                                                epithelial_cells: newValue,
-                                              }
-                                            : {
-                                                rbc: 0,
-                                                wbc: 0,
-                                                epithelial_cells: newValue,
-                                                crystals: 0,
-                                                bacteria: 0,
-                                                yeast: 0,
-                                                sperm: 0,
-                                                parasites: 0,
-                                                confidence: 0,
-                                                analysis_notes: "",
-                                              }
-                                        );
-                                        // Auto-save to database
-                                        if (selectedTest) {
-                                          saveHPFCountToDatabase(
-                                            "epithelial_cells",
-                                            newValue
-                                          );
-                                        }
-                                      }}
-                                      className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
-                                    />
+                                <td className="text-center py-2 px-2 align-top">
+                                  <div className="flex flex-col items-center gap-2 w-full">
+                                    {/* Count input container - fixed width, no stretching */}
+                                    <div className="flex justify-center w-full">
+                                      <div
+                                        className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
+                                          (hpfSedimentDetection?.epithelial_cells ||
+                                            0) > 0
+                                            ? "bg-gray-200 text-gray-700"
+                                            : "bg-gray-50 text-gray-500"
+                                        }`}
+                                      >
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={
+                                            hpfSedimentDetection?.epithelial_cells ||
+                                            0
+                                          }
+                                          onChange={(e) => {
+                                            const newValue =
+                                              parseInt(e.target.value) || 0;
+                                            setHpfSedimentDetection((prev) =>
+                                              prev
+                                                ? {
+                                                    ...prev,
+                                                    epithelial_cells: newValue,
+                                                  }
+                                                : {
+                                                    rbc: 0,
+                                                    wbc: 0,
+                                                    epithelial_cells: newValue,
+                                                    crystals: 0,
+                                                    bacteria: 0,
+                                                    yeast: 0,
+                                                    sperm: 0,
+                                                    parasites: 0,
+                                                    confidence: 0,
+                                                    analysis_notes: "",
+                                                  }
+                                            );
+                                            // Auto-save to database
+                                            if (selectedTest) {
+                                              saveHPFCountToDatabase(
+                                                "epithelial_cells",
+                                                newValue
+                                              );
+                                            }
+                                          }}
+                                          className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                        />
+                                      </div>
+                                    </div>
+                                    {/* Cropped images gallery - separate container */}
+                                    {getHPFCroppedImagesByClass('epithelial_cells').length > 0 && (
+                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
+                                        {getHPFCroppedImagesByClass('epithelial_cells').map((item) => (
+                                          <img
+                                            key={item.id}
+                                            src={item.image}
+                                            alt="Epithelial Cell"
+                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
+                                              highlightedDetection === item.id
+                                                ? 'border-red-500 shadow-lg'
+                                                : 'border-gray-300 hover:border-gray-500'
+                                            }`}
+                                            onClick={() => setHighlightedDetection(
+                                              highlightedDetection === item.id ? null : item.id
+                                            )}
+                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
-                                <td className="text-center py-2 px-2">
-                                  <div
-                                    className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                      (hpfSedimentDetection?.crystals || 0) > 0
-                                        ? "bg-gray-200 text-gray-700"
-                                        : "bg-gray-50 text-gray-500"
-                                    }`}
-                                  >
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={hpfSedimentDetection?.crystals || 0}
-                                      onChange={(e) => {
-                                        const newValue =
-                                          parseInt(e.target.value) || 0;
-                                        setHpfSedimentDetection((prev) =>
-                                          prev
-                                            ? { ...prev, crystals: newValue }
-                                            : {
-                                                rbc: 0,
-                                                wbc: 0,
-                                                epithelial_cells: 0,
-                                                crystals: newValue,
-                                                bacteria: 0,
-                                                yeast: 0,
-                                                sperm: 0,
-                                                parasites: 0,
-                                                confidence: 0,
-                                                analysis_notes: "",
-                                              }
-                                        );
-                                        // Auto-save to database
-                                        if (selectedTest) {
-                                          saveHPFCountToDatabase(
-                                            "crystals",
-                                            newValue
-                                          );
-                                        }
-                                      }}
-                                      className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
-                                    />
+                                <td className="text-center py-2 px-2 align-top">
+                                  <div className="flex flex-col items-center gap-2 w-full">
+                                    {/* Count input container - fixed width, no stretching */}
+                                    <div className="flex justify-center w-full">
+                                      <div
+                                        className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
+                                          (hpfSedimentDetection?.crystals || 0) > 0
+                                            ? "bg-gray-200 text-gray-700"
+                                            : "bg-gray-50 text-gray-500"
+                                        }`}
+                                      >
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={hpfSedimentDetection?.crystals || 0}
+                                          onChange={(e) => {
+                                            const newValue =
+                                              parseInt(e.target.value) || 0;
+                                            setHpfSedimentDetection((prev) =>
+                                              prev
+                                                ? { ...prev, crystals: newValue }
+                                                : {
+                                                    rbc: 0,
+                                                    wbc: 0,
+                                                    epithelial_cells: 0,
+                                                    crystals: newValue,
+                                                    bacteria: 0,
+                                                    yeast: 0,
+                                                    sperm: 0,
+                                                    parasites: 0,
+                                                    confidence: 0,
+                                                    analysis_notes: "",
+                                                  }
+                                            );
+                                            // Auto-save to database
+                                            if (selectedTest) {
+                                              saveHPFCountToDatabase(
+                                                "crystals",
+                                                newValue
+                                              );
+                                            }
+                                          }}
+                                          className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                        />
+                                      </div>
+                                    </div>
+                                    {/* Cropped images gallery - separate container */}
+                                    {getHPFCroppedImagesByClass('crystals').length > 0 && (
+                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
+                                        {getHPFCroppedImagesByClass('crystals').map((item) => (
+                                          <img
+                                            key={item.id}
+                                            src={item.image}
+                                            alt="Crystal"
+                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
+                                              highlightedDetection === item.id
+                                                ? 'border-red-500 shadow-lg'
+                                                : 'border-gray-300 hover:border-gray-500'
+                                            }`}
+                                            onClick={() => setHighlightedDetection(
+                                              highlightedDetection === item.id ? null : item.id
+                                            )}
+                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
-                                <td className="text-center py-2 px-2">
-                                  <div
-                                    className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                      (hpfSedimentDetection?.bacteria || 0) > 0
-                                        ? "bg-gray-200 text-gray-700"
-                                        : "bg-gray-50 text-gray-500"
-                                    }`}
-                                  >
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={hpfSedimentDetection?.bacteria || 0}
-                                      onChange={(e) => {
-                                        const newValue =
-                                          parseInt(e.target.value) || 0;
-                                        setHpfSedimentDetection((prev) =>
-                                          prev
-                                            ? { ...prev, bacteria: newValue }
-                                            : {
-                                                rbc: 0,
-                                                wbc: 0,
-                                                epithelial_cells: 0,
-                                                crystals: 0,
-                                                bacteria: newValue,
-                                                yeast: 0,
-                                                sperm: 0,
-                                                parasites: 0,
-                                                confidence: 0,
-                                                analysis_notes: "",
-                                              }
-                                        );
-                                        // Auto-save to database
-                                        if (selectedTest) {
-                                          saveHPFCountToDatabase(
-                                            "bacteria",
-                                            newValue
-                                          );
-                                        }
-                                      }}
-                                      className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
-                                    />
+                                <td className="text-center py-2 px-2 align-top">
+                                  <div className="flex flex-col items-center gap-2 w-full">
+                                    {/* Count input container - fixed width, no stretching */}
+                                    <div className="flex justify-center w-full">
+                                      <div
+                                        className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
+                                          (hpfSedimentDetection?.bacteria || 0) > 0
+                                            ? "bg-gray-200 text-gray-700"
+                                            : "bg-gray-50 text-gray-500"
+                                        }`}
+                                      >
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={hpfSedimentDetection?.bacteria || 0}
+                                          onChange={(e) => {
+                                            const newValue =
+                                              parseInt(e.target.value) || 0;
+                                            setHpfSedimentDetection((prev) =>
+                                              prev
+                                                ? { ...prev, bacteria: newValue }
+                                                : {
+                                                    rbc: 0,
+                                                    wbc: 0,
+                                                    epithelial_cells: 0,
+                                                    crystals: 0,
+                                                    bacteria: newValue,
+                                                    yeast: 0,
+                                                    sperm: 0,
+                                                    parasites: 0,
+                                                    confidence: 0,
+                                                    analysis_notes: "",
+                                                  }
+                                            );
+                                            // Auto-save to database
+                                            if (selectedTest) {
+                                              saveHPFCountToDatabase(
+                                                "bacteria",
+                                                newValue
+                                              );
+                                            }
+                                          }}
+                                          className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                        />
+                                      </div>
+                                    </div>
+                                    {/* Cropped images gallery - separate container */}
+                                    {getHPFCroppedImagesByClass('bacteria').length > 0 && (
+                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
+                                        {getHPFCroppedImagesByClass('bacteria').map((item) => (
+                                          <img
+                                            key={item.id}
+                                            src={item.image}
+                                            alt="Bacteria"
+                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
+                                              highlightedDetection === item.id
+                                                ? 'border-red-500 shadow-lg'
+                                                : 'border-gray-300 hover:border-gray-500'
+                                            }`}
+                                            onClick={() => setHighlightedDetection(
+                                              highlightedDetection === item.id ? null : item.id
+                                            )}
+                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
-                                <td className="text-center py-2 px-2">
-                                  <div
-                                    className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                      (hpfSedimentDetection?.yeast || 0) > 0
-                                        ? "bg-gray-200 text-gray-700"
-                                        : "bg-gray-50 text-gray-500"
-                                    }`}
-                                  >
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={hpfSedimentDetection?.yeast || 0}
-                                      onChange={(e) => {
-                                        const newValue =
-                                          parseInt(e.target.value) || 0;
-                                        setHpfSedimentDetection((prev) =>
-                                          prev
-                                            ? { ...prev, yeast: newValue }
-                                            : {
-                                                rbc: 0,
-                                                wbc: 0,
-                                                epithelial_cells: 0,
-                                                crystals: 0,
-                                                bacteria: 0,
-                                                yeast: newValue,
-                                                sperm: 0,
-                                                parasites: 0,
-                                                confidence: 0,
-                                                analysis_notes: "",
-                                              }
-                                        );
-                                        // Auto-save to database
-                                        if (selectedTest) {
-                                          saveHPFCountToDatabase(
-                                            "yeast",
-                                            newValue
-                                          );
-                                        }
-                                      }}
-                                      className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
-                                    />
+                                <td className="text-center py-2 px-2 align-top">
+                                  <div className="flex flex-col items-center gap-2 w-full">
+                                    {/* Count input container - fixed width, no stretching */}
+                                    <div className="flex justify-center w-full">
+                                      <div
+                                        className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
+                                          (hpfSedimentDetection?.yeast || 0) > 0
+                                            ? "bg-gray-200 text-gray-700"
+                                            : "bg-gray-50 text-gray-500"
+                                        }`}
+                                      >
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={hpfSedimentDetection?.yeast || 0}
+                                          onChange={(e) => {
+                                            const newValue =
+                                              parseInt(e.target.value) || 0;
+                                            setHpfSedimentDetection((prev) =>
+                                              prev
+                                                ? { ...prev, yeast: newValue }
+                                                : {
+                                                    rbc: 0,
+                                                    wbc: 0,
+                                                    epithelial_cells: 0,
+                                                    crystals: 0,
+                                                    bacteria: 0,
+                                                    yeast: newValue,
+                                                    sperm: 0,
+                                                    parasites: 0,
+                                                    confidence: 0,
+                                                    analysis_notes: "",
+                                                  }
+                                            );
+                                            // Auto-save to database
+                                            if (selectedTest) {
+                                              saveHPFCountToDatabase(
+                                                "yeast",
+                                                newValue
+                                              );
+                                            }
+                                          }}
+                                          className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                        />
+                                      </div>
+                                    </div>
+                                    {/* Cropped images gallery - separate container */}
+                                    {getHPFCroppedImagesByClass('yeast').length > 0 && (
+                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
+                                        {getHPFCroppedImagesByClass('yeast').map((item) => (
+                                          <img
+                                            key={item.id}
+                                            src={item.image}
+                                            alt="Yeast"
+                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
+                                              highlightedDetection === item.id
+                                                ? 'border-red-500 shadow-lg'
+                                                : 'border-gray-300 hover:border-gray-500'
+                                            }`}
+                                            onClick={() => setHighlightedDetection(
+                                              highlightedDetection === item.id ? null : item.id
+                                            )}
+                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
-                                <td className="text-center py-2 px-2">
-                                  <div
-                                    className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                      (hpfSedimentDetection?.sperm || 0) > 0
-                                        ? "bg-gray-200 text-gray-700"
-                                        : "bg-gray-50 text-gray-500"
-                                    }`}
-                                  >
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={hpfSedimentDetection?.sperm || 0}
-                                      onChange={(e) => {
-                                        const newValue =
-                                          parseInt(e.target.value) || 0;
-                                        setHpfSedimentDetection((prev) =>
-                                          prev
-                                            ? { ...prev, sperm: newValue }
-                                            : {
-                                                rbc: 0,
-                                                wbc: 0,
-                                                epithelial_cells: 0,
-                                                crystals: 0,
-                                                bacteria: 0,
-                                                yeast: 0,
-                                                sperm: newValue,
-                                                parasites: 0,
-                                                confidence: 0,
-                                                analysis_notes: "",
-                                              }
-                                        );
-                                        // Auto-save to database
-                                        if (selectedTest) {
-                                          saveHPFCountToDatabase(
-                                            "sperm",
-                                            newValue
-                                          );
-                                        }
-                                      }}
-                                      className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
-                                    />
+                                <td className="text-center py-2 px-2 align-top">
+                                  <div className="flex flex-col items-center gap-2 w-full">
+                                    {/* Count input container - fixed width, no stretching */}
+                                    <div className="flex justify-center w-full">
+                                      <div
+                                        className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
+                                          (hpfSedimentDetection?.sperm || 0) > 0
+                                            ? "bg-gray-200 text-gray-700"
+                                            : "bg-gray-50 text-gray-500"
+                                        }`}
+                                      >
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={hpfSedimentDetection?.sperm || 0}
+                                          onChange={(e) => {
+                                            const newValue =
+                                              parseInt(e.target.value) || 0;
+                                            setHpfSedimentDetection((prev) =>
+                                              prev
+                                                ? { ...prev, sperm: newValue }
+                                                : {
+                                                    rbc: 0,
+                                                    wbc: 0,
+                                                    epithelial_cells: 0,
+                                                    crystals: 0,
+                                                    bacteria: 0,
+                                                    yeast: 0,
+                                                    sperm: newValue,
+                                                    parasites: 0,
+                                                    confidence: 0,
+                                                    analysis_notes: "",
+                                                  }
+                                            );
+                                            // Auto-save to database
+                                            if (selectedTest) {
+                                              saveHPFCountToDatabase(
+                                                "sperm",
+                                                newValue
+                                              );
+                                            }
+                                          }}
+                                          className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                        />
+                                      </div>
+                                    </div>
+                                    {/* Cropped images gallery - separate container */}
+                                    {getHPFCroppedImagesByClass('sperm').length > 0 && (
+                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
+                                        {getHPFCroppedImagesByClass('sperm').map((item) => (
+                                          <img
+                                            key={item.id}
+                                            src={item.image}
+                                            alt="Sperm"
+                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
+                                              highlightedDetection === item.id
+                                                ? 'border-red-500 shadow-lg'
+                                                : 'border-gray-300 hover:border-gray-500'
+                                            }`}
+                                            onClick={() => setHighlightedDetection(
+                                              highlightedDetection === item.id ? null : item.id
+                                            )}
+                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
-                                <td className="text-center py-2 px-2">
-                                  <div
-                                    className={`rounded px-3 py-1 text-xs font-medium min-w-[60px] ${
-                                      (hpfSedimentDetection?.parasites || 0) >
-                                      0
-                                        ? "bg-gray-200 text-gray-700"
-                                        : "bg-gray-50 text-gray-500"
-                                    }`}
-                                  >
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={hpfSedimentDetection?.parasites || 0}
-                                      onChange={(e) => {
-                                        const newValue =
-                                          parseInt(e.target.value) || 0;
-                                        setHpfSedimentDetection((prev) =>
-                                          prev
-                                            ? { ...prev, parasites: newValue }
-                                            : {
-                                                rbc: 0,
-                                                wbc: 0,
-                                                epithelial_cells: 0,
-                                                crystals: 0,
-                                                bacteria: 0,
-                                                yeast: 0,
-                                                sperm: 0,
-                                                parasites: newValue,
-                                                confidence: 0,
-                                                analysis_notes: "",
-                                              }
-                                        );
-                                        // Auto-save to database
-                                        if (selectedTest) {
-                                          saveHPFCountToDatabase(
-                                            "parasites",
-                                            newValue
-                                          );
-                                        }
-                                      }}
-                                      className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
-                                    />
+                                <td className="text-center py-2 px-2 align-top">
+                                  <div className="flex flex-col items-center gap-2 w-full">
+                                    {/* Count input container - fixed width, no stretching */}
+                                    <div className="flex justify-center w-full">
+                                      <div
+                                        className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
+                                          (hpfSedimentDetection?.parasites || 0) >
+                                          0
+                                            ? "bg-gray-200 text-gray-700"
+                                            : "bg-gray-50 text-gray-500"
+                                        }`}
+                                      >
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={hpfSedimentDetection?.parasites || 0}
+                                          onChange={(e) => {
+                                            const newValue =
+                                              parseInt(e.target.value) || 0;
+                                            setHpfSedimentDetection((prev) =>
+                                              prev
+                                                ? { ...prev, parasites: newValue }
+                                                : {
+                                                    rbc: 0,
+                                                    wbc: 0,
+                                                    epithelial_cells: 0,
+                                                    crystals: 0,
+                                                    bacteria: 0,
+                                                    yeast: 0,
+                                                    sperm: 0,
+                                                    parasites: newValue,
+                                                    confidence: 0,
+                                                    analysis_notes: "",
+                                                  }
+                                            );
+                                            // Auto-save to database
+                                            if (selectedTest) {
+                                              saveHPFCountToDatabase(
+                                                "parasites",
+                                                newValue
+                                              );
+                                            }
+                                          }}
+                                          className="w-full text-center text-xs bg-transparent border-none outline-none focus:ring-0 focus:outline-none"
+                                        />
+                                      </div>
+                                    </div>
+                                    {/* Cropped images gallery - separate container */}
+                                    {getHPFCroppedImagesByClass('parasites').length > 0 && (
+                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
+                                        {getHPFCroppedImagesByClass('parasites').map((item) => (
+                                          <img
+                                            key={item.id}
+                                            src={item.image}
+                                            alt="Parasite"
+                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
+                                              highlightedDetection === item.id
+                                                ? 'border-red-500 shadow-lg'
+                                                : 'border-gray-300 hover:border-gray-500'
+                                            }`}
+                                            onClick={() => setHighlightedDetection(
+                                              highlightedDetection === item.id ? null : item.id
+                                            )}
+                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
                               </tr>
-                              {/* Average Row for 10 Fields - Always at bottom */}
-                              <tr className="border-t-2 border-gray-300 bg-gray-100">
-                                <td colSpan={8} className="text-left py-1.5 px-2 text-[10px] font-semibold text-gray-600 uppercase">
-                                  Average (10 Fields)
-                                </td>
-                              </tr>
-                              <tr className="bg-gray-100">
-                                <td className="text-center py-2 px-2 font-semibold text-gray-900">
-                                  0.0
-                                </td>
-                                <td className="text-center py-2 px-2 font-semibold text-gray-900">
-                                  0.0
-                                </td>
-                                <td className="text-center py-2 px-2 font-semibold text-gray-900">
-                                  0.0
-                                </td>
-                                <td className="text-center py-2 px-2 font-semibold text-gray-900">
-                                  0.0
-                                </td>
-                                <td className="text-center py-2 px-2 font-semibold text-gray-900">
-                                  0.0
-                                </td>
-                                <td className="text-center py-2 px-2 font-semibold text-gray-900">
-                                  0.0
-                                </td>
-                                <td className="text-center py-2 px-2 font-semibold text-gray-900">
-                                  0.0
-                                </td>
-                                <td className="text-center py-2 px-2 font-semibold text-gray-900">
-                                  0.0
-                                </td>
-                              </tr>
+                              {/* Remarks Row */}
+                              {hpfSedimentDetection && hpfSedimentDetection.analysis_notes && (
+                                <tr className="border-t-2 border-gray-300 bg-gray-50">
+                                  <td colSpan={8} className="py-2 px-3 text-left">
+                                    <div className="text-xs">
+                                      <span className="font-semibold text-gray-700">Remarks: </span>
+                                      <span className="text-gray-600">
+                                        {hpfSedimentDetection.analysis_notes}
+                                      </span>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
                             </tbody>
                           </table>
                         </div>
-
-                        {/* AI Analysis Status */}
-                        {hpfSedimentDetection && hpfSedimentDetection.analysis_notes && (
-                          <div className="mt-3 p-2 bg-gray-100 rounded-lg">
-                            <div className="text-xs">
-                              <span className="text-gray-700">
-                                {hpfSedimentDetection.analysis_notes}
-                              </span>
-                            </div>
-                          </div>
-                        )}
 
                         {/* Loading indicator for HPF analysis */}
                         {isAnalyzingHPF[currentHPFIndex] === true && (

@@ -91,6 +91,22 @@ export interface ImageAnalysis {
   // Analysis metadata
   confidence?: number
   analysis_notes?: string
+  yolo_detections?: {
+    predictions: Array<{
+      x: number
+      y: number
+      width: number
+      height: number
+      confidence: number
+      class: string
+      class_id: number
+      detection_id: string
+    }>
+    summary: {
+      total_detections: number
+      by_class: Record<string, number>
+    }
+  } | null
   analyzed_at: string
   created_at: string
   updated_at: string
