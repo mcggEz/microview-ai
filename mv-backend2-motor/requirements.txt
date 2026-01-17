@@ -1,0 +1,4 @@
+Flask==2.3.3
+flask-cors==4.0.0
+pyserial==3.5
+# RPi.GPIO==0.7.1  # Only needed on Raspberry Pi, install separately if needed
