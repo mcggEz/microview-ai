@@ -460,79 +460,75 @@ def move_to_position_endpoint():
 
 @app.route('/get_samples', methods=['POST'])
 def get_samples_routine():
-    """Execute the get samples routine - cycles through all 10 LPF samples"""
+    """
+    Initialize sample collection:
+    - Home motors
+    - Move to the first LPF sample (lpf_1)
+    - Return a single-step status payload
+    
+    Subsequent samples should be requested via /next_sample.
+    """
     global current_sample
-    logger.info("=== GET SAMPLES ROUTINE STARTED ===")
+    logger.info("=== GET SAMPLES ROUTINE (STEP 1) STARTED ===")
     try:
-        logger.info("Starting 'Get Samples' routine...")
-        
+        logger.info("Starting 'Get Samples' routine (home + first sample)...")
+
         # Step 1: Home motors first
         logger.info("Step 1: Homing motors")
         home_motors()
         time.sleep(1)  # Wait for homing to complete
-        
-        # Step 2: Cycle through all 10 LPF samples
-        logger.info("Step 2: Cycling through all 10 LPF samples")
-        samples_completed = []
-        movement_interval = 1.0  # 1 second between movements
-        
-        for sample_num in range(1, 11):
-            sample_name = f'lpf_{sample_num}'
-            logger.info("=" * 50)
-            logger.info(f"MOVED TO SAMPLE {sample_num} LPF")
-            logger.info("=" * 50)
-            
-            # Get target position
-            target_pos = SAMPLE_POSITIONS[sample_name]
-            logger.info(f"Target position for {sample_name}: {target_pos}")
-            
-            # Move to sample position
-            if USE_ARDUINO and is_initialized:
-                # Use Arduino SAMPLE command for direct positioning
-                logger.info(f"Sending SAMPLE command to Arduino: {sample_name}")
-                send_arduino_command(f"SAMPLE {sample_name}")
-                time.sleep(0.5)  # Wait for Arduino to process
-            else:
-                logger.info(f"Moving to position: x={target_pos['x']}, y={target_pos['y']}, z={target_pos['z']}")
-                move_to_position(target_pos['x'], target_pos['y'], target_pos['z'])
-            
-            # Update current sample
-            current_sample = sample_name
-            logger.info(f"Current sample updated to: {current_sample}")
-            logger.info(f"✓ Successfully moved to sample {sample_num} LPF")
-            
-            # Record completion
-            samples_completed.append({
-                'sample': sample_name,
-                'sample_number': sample_num,
-                'position': current_position.copy()
-            })
-            
-            # Wait before moving to next sample (except for the last one)
-            if sample_num < 10:
-                logger.info(f"Waiting {movement_interval} seconds before moving to next sample...")
-                time.sleep(movement_interval)
-        
-        logger.info("=" * 50)
-        logger.info("ALL 10 SAMPLES COMPLETED")
-        logger.info("=" * 50)
-        
-        # Send response that all samples have been cycled through
+
+        # Step 2: Move to first LPF sample only
+        sample_num = 1
+        sample_name = f'lpf_{sample_num}'
+        logger.info("Step 2: Moving to first LPF sample (lpf_1)")
+
+        target_pos = SAMPLE_POSITIONS.get(sample_name)
+        if not target_pos:
+            error_msg = f"Sample position {sample_name} not defined"
+            logger.error(error_msg)
+            return jsonify({
+                'status': 'error',
+                'message': error_msg
+            }), 500
+
+        logger.info(f"Target position for {sample_name}: {target_pos}")
+
+        # Move to sample position
+        if USE_ARDUINO and is_initialized:
+            # Use Arduino SAMPLE command for direct positioning
+            logger.info(f"Sending SAMPLE command to Arduino: {sample_name}")
+            send_arduino_command(f"SAMPLE {sample_name}")
+            time.sleep(0.5)  # Wait for Arduino to process
+        else:
+            logger.info(
+                f"Moving to position: x={target_pos['x']}, y={target_pos['y']}, z={target_pos['z']}"
+            )
+            move_to_position(target_pos['x'], target_pos['y'], target_pos['z'])
+
+        # Update current sample
+        current_sample = sample_name
+        logger.info(f"Current sample updated to: {current_sample}")
+        logger.info("✓ Successfully moved to first LPF sample (1/10)")
+
+        # Build response consistent with /next_sample
+        field_type = 'lpf'
+        total_samples = 10
         response = {
             'status': 'success',
-            'message': 'All 10 LPF samples positioned successfully',
-            'samples_completed': samples_completed,
-            'total_samples': 10,
-            'field_type': 'lpf',
-            'current_sample': current_sample,
+            'message': f'{field_type.upper()} sample {sample_num}/{total_samples} ready for capture',
+            'sample': sample_name,
+            'sample_number': sample_num,
+            'total_samples': total_samples,
+            'field_type': field_type,
             'position': current_position,
             'ready_for_capture': True
         }
-        
-        logger.info(f"Get samples routine completed successfully. Response: {response}")
-        logger.info("=== GET SAMPLES ROUTINE COMPLETED ===")
+
+        logger.info(f"Get samples (step 1) completed successfully. Response: {response}")
+        logger.info("=== GET SAMPLES ROUTINE (STEP 1) COMPLETED ===")
         return jsonify(response)
-        
+
     except Exception as e:
         logger.error(f"Error in get_samples routine: {e}")
         return jsonify({
