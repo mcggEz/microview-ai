@@ -54,6 +54,8 @@ flowchart LR
 - **Supabase** - Backend-as-a-Service for database, storage, and traditional table-based authentication
 - **Google Gemini AI** - Large Language Model for image analysis and urinalysis interpretation
 - **Traditional Authentication** - Email/password authentication using `med_tech` table with bcrypt password hashing
+- **`mv-backend1-yolo`** - FastAPI microservice exposing the YOLO v11 urine sediment detection model as a pure API (default port `7860`); see `mv-backend1-yolo/README.md` for details.
+- **`mv-backend2-motor`** - Flask-based motor control server for automated sample positioning and microscope movement (default port `3001`), used by the web app to coordinate LPF/HPF field capture.
 
 
 ## 🔌 Hardware Setup Overview
