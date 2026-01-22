@@ -83,6 +83,13 @@ export default function Report() {
     "success" | "error" | "warning" | "info"
   >("success");
 
+  // Motor server / Get Samples event log
+  const [showMotorLog, setShowMotorLog] = useState(false);
+  const [motorEvents, setMotorEvents] = useState<
+    { timestamp: string; message: string; type: "info" | "success" | "error" }[]
+  >([]);
+  const [motorRunning, setMotorRunning] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState<{ full_name?: string; email?: string } | null>(null);
 
@@ -2382,30 +2389,174 @@ export default function Report() {
                 <span className="tracking-tight">Add Test</span>
               </Button>
 
-              {/* Get Samples - attempts request but shows friendly error */}
+              {/* Get Samples - attempts request and logs full routine */}
               <Button
                 onClick={async () => {
                   try {
+                    const startTime = new Date().toLocaleTimeString();
+                    setShowMotorLog(true);
+                    setMotorRunning(true);
+                    setMotorEvents((prev) => [
+                      ...prev,
+                      {
+                        timestamp: startTime,
+                        message: "Starting Get Samples routine…",
+                        type: "info",
+                      },
+                    ]);
+
                     const base =
                       process.env.NEXT_PUBLIC_MOTOR_API_BASE ||
                       "http://127.0.0.1:3001";
-                    const res = await fetch(`${base}/get_samples`, {
+                    // Step 1: Initialize routine (home motors + first sample)
+                    const firstRes = await fetch(`${base}/get_samples`, {
                       method: "POST",
                     });
-                    if (!res.ok)
-                      throw new Error(`Motor server error ${res.status}`);
-                    setNotificationMessage(
-                      "Sample collection completed successfully!"
-                    );
-                    setNotificationType("success");
-                    setShowNotification(true);
-                  } catch {
-                    // Show user-friendly message instead of technical error
-                    setNotificationMessage(
-                      "Motor control is not supported in this configuration."
-                    );
-                    setNotificationType("warning");
-                    setShowNotification(true);
+                    if (!firstRes.ok) {
+                      throw new Error(`Motor server error ${firstRes.status}`);
+                    }
+
+                    const firstData = await firstRes.json().catch(() => null);
+
+                    if (!firstData || firstData.status !== "success") {
+                      const message =
+                        firstData?.message ||
+                        "Failed to start Get Samples routine (step 1).";
+                      setMotorEvents((prev) => [
+                        ...prev,
+                        {
+                          timestamp: new Date().toLocaleTimeString(),
+                          message,
+                          type: "error",
+                        },
+                      ]);
+                      return;
+                    }
+
+                    const totalSamples =
+                      firstData.total_samples ?? 10;
+                    const fieldTypeLabel =
+                      (firstData.field_type || "lpf").toString().toUpperCase();
+
+                    // Log first sample from /get_samples
+                    setMotorEvents((prev) => [
+                      ...prev,
+                      {
+                        timestamp: new Date().toLocaleTimeString(),
+                        message: `${fieldTypeLabel} sample ${
+                          firstData.sample_number ?? 1
+                        }/${totalSamples} (${
+                          firstData.sample || "lpf_1"
+                        }) positioned at X=${firstData.position?.x?.toFixed?.(
+                          1
+                        )}, Y=${firstData.position?.y?.toFixed?.(1)}`,
+                        type: "info",
+                      },
+                    ]);
+
+                    // Step 2: Loop through remaining samples via /next_sample
+                    let continueLoop = true;
+                    while (continueLoop) {
+                      const nextRes = await fetch(`${base}/next_sample`, {
+                        method: "POST",
+                      });
+
+                      if (!nextRes.ok) {
+                        throw new Error(
+                          `Motor server error (next_sample) ${nextRes.status}`
+                        );
+                      }
+
+                      const nextData = await nextRes.json().catch(() => null);
+
+                      if (!nextData) {
+                        setMotorEvents((prev) => [
+                          ...prev,
+                          {
+                            timestamp: new Date().toLocaleTimeString(),
+                            message:
+                              "Received empty response from motor server during next_sample.",
+                            type: "error",
+                          },
+                        ]);
+                        break;
+                      }
+
+                      if (nextData.status === "success") {
+                        const nextTotal =
+                          nextData.total_samples ?? totalSamples ?? 10;
+                        const nextFieldTypeLabel = (
+                          nextData.field_type || "lpf"
+                        )
+                          .toString()
+                          .toUpperCase();
+
+                        setMotorEvents((prev) => [
+                          ...prev,
+                          {
+                            timestamp: new Date().toLocaleTimeString(),
+                            message: `${nextFieldTypeLabel} sample ${
+                              nextData.sample_number ?? "?"
+                            }/${nextTotal} (${
+                              nextData.sample || "unknown"
+                            }) positioned at X=${nextData.position?.x?.toFixed?.(
+                              1
+                            )}, Y=${nextData.position?.y?.toFixed?.(1)}`,
+                            type: "info",
+                          },
+                        ]);
+                      } else if (nextData.status === "complete") {
+                        setMotorEvents((prev) => [
+                          ...prev,
+                          {
+                            timestamp: new Date().toLocaleTimeString(),
+                            message:
+                              nextData.message || "All samples completed.",
+                            type: "success",
+                          },
+                        ]);
+                        continueLoop = false;
+                      } else if (nextData.status === "error") {
+                        setMotorEvents((prev) => [
+                          ...prev,
+                          {
+                            timestamp: new Date().toLocaleTimeString(),
+                            message: `Motor server error: ${
+                              nextData.message || "Unknown error"
+                            }`,
+                            type: "error",
+                          },
+                        ]);
+                        continueLoop = false;
+                      } else {
+                        // Unexpected payload; stop to avoid infinite loop
+                        setMotorEvents((prev) => [
+                          ...prev,
+                          {
+                            timestamp: new Date().toLocaleTimeString(),
+                            message:
+                              "Unexpected response from motor server during next_sample.",
+                            type: "error",
+                          },
+                        ]);
+                        continueLoop = false;
+                      }
+                    }
+                  } catch (error) {
+                    console.error("Get Samples error:", error);
+
+                    setMotorEvents((prev) => [
+                      ...prev,
+                      {
+                        timestamp: new Date().toLocaleTimeString(),
+                        message:
+                          "Motor control is not supported or motor server is unreachable.",
+                        type: "error",
+                      },
+                    ]);
+
+                  } finally {
+                    setMotorRunning(false);
                   }
                 }}
                 variant="default"
@@ -2414,7 +2565,6 @@ export default function Report() {
               >
                 <Microscope className="h-3 w-3" />
                 <span className="tracking-tight">Get Samples</span>
-                <div className="h-1.5 w-1.5 bg-red-500 rounded-full shadow-sm"></div>
               </Button>
 
               <div className="flex items-center">
@@ -4883,9 +5033,77 @@ export default function Report() {
           />
         </div>
 
+        {/* Motor Events Log - persistent panel for Get Samples routine */}
+         {showMotorLog && (
+           <div className="fixed top-16 right-4 z-[9998] w-80">
+            <div className="flex flex-col rounded-md border border-gray-300 bg-white shadow-lg">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4 text-gray-600" />
+                  <span className="text-xs font-semibold text-gray-800 tracking-tight">
+                    Motor Events
+                  </span>
+                  {motorRunning && (
+                    <span className="ml-1 h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {motorEvents.length > 0 && (
+                    <button
+                      onClick={() => setMotorEvents([])}
+                      className="text-[10px] text-gray-500 hover:text-gray-800"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowMotorLog(false)}
+                    className="text-gray-500 hover:text-gray-800"
+                    aria-label="Close motor events"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+              <div className="max-h-64 overflow-y-auto px-3 py-2 space-y-1">
+                {motorEvents.length === 0 ? (
+                  <p className="text-[11px] text-gray-500">
+                    No events yet. Click <span className="font-semibold">Get Samples</span> to start the routine.
+                  </p>
+                ) : (
+                  motorEvents.map((event, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-start gap-2 rounded-md px-2 py-1 ${
+                        event.type === "success"
+                          ? "bg-emerald-50 border border-emerald-100"
+                        : event.type === "error"
+                          ? "bg-red-50 border border-red-100"
+                          : "bg-gray-50 border border-gray-100"
+                      }`}
+                    >
+                      <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-medium text-gray-700">
+                            {event.message}
+                          </span>
+                        </div>
+                        <span className="text-[9px] text-gray-400">
+                          {event.timestamp}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Notification */}
         {showNotification && (
-          <div className="fixed top-4 right-4 z-[9999]">
+          <div className="fixed top-20 right-4 z-[9999]">
             <Notification
               message={notificationMessage}
               type={notificationType}
