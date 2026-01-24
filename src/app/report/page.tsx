@@ -2818,8 +2818,8 @@ export default function Report() {
                               onClick={(e) => handleDeleteTestFromList(test.id, e)}
                               className={`absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md ${
                                 isSelected
-                                  ? "text-white hover:bg-gray-800"
-                                  : "text-gray-600 hover:bg-gray-300"
+                                  ? "text-white hover:bg-red-500"
+                                  : "text-gray-600 hover:bg-red-500"
                               }`}
                               title="Delete test"
                             >
