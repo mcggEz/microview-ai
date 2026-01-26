@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Microscope, TestTube } from "lucide-react";
+import { Microscope, TestTube, Camera, Brain, FileText, Zap, Eye, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -28,19 +28,67 @@ const highlights = [
 
 const workflow = [
   {
-    title: "Capture",
+    title: "Image Acquisition",
     description:
-      "Securely connect the microscope feed and begin a stabilized live session.",
+      "Capture high-quality microscopy images from the microscope feed for analysis.",
+    icon: Camera
   },
   {
-    title: "Interpret",
+    title: "Coarse-Grain Analysis",
     description:
-      "MicroView AI categorizes sediments, counts cell populations, and flags anomalies.",
+      "YOLO v11 performs initial object detection to identify and locate sediment types with bounding boxes.",
+    icon: Eye
   },
   {
-    title: "Deliver",
+    title: "Fine-Grain Analysis",
     description:
-      "Generate a concise report with annotated frames ready for physician validation.",
+      "Gemini 2.5 Pro performs detailed analysis, verifies YOLO detections, and provides clinical context.",
+    icon: Sparkles
+  },
+  {
+    title: "Report Generation",
+    description:
+      "Generate comprehensive reports with structured findings, annotated images, and clinical recommendations.",
+    icon: FileText
+  },
+];
+
+const aiPipeline = [
+  {
+    title: "YOLO v11 - Coarse Detection",
+    description: "First-stage analysis: Fast object detection model performs initial coarse-grain identification of sediment types",
+    features: [
+      "Rapid bounding box generation for detected objects",
+      "Initial classification of sediment types",
+      "Confidence scores for each detection",
+      "Multi-class detection (RBC, WBC, crystals, casts, etc.)"
+    ],
+    icon: Eye,
+    color: "bg-blue-50 border-blue-200"
+  },
+  {
+    title: "Gemini 2.5 Pro - Fine Analysis",
+    description: "Second-stage analysis: Advanced vision-language model performs detailed fine-grain verification and refinement",
+    features: [
+      "Verifies and refines YOLO coarse detections",
+      "Performs comprehensive systematic image scan",
+      "Provides detailed morphology descriptions",
+      "Generates clinical context and recommendations"
+    ],
+    icon: Sparkles,
+    color: "bg-purple-50 border-purple-200"
+  },
+  {
+    title: "Hybrid Pipeline",
+    description: "Two-stage approach: Coarse detection followed by fine analysis ensures both speed and accuracy",
+    features: [
+      "YOLO provides fast coarse-grain initial detection",
+      "Gemini performs fine-grain detailed analysis",
+      "Error correction and missed detection recovery",
+      "Explainable AI with comprehensive reasoning"
+    ],
+    icon: Zap,
+    color: "bg-green-50 border-green-200"
   },
 ];
 
@@ -52,7 +100,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5] text-gray-900">
+    <div className="min-h-screen bg-[#f5f5f5] text-gray-900 scroll-smooth">
       <Navbar onDemoClick={handleDemoClick} />
 
       <main>
@@ -173,14 +221,21 @@ export default function Home() {
         >
           <div className="grid gap-2 md:grid-cols-3">
             {highlights.map((item, index) => (
-              <div key={item.title} className="rounded-2xl bg-white p-8">
+              <div 
+                key={item.title} 
+                className="group rounded-2xl bg-white p-8 hover:shadow-lg transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 hover:scale-105"
+                style={{
+                  animationDelay: `${index * 150}ms`,
+                  animationFillMode: 'both'
+                }}
+              >
                 <div className="mb-4 flex items-center gap-2">
-                  <span className="text-xs font-mono text-gray-400">
+                  <span className="text-xs font-mono text-gray-400 transition-colors duration-300 group-hover:text-gray-600">
                     {String(index + 1).padStart(2, "0")}
                   </span>
-                  <div className="h-px flex-1 bg-gray-200"></div>
+                  <div className="h-px flex-1 bg-gray-200 transition-all duration-300 group-hover:bg-gray-300"></div>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 transition-colors duration-300 group-hover:text-gray-700">
                   {item.title}
                 </h3>
                 <p className="text-sm leading-relaxed text-gray-600">
@@ -196,38 +251,138 @@ export default function Home() {
           className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8"
         >
           <div className="space-y-8">
-            <div className="text-center max-w-2xl mx-auto">
+            <div className="text-center max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4">
               <h2 className="text-2xl font-semibold text-gray-900 sm:text-3xl">
-                Designed for calm, repeatable analysis
+                Two-Stage AI Analysis Pipeline
               </h2>
               <p className="mt-4 text-sm leading-relaxed text-gray-700 sm:text-base">
-                Every stage keeps the interface focused on outcomes, offering
-                the right amount of context for clinical decisions.
+                From image acquisition to clinical reporting, our workflow uses YOLO for coarse-grain detection followed by Gemini for fine-grain analysis, ensuring both speed and accuracy.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              {workflow.map((step, index) => (
-                <div
-                  key={step.title}
-                  className="relative rounded-2xl bg-white p-10 overflow-hidden"
-                >
-                  <div className="absolute top-6 right-6 text-7xl font-bold text-gray-100 font-mono">
-                    {String(index + 1).padStart(2, "0")}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {workflow.map((step, index) => {
+                const IconComponent = step.icon;
+                return (
+                  <div
+                    key={step.title}
+                    className="group relative rounded-2xl bg-white p-8 overflow-hidden border border-gray-100 hover:border-gray-300 hover:shadow-lg transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+                    style={{
+                      animationDelay: `${index * 100}ms`,
+                      animationFillMode: 'both'
+                    }}
+                  >
+                    <div className="absolute top-6 right-6 text-7xl font-bold text-gray-100 font-mono transition-transform duration-300 group-hover:scale-110 group-hover:text-gray-200">
+                      {String(index + 1).padStart(2, "0")}
+                    </div>
+                    <div className="relative space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-gray-100 transition-all duration-300 group-hover:bg-gray-200 group-hover:scale-110 group-hover:rotate-6">
+                          <IconComponent className="h-5 w-5 text-gray-700 transition-transform duration-300 group-hover:rotate-12" />
+                        </div>
+                        <span className="text-xs uppercase font-mono text-gray-500 transition-colors duration-300 group-hover:text-gray-700">
+                          Step {index + 1}
+                        </span>
+                      </div>
+                      <h3 className="text-2xl font-semibold text-gray-900 transition-colors duration-300 group-hover:text-gray-700">
+                        {step.title}
+                      </h3>
+                      <p className="text-sm leading-relaxed text-gray-600">
+                        {step.description}
+                      </p>
+                    </div>
                   </div>
-                  <div className="relative space-y-4">
-                    <span className="text-xs uppercase font-mono text-gray-500">
-                      Step {index + 1}
-                    </span>
-                    <h3 className="text-2xl font-semibold text-gray-900">
-                      {step.title}
-                    </h3>
-                    <p className="text-sm leading-relaxed text-gray-600">
-                      {step.description}
-                    </p>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="ai-pipeline"
+          className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8 bg-white"
+        >
+          <div className="space-y-12">
+            <div className="text-center max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4">
+              <h2 className="text-2xl font-semibold text-gray-900 sm:text-3xl">
+                Powered by Hybrid AI Technology
+              </h2>
+              <p className="mt-4 text-sm leading-relaxed text-gray-700 sm:text-base">
+                Combining the speed of YOLO v11 object detection with the clinical expertise of Google Gemini 2.5 Pro for accurate, explainable urinalysis analysis.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {aiPipeline.map((tech, index) => {
+                const IconComponent = tech.icon;
+                return (
+                  <div
+                    key={tech.title}
+                    className={`rounded-2xl p-8 border-2 ${tech.color} transition-all duration-300 hover:scale-105 hover:shadow-xl animate-in fade-in slide-in-from-bottom-4`}
+                    style={{
+                      animationDelay: `${index * 150}ms`,
+                      animationFillMode: 'both'
+                    }}
+                  >
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-3 rounded-xl bg-white shadow-sm transition-all duration-300 hover:scale-110 hover:rotate-6">
+                          <IconComponent className="h-6 w-6 text-gray-800 transition-transform duration-300" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 transition-colors duration-300 group-hover:text-gray-700">
+                          {tech.title}
+                        </h3>
+                      </div>
+                      <p className="text-sm leading-relaxed text-gray-700">
+                        {tech.description}
+                      </p>
+                      <ul className="space-y-2 mt-4">
+                        {tech.features.map((feature, idx) => (
+                          <li 
+                            key={idx} 
+                            className="text-xs text-gray-600 flex items-start gap-2 transition-all duration-300 hover:translate-x-1"
+                          >
+                            <span className="text-gray-400 mt-1 transition-colors duration-300 group-hover:text-green-500">✓</span>
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 p-8 border border-gray-200 hover:shadow-lg transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
+              <div className="max-w-3xl mx-auto text-center space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  How It Works Together
+                </h3>
+                <div className="flex items-center justify-center gap-3 text-sm text-gray-700 flex-wrap">
+                  <div className="flex items-center gap-2 transition-transform duration-300 hover:scale-110">
+                    <Camera className="h-4 w-4 text-gray-600 animate-pulse" />
+                    <span className="font-medium">Image Acquisition</span>
+                  </div>
+                  <span className="text-gray-400 animate-pulse">→</span>
+                  <div className="flex items-center gap-2 transition-transform duration-300 hover:scale-110">
+                    <Eye className="h-4 w-4 text-blue-600 animate-pulse" />
+                    <span className="font-medium">YOLO v11 (Coarse)</span>
+                  </div>
+                  <span className="text-gray-400 animate-pulse">→</span>
+                  <div className="flex items-center gap-2 transition-transform duration-300 hover:scale-110">
+                    <Sparkles className="h-4 w-4 text-purple-600 animate-pulse" />
+                    <span className="font-medium">Gemini 2.5 Pro (Fine)</span>
+                  </div>
+                  <span className="text-gray-400 animate-pulse">→</span>
+                  <div className="flex items-center gap-2 transition-transform duration-300 hover:scale-110">
+                    <FileText className="h-4 w-4 text-green-600 animate-pulse" />
+                    <span className="font-medium">Clinical Report</span>
                   </div>
                 </div>
-              ))}
+                <p className="text-xs text-gray-600 max-w-2xl mx-auto">
+                  First, YOLO v11 performs coarse-grain analysis to quickly identify and locate sediment types. Then, Gemini 2.5 Pro performs fine-grain analysis to verify detections, refine classifications, and provide detailed clinical context. This two-stage approach ensures both speed and accuracy.
+                </p>
+              </div>
             </div>
           </div>
         </section>
