@@ -11,6 +11,59 @@ const genAI = new GoogleGenerativeAI(
   process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
 )
 
+// Basic in-memory rate limiting / backoff for Gemini calls.
+// This is per-server-process, which is enough to stop "spam" from the UI.
+let lastGeminiCallAt = 0
+let geminiBackoffUntil = 0
+const MIN_GEMINI_INTERVAL_MS = 2000 // at most ~1 request every 2s per server instance
+
+function isGeminiThrottled() {
+  const now = Date.now()
+
+  if (geminiBackoffUntil && now < geminiBackoffUntil) {
+    const waitSeconds = Math.ceil((geminiBackoffUntil - now) / 1000)
+    return { throttled: true, waitSeconds }
+  }
+
+  const sinceLast = now - lastGeminiCallAt
+  if (sinceLast < MIN_GEMINI_INTERVAL_MS) {
+    const waitMs = MIN_GEMINI_INTERVAL_MS - sinceLast
+    const waitSeconds = Math.ceil(waitMs / 1000)
+    geminiBackoffUntil = now + waitMs
+    return { throttled: true, waitSeconds }
+  }
+
+  return { throttled: false, waitSeconds: 0 }
+}
+
+function updateBackoffFromGeminiError(error: unknown) {
+  const anyErr = error as any
+  if (!anyErr || typeof anyErr !== 'object') return
+  if (anyErr.status !== 429) return
+
+  // Default to a conservative backoff if we can't parse details
+  let retrySeconds = 60
+
+  try {
+    const details = anyErr.errorDetails as any[] | undefined
+    if (Array.isArray(details)) {
+      const retryInfo = details.find(d => typeof d === 'object' && d['@type']?.includes('RetryInfo'))
+      const retryDelay = retryInfo?.retryDelay as string | undefined // e.g. "16s"
+      if (retryDelay) {
+        const match = retryDelay.match(/(\d+)(\.\d+)?s/)
+        if (match) {
+          retrySeconds = Math.max(1, Math.round(parseFloat(match[1] + (match[2] || ''))))
+        }
+      }
+    }
+  } catch {
+    // Ignore parsing issues and keep default retrySeconds
+  }
+
+  geminiBackoffUntil = Date.now() + retrySeconds * 1000
+  return retrySeconds
+}
+
 // Helper to convert File to base64
 async function fileToBase64(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer()
@@ -156,11 +209,24 @@ Guidance for recognition (use as visual references only):
 
 Ensure all numeric values remain strings as shown in the template.`
 
+    // Simple rate limiting / backoff before calling Gemini
+    const throttle = isGeminiThrottled()
+    if (throttle.throttled) {
+      return NextResponse.json(
+        {
+          error: 'Gemini is temporarily rate-limited. Please wait before trying again.',
+          retryAfterSeconds: throttle.waitSeconds
+        },
+        { status: 429 }
+      )
+    }
+
     // Convert image to base64 for Gemini
     const base64Image = await fileToBase64(imageFile)
     
     // Call Gemini API
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' })
+    lastGeminiCallAt = Date.now()
     const result = await model.generateContent([
       prompt,
       {
@@ -207,6 +273,21 @@ Ensure all numeric values remain strings as shown in the template.`
 
   } catch (error) {
     console.error('Error in YOLO + Gemini pipeline:', error)
+
+    // If this is a Gemini quota / 429 error, update backoff and surface 429
+    const anyErr = error as any
+    if (anyErr && typeof anyErr === 'object' && anyErr.status === 429) {
+      const retrySeconds = updateBackoffFromGeminiError(anyErr) ?? 60
+      return NextResponse.json(
+        {
+          error: 'Gemini quota exceeded. Please wait before trying again.',
+          retryAfterSeconds: retrySeconds,
+          details: anyErr.statusText || (error instanceof Error ? error.message : 'Too Many Requests')
+        },
+        { status: 429 }
+      )
+    }
+
     return NextResponse.json(
       { 
         error: 'Failed to analyze image. Please try again.',

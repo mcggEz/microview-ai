@@ -10,7 +10,13 @@ export type AddPatientWithTestInput = {
   patient_id: string
 }
 
-export const useDashboard = () => {
+export type UseDashboardOptions = {
+  /** When false, skips initial load (e.g. until auth is verified). Default true. */
+  enabled?: boolean
+}
+
+export const useDashboard = (options?: UseDashboardOptions) => {
+  const enabled = options?.enabled ?? true
   const [patients, setPatients] = useState<Patient[]>([])
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
   const [tests, setTests] = useState<UrineTest[]>([])
@@ -19,8 +25,8 @@ export const useDashboard = () => {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadPatients()
-  }, [])
+    if (enabled) loadPatients()
+  }, [enabled])
 
   const loadPatients = async () => {
     try {

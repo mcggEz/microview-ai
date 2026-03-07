@@ -55,6 +55,7 @@ import Notification from "@/components/Notification";
 import StrasingerReferenceTable from "@/components/StrasingerReferenceTable";
 import YOLODetectionOverlay from "@/components/YOLODetectionOverlay";
 import BoundingBoxOverlay from "@/components/BoundingBoxOverlay";
+import MotorEventsLog from "@/components/MotorEventsLog";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
@@ -90,14 +91,19 @@ export default function Report() {
   >([]);
   const [motorRunning, setMotorRunning] = useState(false);
 
+  // Derived motor state for UI
+  const hasMotorEvents = motorEvents.length > 0;
+  const hasMotorErrors = motorEvents.some((e) => e.type === "error");
+
   const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState<{ full_name?: string; email?: string } | null>(null);
+  const [authOk, setAuthOk] = useState(false);
 
-  // Check authentication and load user data on mount
+  // Check authentication and load user data on mount; only allow dashboard load after session is verified
   useEffect(() => {
     const checkAuth = async () => {
-    const userData = localStorage.getItem('user');
-      
+      const userData = localStorage.getItem('user');
+
       // If no user data in localStorage, redirect to login
       if (!userData) {
         router.push('/login?redirect=/report');
@@ -107,29 +113,27 @@ export default function Report() {
       try {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
-        
+
         // Verify session is still valid by making a simple API call
-        // If the API call fails with 401, redirect to login
-        try {
-          const response = await fetch('/api/patients', {
-            credentials: 'include'
-          });
-          
-          if (response.status === 401) {
-            // Session expired or invalid, redirect to login
-            localStorage.removeItem('user');
-            router.push('/login?redirect=/report');
-            return;
-          }
-        } catch (error) {
-          // Network error or other issue, but we have user data so continue
-          console.warn('Could not verify session, but user data exists:', error);
+        const response = await fetch('/api/patients', {
+          credentials: 'include'
+        });
+
+        if (response.status === 401) {
+          localStorage.removeItem('user');
+          router.push('/login?redirect=/report');
+          return;
+        }
+
+        if (response.ok) {
+          setAuthOk(true);
+        } else {
+          router.push('/login?redirect=/report');
         }
       } catch (e) {
-        console.error('Failed to parse user data:', e);
+        console.error('Failed to parse user data or verify session:', e);
         localStorage.removeItem('user');
         router.push('/login?redirect=/report');
-        return;
       }
     };
 
@@ -260,7 +264,7 @@ export default function Report() {
     addPatientWithTest,
     loadTestsForPatient,
     loadPatients,
-  } = useDashboard();
+  } = useDashboard({ enabled: authOk });
 
   const attachStreamToVideo = useCallback(
     (videoElement: HTMLVideoElement, streamToAttach: MediaStream) => {
@@ -644,66 +648,97 @@ export default function Report() {
       const blob = await response.blob();
       const file = new File([blob], "lpf-image.jpg", { type: "image/jpeg" });
 
-      console.log(`📤 Sending LPF image ${imageIndex + 1} to YOLO + Gemini pipeline...`);
+      console.log(`📤 Sending LPF image ${imageIndex + 1} to YOLO detection API...`);
       const form = new FormData();
       form.append("image", file);
       form.append("conf", confThreshold.toString());
       
-      // Use YOLO + Gemini pipeline
-      const res = await fetch("/api/analyze-image-yolo", {
+      // Stage 1: YOLO-only pipeline (fast, no Gemini)
+      const res = await fetch("/api/detect-sediments", {
         method: "POST",
         body: form,
         signal: abortController.signal,
         credentials: 'include',
       });
-      if (!res.ok) throw new Error("YOLO + Gemini API failed");
-      
-      const result = (await res.json()) as {
-        success: boolean;
-        analysis: any; // Gemini analysis (we'll map this to LPFSedimentDetection)
-        yolo_detections: {
-          predictions: Array<{
-            x: number
-            y: number
-            width: number
-            height: number
-            confidence: number
-            class: string
-            class_id: number
-            detection_id: string
-          }>
-          summary: {
-            total_detections: number
-            by_class: Record<string, number>
+      if (!res.ok) {
+        let message = "YOLO + Gemini API failed";
+        try {
+          const errJson = await res.json();
+          if (errJson?.error) {
+            message = errJson.error;
           }
-        };
+          if (errJson?.retryAfterSeconds) {
+            message += ` Please wait about ${Math.ceil(
+              Number(errJson.retryAfterSeconds)
+            )}s before retrying.`;
+          }
+        } catch {
+          // ignore JSON parse errors and keep generic message
+        }
+        throw new Error(message);
+      }
+      
+      const yoloOnly = (await res.json()) as {
+        success: boolean;
+        predictions: Array<{
+          x: number
+          y: number
+          width: number
+          height: number
+          confidence: number
+          class: string
+          class_id: number
+          detection_id: string
+        }>
+        summary: {
+          total_detections: number
+          by_class: Record<string, number>
+        }
       };
+
+      console.log(`✅ YOLO detection complete for LPF image ${imageIndex + 1}`);
+
+      const yoloDetections = {
+        predictions: yoloOnly.predictions || [],
+        summary: yoloOnly.summary || { total_detections: 0, by_class: {} }
+      };
+
+      // Store YOLO detections for overlays and cropping
+      setLpfYoloDetections(yoloDetections);
       
-      console.log(`✅ YOLO + Gemini analysis complete for image ${imageIndex + 1}`);
-      
-      // Store YOLO detections
-      setLpfYoloDetections(result.yolo_detections);
-      
-      // Map Gemini analysis to LPF format (we'll need to adapt this)
-      // For now, create a basic detection from the analysis
+      // Map YOLO summary to LPF format as a fast baseline
+      const byClass = yoloDetections.summary.by_class || {};
+      const lpfConfidences = yoloDetections.predictions.map((p) => p.confidence);
+      const lpfAvgConfidence =
+        lpfConfidences.length > 0
+          ? (lpfConfidences.reduce((a, b) => a + b, 0) / lpfConfidences.length) * 100
+          : 0;
       const detection: LPFSedimentDetection = {
-        epithelial_cells: parseInt(result.analysis.epithelial_cells?.count || "0") || 0,
-        mucus_threads: parseInt(result.analysis.mucus?.count || "0") || 0,
-        casts: parseInt(result.analysis.casts?.count || "0") || 0,
-        squamous_epithelial: 0, // May need to map from analysis
-        abnormal_crystals: parseInt(result.analysis.crystals?.count || "0") || 0,
-        confidence: result.analysis.overall_accuracy || 85,
-        analysis_notes: result.analysis.summary || result.analysis.analysis_notes || "",
+        // YOLO model doesn't directly detect LPF epithelial_cells or mucus_threads,
+        // so we keep those at 0 for now. Casts / crystals are mapped from YOLO classes.
+        epithelial_cells: 0,
+        mucus_threads: 0,
+        casts: (byClass["cast"] as number | undefined) ?? 0,
+        squamous_epithelial:
+          ((byClass["epith"] as number | undefined) ?? 0) +
+          ((byClass["epithn"] as number | undefined) ?? 0),
+        abnormal_crystals: (byClass["cryst"] as number | undefined) ?? 0,
+        confidence: lpfAvgConfidence,
+        analysis_notes: `YOLO-only analysis (min conf ${confThreshold.toFixed(
+          2
+        )}, live rate ~${Math.round(
+          1000 / detectionInterval
+        )} FPS). Detailed Gemini report pending.`,
       };
       
-      console.log("📝 New LPF Analysis text:", detection.analysis_notes);
+      console.log("📝 New LPF YOLO-only analysis text:", detection.analysis_notes);
       setLpfSedimentDetection(detection);
       
       // Crop images from YOLO detections
-      if (result.yolo_detections.predictions.length > 0) {
-        console.log(`🖼️ Starting to crop ${result.yolo_detections.predictions.length} images from LPF detections`)
+      if (yoloDetections.predictions.length > 0) {
+        console.log(`🖼️ Starting to crop ${yoloDetections.predictions.length} images from LPF detections`)
         const croppedImages: Record<string, string> = {}
-        for (const pred of result.yolo_detections.predictions) {
+        for (const pred of yoloDetections.predictions) {
           try {
             console.log(`📸 Cropping image for ${pred.class} (${pred.detection_id}) at (${pred.x}, ${pred.y}, ${pred.width}, ${pred.height})`)
             const cropped = await cropImageFromBoundingBox(
@@ -724,8 +759,8 @@ export default function Report() {
           }
         }
         setLpfCroppedImages(croppedImages)
-        console.log(`✅ Cropped ${Object.keys(croppedImages).length}/${result.yolo_detections.predictions.length} images from LPF detections`)
-        console.log(`📊 Cropped images by class:`, Object.entries(result.yolo_detections.summary.by_class || {}).map(([cls, count]) => `${cls}: ${count}`).join(', '))
+        console.log(`✅ Cropped ${Object.keys(croppedImages).length}/${yoloDetections.predictions.length} images from LPF detections`)
+        console.log(`📊 Cropped images by class:`, Object.entries(yoloDetections.summary.by_class || {}).map(([cls, count]) => `${cls}: ${count}`).join(', '))
       } else {
         console.warn('⚠️ No YOLO predictions to crop for LPF image')
       }
@@ -744,7 +779,7 @@ export default function Report() {
           lpf_abnormal_crystals: detection.abnormal_crystals,
           confidence: detection.confidence,
           analysis_notes: detection.analysis_notes,
-          yolo_detections: result.yolo_detections, // Save YOLO detections
+          yolo_detections: yoloDetections, // Save YOLO detections
           analyzed_at: new Date().toISOString(),
         });
         console.log("LPF AI analysis with YOLO detections saved to database");
@@ -767,7 +802,11 @@ export default function Report() {
         return; // Don't show error for cancelled requests
       }
       console.error("Error analyzing LPF image:", error);
-      setNotificationMessage("Failed to analyze LPF image");
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to analyze LPF image";
+      setNotificationMessage(message);
       setNotificationType("error");
       setShowNotification(true);
     } finally {
@@ -830,68 +869,82 @@ export default function Report() {
       const blob = await response.blob();
       const file = new File([blob], "hpf-image.jpg", { type: "image/jpeg" });
 
-      console.log(`📤 Sending HPF image ${imageIndex + 1} to YOLO + Gemini pipeline...`);
+      console.log(`📤 Sending HPF image ${imageIndex + 1} to YOLO detection API...`);
       const form = new FormData();
       form.append("image", file);
       form.append("conf", confThreshold.toString());
       
-      // Use YOLO + Gemini pipeline
-      const res = await fetch("/api/analyze-image-yolo", {
+      // Stage 1: YOLO-only pipeline (fast, no Gemini)
+      const res = await fetch("/api/detect-sediments", {
         method: "POST",
         body: form,
         signal: abortController.signal,
         credentials: 'include',
       });
-      if (!res.ok) throw new Error("YOLO + Gemini API failed");
+      if (!res.ok) throw new Error("YOLO detection API failed");
       
-      const result = (await res.json()) as {
+      const yoloOnly = (await res.json()) as {
         success: boolean;
-        analysis: any; // Gemini analysis
-        yolo_detections: {
-          predictions: Array<{
-            x: number
-            y: number
-            width: number
-            height: number
-            confidence: number
-            class: string
-            class_id: number
-            detection_id: string
-          }>
-          summary: {
-            total_detections: number
-            by_class: Record<string, number>
-          }
-        };
+        predictions: Array<{
+          x: number
+          y: number
+          width: number
+          height: number
+          confidence: number
+          class: string
+          class_id: number
+          detection_id: string
+        }>
+        summary: {
+          total_detections: number
+          by_class: Record<string, number>
+        }
       };
       
-      console.log(`✅ YOLO + Gemini analysis complete for image ${imageIndex + 1}`);
+      console.log(`✅ YOLO detection complete for HPF image ${imageIndex + 1}`);
+      
+      const yoloDetections = {
+        predictions: yoloOnly.predictions || [],
+        summary: yoloOnly.summary || { total_detections: 0, by_class: {} }
+      };
       
       // Store YOLO detections
-      setHpfYoloDetections(result.yolo_detections);
+      setHpfYoloDetections(yoloDetections);
       
-      // Map Gemini analysis to HPF format
+      // Map YOLO summary to HPF format as a fast baseline
+      const byClassHPF = yoloDetections.summary.by_class || {};
+      const hpfConfidences = yoloDetections.predictions.map((p) => p.confidence);
+      const hpfAvgConfidence =
+        hpfConfidences.length > 0
+          ? (hpfConfidences.reduce((a, b) => a + b, 0) / hpfConfidences.length) * 100
+          : 0;
       const detection: HPFSedimentDetection = {
-        rbc: parseInt(result.analysis.rbc?.count || "0") || 0,
-        wbc: parseInt(result.analysis.wbc?.count || "0") || 0,
-        epithelial_cells: parseInt(result.analysis.epithelial_cells?.count || "0") || 0,
-        crystals: parseInt(result.analysis.crystals?.count || "0") || 0,
-        bacteria: parseInt(result.analysis.bacteria?.count || "0") || 0,
-        yeast: parseInt(result.analysis.yeast?.count || "0") || 0,
-        sperm: parseInt(result.analysis.sperm?.count || "0") || 0,
-        parasites: parseInt(result.analysis.parasites?.count || "0") || 0,
-        confidence: result.analysis.overall_accuracy || 85,
-        analysis_notes: result.analysis.summary || result.analysis.analysis_notes || "",
+        rbc: (byClassHPF["eryth"] as number | undefined) ?? 0,
+        wbc: (byClassHPF["leuko"] as number | undefined) ?? 0,
+        epithelial_cells:
+          ((byClassHPF["epith"] as number | undefined) ?? 0) +
+          ((byClassHPF["epithn"] as number | undefined) ?? 0),
+        crystals: (byClassHPF["cryst"] as number | undefined) ?? 0,
+        bacteria: 0,
+        yeast: (byClassHPF["mycete"] as number | undefined) ?? 0,
+        sperm: 0,
+        parasites: 0,
+        confidence: hpfAvgConfidence,
+        analysis_notes: `YOLO-only analysis (min conf ${confThreshold.toFixed(
+          2
+        )}, live rate ~${Math.round(
+          1000 / detectionInterval
+        )} FPS). Detailed Gemini report pending.`,
       };
       
-      console.log("📝 New HPF Analysis text:", detection.analysis_notes);
+      console.log("📝 New HPF YOLO-only analysis text:", detection.analysis_notes);
       setHpfSedimentDetection(detection);
       
       // Crop images from YOLO detections
-      if (result.yolo_detections.predictions.length > 0) {
-        console.log(`🖼️ Starting to crop ${result.yolo_detections.predictions.length} images from HPF detections`)
+      if (yoloDetections.predictions.length > 0) {
+        console.log(`🖼️ Starting to crop ${yoloDetections.predictions.length} images from HPF detections`)
         const croppedImages: Record<string, string> = {}
-        for (const pred of result.yolo_detections.predictions) {
+        for (const pred of yoloDetections.predictions) {
           try {
             console.log(`📸 Cropping image for ${pred.class} (${pred.detection_id}) at (${pred.x}, ${pred.y}, ${pred.width}, ${pred.height})`)
             const cropped = await cropImageFromBoundingBox(
@@ -912,8 +965,8 @@ export default function Report() {
           }
         }
         setHpfCroppedImages(croppedImages)
-        console.log(`✅ Cropped ${Object.keys(croppedImages).length}/${result.yolo_detections.predictions.length} images from HPF detections`)
-        console.log(`📊 Cropped images by class:`, Object.entries(result.yolo_detections.summary.by_class || {}).map(([cls, count]) => `${cls}: ${count}`).join(', '))
+        console.log(`✅ Cropped ${Object.keys(croppedImages).length}/${yoloDetections.predictions.length} images from HPF detections`)
+        console.log(`📊 Cropped images by class:`, Object.entries(yoloDetections.summary.by_class || {}).map(([cls, count]) => `${cls}: ${count}`).join(', '))
       } else {
         console.warn('⚠️ No YOLO predictions to crop for HPF image')
       }
@@ -935,7 +988,7 @@ export default function Report() {
           hpf_parasites: detection.parasites,
           confidence: detection.confidence,
           analysis_notes: detection.analysis_notes,
-          yolo_detections: result.yolo_detections, // Save YOLO detections
+          yolo_detections: yoloDetections, // Save YOLO detections
           analyzed_at: new Date().toISOString(),
         });
         console.log("HPF AI analysis with YOLO detections saved to database");
@@ -958,7 +1011,11 @@ export default function Report() {
         return; // Don't show error for cancelled requests
       }
       console.error("Error analyzing HPF image:", error);
-      setNotificationMessage("Failed to analyze HPF image");
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to analyze HPF image";
+      setNotificationMessage(message);
       setNotificationType("error");
       setShowNotification(true);
     } finally {
@@ -991,6 +1048,7 @@ export default function Report() {
   }, []);
 
   useEffect(() => {
+    if (!authOk) return;
     if (dateParam) {
       console.log("Report page: Loading data for date:", dateParam);
       setSelectedDate(dateParam);
@@ -1001,7 +1059,7 @@ export default function Report() {
       setSelectedDate(today);
       preloadByDate(today);
     }
-  }, [dateParam, preloadByDate]);
+  }, [authOk, dateParam, preloadByDate]);
 
   // Initialize date parameter from URL
   useEffect(() => {
@@ -1518,12 +1576,6 @@ export default function Report() {
         // Re-analyze the current HPF image
         analyzeHPFImage(highPowerImages[currentHPFIndex], currentHPFIndex);
       }
-
-      setNotificationMessage(
-        `${powerMode.toUpperCase()} image recounted successfully`
-      );
-      setNotificationType("success");
-      setShowNotification(true);
     } catch (error) {
       console.error("Error recounting image:", error);
       setNotificationMessage("Failed to recount image");
@@ -2311,6 +2363,14 @@ export default function Report() {
     return false;
   };
 
+  if (!authOk) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-gray-500">Checking authentication...</div>
+      </div>
+    );
+  }
+
   return (
     <Suspense fallback={null}>
       <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
@@ -2405,9 +2465,7 @@ export default function Report() {
                       },
                     ]);
 
-                    const base =
-                      process.env.NEXT_PUBLIC_MOTOR_API_BASE ||
-                      "http://127.0.0.1:3001";
+                    const base = "http://127.0.0.1:3001";
                     // Step 1: Initialize routine (home motors + first sample)
                     const firstRes = await fetch(`${base}/get_samples`, {
                       method: "POST",
@@ -2543,7 +2601,7 @@ export default function Report() {
                       }
                     }
                   } catch (error) {
-                    console.error("Get Samples error:", error);
+                    console.warn("Get Samples error (motor server unreachable or failed):", error);
 
                     setMotorEvents((prev) => [
                       ...prev,
@@ -2565,6 +2623,32 @@ export default function Report() {
               >
                 <Microscope className="h-3 w-3" />
                 <span className="tracking-tight">Get Samples</span>
+              </Button>
+
+              {/* Motor log toggle */}
+              <Button
+                onClick={() => setShowMotorLog((prev) => !prev)}
+                variant="secondary"
+                className={`h-7 px-2.5 rounded-md text-xs font-semibold tracking-tight shadow-sm border flex items-center gap-1.5 ${
+                  showMotorLog || hasMotorErrors || motorRunning
+                    ? "bg-gray-900 text-white border-gray-900 hover:bg-black"
+                    : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                }`}
+                title={showMotorLog ? "Hide motor events" : "Show motor events"}
+              >
+                <ClipboardList className="h-3 w-3" />
+                <span className="hidden sm:inline">Motor Log</span>
+                {(hasMotorEvents || motorRunning) && (
+                  <span
+                    className={`ml-0.5 h-1.5 w-1.5 rounded-full ${
+                      hasMotorErrors
+                        ? "bg-red-500 animate-pulse"
+                        : motorRunning
+                        ? "bg-emerald-500 animate-pulse"
+                        : "bg-gray-400"
+                    }`}
+                  />
+                )}
               </Button>
 
               <div className="flex items-center">
@@ -3537,9 +3621,36 @@ export default function Report() {
 
                       {/* Sidebar - Sediment Description */}
                       <div className="flex-1 bg-white border-l-2 border-gray-300 p-3">
-                        <h4 className="font-semibold text-gray-900 mb-3 text-sm">
-                          LPF Sediment Analysis
-                        </h4>
+                        <div className="flex items-center justify-between mb-3 gap-2">
+                          <h4 className="font-semibold text-gray-900 text-sm">
+                            LPF Sediment Analysis
+                          </h4>
+                          <div className="flex items-center gap-2">
+                            {lpfSedimentDetection && (
+                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+                                <span className="font-medium">
+                                  Confidence:{" "}
+                                  {lpfSedimentDetection.confidence
+                                    ? `${lpfSedimentDetection.confidence.toFixed(1)}%`
+                                    : "N/A"}
+                                </span>
+                              </span>
+                            )}
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="h-6 px-2 text-[10px] font-semibold bg-white border border-gray-300 text-gray-800 hover:bg-gray-100"
+                              disabled={
+                                isAnalyzingLPF[currentLPFIndex] ||
+                                !lowPowerImages.length
+                              }
+                              onClick={() => enhanceWithGemini("low")}
+                            >
+                              Enhance with Gemini
+                            </Button>
+                          </div>
+                        </div>
 
                         {/* Loading Indicator */}
                         {isAnalyzingLPF[currentLPFIndex] === true && (
@@ -3874,17 +3985,6 @@ export default function Report() {
                           </table>
                         </div>
 
-                        {/* Loading indicator for LPF analysis */}
-                        {isAnalyzingLPF[currentLPFIndex] === true && (
-                          <div className="mt-3 p-3 bg-gray-100 rounded-lg">
-                            <div className="flex items-center justify-center">
-                              <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-md animate-spin mr-2"></div>
-                              <span className="text-sm text-gray-700 font-medium">
-                                Analyzing LPF image...
-                              </span>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -4037,9 +4137,36 @@ export default function Report() {
 
                     {/* Sidebar - Sediment Description */}
                     <div className="flex-1 bg-white border-l-2 border-gray-300 p-3">
-                      <h4 className="font-semibold text-gray-900 mb-3 text-sm">
-                        HPF Sediment Analysis
-                      </h4>
+                      <div className="flex items-center justify-between mb-3 gap-2">
+                        <h4 className="font-semibold text-gray-900 text-sm">
+                          HPF Sediment Analysis
+                        </h4>
+                        <div className="flex items-center gap-2">
+                          {hpfSedimentDetection && (
+                            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+                              <span className="font-medium">
+                                Confidence:{" "}
+                                {hpfSedimentDetection.confidence
+                                  ? `${hpfSedimentDetection.confidence.toFixed(1)}%`
+                                  : "N/A"}
+                              </span>
+                            </span>
+                          )}
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-6 px-2 text-[10px] font-semibold bg-white border border-gray-300 text-gray-800 hover:bg-gray-100"
+                            disabled={
+                              isAnalyzingHPF[currentHPFIndex] ||
+                              !highPowerImages.length
+                            }
+                            onClick={() => enhanceWithGemini("high")}
+                          >
+                            Enhance with Gemini
+                          </Button>
+                        </div>
+                      </div>
 
                       {/* Loading Indicator */}
                       {isAnalyzingHPF[currentHPFIndex] === true && (
@@ -4143,10 +4270,19 @@ export default function Report() {
                                                 ? 'border-red-500 shadow-lg'
                                                 : 'border-gray-300 hover:border-gray-500'
                                             }`}
-                                            onClick={() => setHighlightedDetection(
-                                              highlightedDetection === item.id ? null : item.id
-                                            )}
-                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                            onClick={() =>
+                                              setHighlightedDetection(
+                                                highlightedDetection === item.id ? null : item.id
+                                              )
+                                            }
+                                            onDoubleClick={() =>
+                                              setModalImage({
+                                                src: item.image,
+                                                alt: "RBC cropped field",
+                                                title: "RBC detection (YOLO)",
+                                              })
+                                            }
+                                            title={`RBC • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
                                           />
                                         ))}
                                       </div>
@@ -4212,10 +4348,19 @@ export default function Report() {
                                                 ? 'border-red-500 shadow-lg'
                                                 : 'border-gray-300 hover:border-gray-500'
                                             }`}
-                                            onClick={() => setHighlightedDetection(
-                                              highlightedDetection === item.id ? null : item.id
-                                            )}
-                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                            onClick={() =>
+                                              setHighlightedDetection(
+                                                highlightedDetection === item.id ? null : item.id
+                                              )
+                                            }
+                                            onDoubleClick={() =>
+                                              setModalImage({
+                                                src: item.image,
+                                                alt: "WBC cropped field",
+                                                title: "WBC detection (YOLO)",
+                                              })
+                                            }
+                                            title={`WBC • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
                                           />
                                         ))}
                                       </div>
@@ -4288,10 +4433,19 @@ export default function Report() {
                                                 ? 'border-red-500 shadow-lg'
                                                 : 'border-gray-300 hover:border-gray-500'
                                             }`}
-                                            onClick={() => setHighlightedDetection(
-                                              highlightedDetection === item.id ? null : item.id
-                                            )}
-                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                            onClick={() =>
+                                              setHighlightedDetection(
+                                                highlightedDetection === item.id ? null : item.id
+                                              )
+                                            }
+                                            onDoubleClick={() =>
+                                              setModalImage({
+                                                src: item.image,
+                                                alt: "Epithelial cell cropped field",
+                                                title: "Epithelial cell detection (YOLO)",
+                                              })
+                                            }
+                                            title={`Epithelial Cells • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
                                           />
                                         ))}
                                       </div>
@@ -4357,10 +4511,19 @@ export default function Report() {
                                                 ? 'border-red-500 shadow-lg'
                                                 : 'border-gray-300 hover:border-gray-500'
                                             }`}
-                                            onClick={() => setHighlightedDetection(
-                                              highlightedDetection === item.id ? null : item.id
-                                            )}
-                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                            onClick={() =>
+                                              setHighlightedDetection(
+                                                highlightedDetection === item.id ? null : item.id
+                                              )
+                                            }
+                                            onDoubleClick={() =>
+                                              setModalImage({
+                                                src: item.image,
+                                                alt: "Crystal cropped field",
+                                                title: "Crystal detection (YOLO)",
+                                              })
+                                            }
+                                            title={`Crystals • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
                                           />
                                         ))}
                                       </div>
@@ -4426,10 +4589,19 @@ export default function Report() {
                                                 ? 'border-red-500 shadow-lg'
                                                 : 'border-gray-300 hover:border-gray-500'
                                             }`}
-                                            onClick={() => setHighlightedDetection(
-                                              highlightedDetection === item.id ? null : item.id
-                                            )}
-                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                            onClick={() =>
+                                              setHighlightedDetection(
+                                                highlightedDetection === item.id ? null : item.id
+                                              )
+                                            }
+                                            onDoubleClick={() =>
+                                              setModalImage({
+                                                src: item.image,
+                                                alt: "Bacteria cropped field",
+                                                title: "Bacteria detection (YOLO)",
+                                              })
+                                            }
+                                            title={`Bacteria • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
                                           />
                                         ))}
                                       </div>
@@ -4495,10 +4667,19 @@ export default function Report() {
                                                 ? 'border-red-500 shadow-lg'
                                                 : 'border-gray-300 hover:border-gray-500'
                                             }`}
-                                            onClick={() => setHighlightedDetection(
-                                              highlightedDetection === item.id ? null : item.id
-                                            )}
-                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                            onClick={() =>
+                                              setHighlightedDetection(
+                                                highlightedDetection === item.id ? null : item.id
+                                              )
+                                            }
+                                            onDoubleClick={() =>
+                                              setModalImage({
+                                                src: item.image,
+                                                alt: "Yeast cropped field",
+                                                title: "Yeast detection (YOLO)",
+                                              })
+                                            }
+                                            title={`Yeast • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
                                           />
                                         ))}
                                       </div>
@@ -4564,10 +4745,19 @@ export default function Report() {
                                                 ? 'border-red-500 shadow-lg'
                                                 : 'border-gray-300 hover:border-gray-500'
                                             }`}
-                                            onClick={() => setHighlightedDetection(
-                                              highlightedDetection === item.id ? null : item.id
-                                            )}
-                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                            onClick={() =>
+                                              setHighlightedDetection(
+                                                highlightedDetection === item.id ? null : item.id
+                                              )
+                                            }
+                                            onDoubleClick={() =>
+                                              setModalImage({
+                                                src: item.image,
+                                                alt: "Sperm cropped field",
+                                                title: "Sperm detection (YOLO)",
+                                              })
+                                            }
+                                            title={`Sperm • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
                                           />
                                         ))}
                                       </div>
@@ -4634,10 +4824,19 @@ export default function Report() {
                                                 ? 'border-red-500 shadow-lg'
                                                 : 'border-gray-300 hover:border-gray-500'
                                             }`}
-                                            onClick={() => setHighlightedDetection(
-                                              highlightedDetection === item.id ? null : item.id
-                                            )}
-                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
+                                            onClick={() =>
+                                              setHighlightedDetection(
+                                                highlightedDetection === item.id ? null : item.id
+                                              )
+                                            }
+                                            onDoubleClick={() =>
+                                              setModalImage({
+                                                src: item.image,
+                                                alt: "Parasite cropped field",
+                                                title: "Parasite detection (YOLO)",
+                                              })
+                                            }
+                                            title={`Parasites • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
                                           />
                                         ))}
                                       </div>
@@ -4662,17 +4861,6 @@ export default function Report() {
                           </table>
                         </div>
 
-                        {/* Loading indicator for HPF analysis */}
-                        {isAnalyzingHPF[currentHPFIndex] === true && (
-                          <div className="mt-3 p-3 bg-gray-100 rounded-lg">
-                            <div className="flex items-center justify-center">
-                              <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-md animate-spin mr-2"></div>
-                              <span className="text-sm text-gray-700 font-medium">
-                                Analyzing HPF image...
-                              </span>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -5034,72 +5222,13 @@ export default function Report() {
         </div>
 
         {/* Motor Events Log - persistent panel for Get Samples routine */}
-         {showMotorLog && (
-           <div className="fixed top-16 right-4 z-[9998] w-80">
-            <div className="flex flex-col rounded-md border border-gray-300 bg-white shadow-lg">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-                <div className="flex items-center gap-2">
-                  <ClipboardList className="h-4 w-4 text-gray-600" />
-                  <span className="text-xs font-semibold text-gray-800 tracking-tight">
-                    Motor Events
-                  </span>
-                  {motorRunning && (
-                    <span className="ml-1 h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {motorEvents.length > 0 && (
-                    <button
-                      onClick={() => setMotorEvents([])}
-                      className="text-[10px] text-gray-500 hover:text-gray-800"
-                    >
-                      Clear
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setShowMotorLog(false)}
-                    className="text-gray-500 hover:text-gray-800"
-                    aria-label="Close motor events"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-              <div className="max-h-64 overflow-y-auto px-3 py-2 space-y-1">
-                {motorEvents.length === 0 ? (
-                  <p className="text-[11px] text-gray-500">
-                    No events yet. Click <span className="font-semibold">Get Samples</span> to start the routine.
-                  </p>
-                ) : (
-                  motorEvents.map((event, index) => (
-                    <div
-                      key={index}
-                      className={`flex items-start gap-2 rounded-md px-2 py-1 ${
-                        event.type === "success"
-                          ? "bg-emerald-50 border border-emerald-100"
-                        : event.type === "error"
-                          ? "bg-red-50 border border-red-100"
-                          : "bg-gray-50 border border-gray-100"
-                      }`}
-                    >
-                      <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-gray-400 flex-shrink-0" />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-medium text-gray-700">
-                            {event.message}
-                          </span>
-                        </div>
-                        <span className="text-[9px] text-gray-400">
-                          {event.timestamp}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        <MotorEventsLog
+          show={showMotorLog}
+          events={motorEvents}
+          running={motorRunning}
+          onClear={() => setMotorEvents([])}
+          onClose={() => setShowMotorLog(false)}
+        />
 
         {/* Notification */}
         {showNotification && (
@@ -5115,4 +5244,173 @@ export default function Report() {
       </div>
     </Suspense>
   );
+
+  // Manual Gemini enhancement for current image (LPF/HPF) - uses existing cascade API
+  async function enhanceWithGemini(powerMode: "low" | "high") {
+    if (!selectedTest) return;
+    try {
+      const isLPF = powerMode === "low";
+      const imageIndex = isLPF ? currentLPFIndex : currentHPFIndex;
+      const images = isLPF ? lowPowerImages : highPowerImages;
+      const imageUrl = images[imageIndex];
+      if (!imageUrl) return;
+
+      if (isLPF) {
+        setIsAnalyzingLPF((prev) => ({ ...prev, [imageIndex]: true }));
+      } else {
+        setIsAnalyzingHPF((prev) => ({ ...prev, [imageIndex]: true }));
+      }
+
+      // Convert image URL to File object
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const file = new File(
+        [blob],
+        isLPF ? "lpf-image.jpg" : "hpf-image.jpg",
+        { type: "image/jpeg" }
+      );
+
+      const form = new FormData();
+      form.append("image", file);
+      form.append("conf", confThreshold.toString());
+
+      const res = await fetch("/api/analyze-image-yolo", {
+        method: "POST",
+        body: form,
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        let message = "Gemini analysis failed";
+        try {
+          const errJson = await res.json();
+          if (errJson?.error) {
+            message = errJson.error;
+          }
+        } catch {
+          // ignore parse errors
+        }
+        throw new Error(message);
+      }
+
+      const result = (await res.json()) as {
+        success: boolean;
+        analysis: any;
+        yolo_detections: {
+          predictions: Array<{
+            x: number;
+            y: number;
+            width: number;
+            height: number;
+            confidence: number;
+            class: string;
+            class_id: number;
+            detection_id: string;
+          }>;
+          summary: {
+            total_detections: number;
+            by_class: Record<string, number>;
+          };
+        };
+      };
+
+      if (isLPF) {
+        const detection: LPFSedimentDetection = {
+          epithelial_cells:
+            parseInt(result.analysis.epithelial_cells?.count || "0") || 0,
+          mucus_threads:
+            parseInt(result.analysis.mucus?.count || "0") || 0,
+          casts: parseInt(result.analysis.casts?.count || "0") || 0,
+          squamous_epithelial: 0,
+          abnormal_crystals:
+            parseInt(result.analysis.crystals?.count || "0") || 0,
+          confidence: result.analysis.overall_accuracy || 85,
+          analysis_notes:
+            result.analysis.summary ||
+            result.analysis.analysis_notes ||
+            "Gemini-enhanced analysis.",
+        };
+
+        setLpfSedimentDetection(detection);
+        setLpfYoloDetections(result.yolo_detections);
+
+        await upsertImageAnalysis({
+          test_id: selectedTest.id,
+          power_mode: "LPF",
+          image_index: imageIndex,
+          image_url: imageUrl,
+          lpf_epithelial_cells: detection.epithelial_cells,
+          lpf_mucus_threads: detection.mucus_threads,
+          lpf_casts: detection.casts,
+          lpf_squamous_epithelial: detection.squamous_epithelial,
+          lpf_abnormal_crystals: detection.abnormal_crystals,
+          confidence: detection.confidence,
+          analysis_notes: detection.analysis_notes,
+          yolo_detections: result.yolo_detections,
+          analyzed_at: new Date().toISOString(),
+        });
+      } else {
+        const detection: HPFSedimentDetection = {
+          rbc: parseInt(result.analysis.rbc?.count || "0") || 0,
+          wbc: parseInt(result.analysis.wbc?.count || "0") || 0,
+          epithelial_cells:
+            parseInt(result.analysis.epithelial_cells?.count || "0") || 0,
+          crystals: parseInt(result.analysis.crystals?.count || "0") || 0,
+          bacteria: parseInt(result.analysis.bacteria?.count || "0") || 0,
+          yeast: parseInt(result.analysis.yeast?.count || "0") || 0,
+          sperm: parseInt(result.analysis.sperm?.count || "0") || 0,
+          parasites:
+            parseInt(result.analysis.parasites?.count || "0") || 0,
+          confidence: result.analysis.overall_accuracy || 85,
+          analysis_notes:
+            result.analysis.summary ||
+            result.analysis.analysis_notes ||
+            "Gemini-enhanced analysis.",
+        };
+
+        setHpfSedimentDetection(detection);
+        setHpfYoloDetections(result.yolo_detections);
+
+        await upsertImageAnalysis({
+          test_id: selectedTest.id,
+          power_mode: "HPF",
+          image_index: imageIndex,
+          image_url: imageUrl,
+          hpf_rbc: detection.rbc,
+          hpf_wbc: detection.wbc,
+          hpf_epithelial_cells: detection.epithelial_cells,
+          hpf_crystals: detection.crystals,
+          hpf_bacteria: detection.bacteria,
+          hpf_yeast: detection.yeast,
+          hpf_sperm: detection.sperm,
+          hpf_parasites: detection.parasites,
+          confidence: detection.confidence,
+          analysis_notes: detection.analysis_notes,
+          yolo_detections: result.yolo_detections,
+          analyzed_at: new Date().toISOString(),
+        });
+      }
+
+      setNotificationMessage(
+        `Gemini analysis completed for ${powerMode === "low" ? "LPF" : "HPF"} image`
+      );
+      setNotificationType("success");
+      setShowNotification(true);
+    } catch (error) {
+      console.error("Error enhancing with Gemini:", error);
+      const msg =
+        error instanceof Error
+          ? error.message
+          : "Failed to enhance with Gemini";
+      setNotificationMessage(msg);
+      setNotificationType("error");
+      setShowNotification(true);
+    } finally {
+      if (powerMode === "low") {
+        setIsAnalyzingLPF((prev) => ({ ...prev, [currentLPFIndex]: false }));
+      } else {
+        setIsAnalyzingHPF((prev) => ({ ...prev, [currentHPFIndex]: false }));
+      }
+    }
+  }
 }
