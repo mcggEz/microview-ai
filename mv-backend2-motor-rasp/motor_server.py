@@ -30,8 +30,8 @@ except (ImportError, RuntimeError):
     GPIO_AVAILABLE = False
     GPIO = None
 
-# Configure logging - Windows compatible path
-log_path = 'motor_server.log' if platform.system() == 'Windows' else '/home/pi/desktop/motor_server.log'
+# Configure logging - write log next to this script (works on Windows and Raspberry Pi)
+log_path = 'motor_server.log'
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',

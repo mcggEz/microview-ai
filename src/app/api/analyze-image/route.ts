@@ -12,6 +12,16 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const imageFile = formData.get('image') as File
+    const headerRaw = request.headers.get('x-gemini-api-keys') || '[]'
+    let apiKeys: string[] = []
+    try {
+      const parsed = JSON.parse(headerRaw)
+      if (Array.isArray(parsed)) {
+        apiKeys = parsed.filter((v) => typeof v === 'string').map((v) => v.trim()).filter(Boolean)
+      }
+    } catch {
+      // ignore
+    }
 
     if (!imageFile) {
       return NextResponse.json(
@@ -43,7 +53,7 @@ export async function POST(request: NextRequest) {
     console.log('File type:', imageFile.type)
 
     // Analyze the image using Gemini API
-    const analysis = await analyzeUrinalysisImage(imageFile)
+    const analysis = await analyzeUrinalysisImage(imageFile, undefined, { apiKeys })
 
     console.log('Analysis completed successfully')
     console.log('Overall accuracy:', analysis.overall_accuracy)

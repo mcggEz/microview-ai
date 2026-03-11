@@ -12,6 +12,16 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const imageFile = formData.get('image') as File
+    const headerRaw = request.headers.get('x-gemini-api-keys') || '[]'
+    let apiKeys: string[] = []
+    try {
+      const parsed = JSON.parse(headerRaw)
+      if (Array.isArray(parsed)) {
+        apiKeys = parsed.filter((v) => typeof v === 'string').map((v) => v.trim()).filter(Boolean)
+      }
+    } catch {
+      // ignore
+    }
 
     if (!imageFile) {
       return NextResponse.json({ error: 'No image file provided' }, { status: 400 })
@@ -21,7 +31,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid file type' }, { status: 400 })
     }
 
-    const detection = await detectHPFSediments(imageFile)
+    const detection = await detectHPFSediments(imageFile, undefined, { apiKeys })
 
     return NextResponse.json({ success: true, detection })
   } catch (error) {

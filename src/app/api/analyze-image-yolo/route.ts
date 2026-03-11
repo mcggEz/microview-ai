@@ -3,13 +3,33 @@ import { requireAuth } from '@/lib/auth'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 // Hugging Face Space API URL
-const HF_SPACE_URL = process.env.HF_SPACE_URL || 
+const HF_SPACE_URL = process.env.HF_SPACE_URL ||
   'https://mcggEz-microview-ai-yolov11.hf.space/api/predict'
 
-// Initialize Gemini API
-const genAI = new GoogleGenerativeAI(
-  process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
-)
+function getFallbackGeminiKeys(request: NextRequest): string[] {
+  const envKey = (process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '').trim()
+  const headerRaw = request.headers.get('x-gemini-api-keys') || ''
+
+  let headerKeys: string[] = []
+  try {
+    const parsed = JSON.parse(headerRaw)
+    if (Array.isArray(parsed)) {
+      headerKeys = parsed.filter((v) => typeof v === 'string').map((v) => v.trim()).filter(Boolean)
+    }
+  } catch {
+    // ignore
+  }
+
+  const all = [envKey, ...headerKeys].filter(Boolean)
+  return all.filter((k, i) => all.indexOf(k) === i)
+}
+
+function isInvalidKeyError(error: unknown): boolean {
+  const anyErr = error as any
+  const status = anyErr?.status
+  const msg = (anyErr?.message || '').toString().toLowerCase()
+  return status === 401 || status === 403 || msg.includes('api key') || msg.includes('permission denied') || msg.includes('unauthorized')
+}
 
 // Basic in-memory rate limiting / backoff for Gemini calls.
 // This is per-server-process, which is enough to stop "spam" from the UI.
@@ -135,23 +155,15 @@ export async function POST(request: NextRequest) {
 
     // Format YOLO results for the prompt
     const yoloSummary = yoloResult.summary || { total_detections: 0, by_class: {} }
-    const yoloPredictions = yoloResult.predictions || []
-    
-    // Create a detailed description of YOLO detections
+
+    // Keep the YOLO context very compact to reduce token usage for Gemini
     const yoloDetectionsText = `
-YOLO MODEL DETECTIONS (Machine Learning Object Detection Results):
-Total Detections: ${yoloSummary.total_detections}
-
-Detections by Class:
-${Object.entries(yoloSummary.by_class).map(([className, count]) => 
-  `- ${className}: ${count} detected`
-).join('\n')}
-
-Detailed Detection Coordinates:
-${yoloPredictions.slice(0, 20).map((pred: any, idx: number) => 
-  `${idx + 1}. ${pred.class} (confidence: ${(pred.confidence * 100).toFixed(1)}%) at position (x: ${pred.x.toFixed(0)}, y: ${pred.y.toFixed(0)}, width: ${pred.width.toFixed(0)}, height: ${pred.height.toFixed(0)})`
-).join('\n')}
-${yoloPredictions.length > 20 ? `\n... and ${yoloPredictions.length - 20} more detections` : ''}
+YOLO MODEL SUMMARY (for context only, do not re-count blindly):
+Total detections: ${yoloSummary.total_detections}
+Detections by class (name: count):
+${Object.entries(yoloSummary.by_class)
+        .map(([className, count]) => `${className}: ${count}`)
+        .join(', ')}
 `
 
     // Create the enhanced prompt that incorporates YOLO results
@@ -223,39 +235,72 @@ Ensure all numeric values remain strings as shown in the template.`
 
     // Convert image to base64 for Gemini
     const base64Image = await fileToBase64(imageFile)
-    
-    // Call Gemini API
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' })
+
+    // Call Gemini API (env key first, then client-provided fallback keys)
+    const geminiKeys = getFallbackGeminiKeys(request)
+    if (geminiKeys.length === 0) {
+      return NextResponse.json(
+        { error: 'Gemini API key not configured' },
+        { status: 500 }
+      )
+    }
+
     lastGeminiCallAt = Date.now()
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          mimeType: imageFile.type,
-          data: base64Image.split(',')[1] // Remove data:image/...;base64, prefix
-        }
+
+    let lastError: unknown = null
+    let result: any = null
+
+    geminiKeys.forEach((k, idx) => {
+      console.log(`[Gemini] Candidate API key #${idx + 1}: ${k.slice(0, 8)}...`)
+    })
+
+    for (let i = 0; i < geminiKeys.length; i++) {
+      const apiKey = geminiKeys[i]
+      try {
+        console.log(`[Gemini] Using API key #${i + 1} for YOLO+Gemini pipeline`)
+        const client = new GoogleGenerativeAI(apiKey)
+        const model = client.getGenerativeModel({ model: 'gemini-2.5-flash' })
+        result = await model.generateContent([
+          prompt,
+          {
+            inlineData: {
+              mimeType: imageFile.type,
+              data: base64Image.split(',')[1] // Remove data:image/...;base64, prefix
+            }
+          }
+        ])
+        break
+      } catch (err) {
+        lastError = err
+        // Rotate keys for "invalid/unauthorized key" OR "quota exceeded" style errors.
+        if (isInvalidKeyError(err) || (err as any).status === 429) continue
+        throw err
       }
-    ])
+    }
+
+    if (!result) {
+      throw (lastError instanceof Error ? lastError : new Error('Gemini failed for all provided API keys'))
+    }
 
     const response = await result.response
     const text = response.text()
-    
+
     // Extract JSON from response
     let jsonText = text.trim()
-    
+
     // Remove markdown code blocks
     if (jsonText.startsWith('```json')) {
       jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
     } else if (jsonText.startsWith('```')) {
       jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '')
     }
-    
+
     // Look for JSON object in the text
     const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
     if (jsonMatch) {
       jsonText = jsonMatch[0]
     }
-    
+
     // Parse JSON response
     const analysis = JSON.parse(jsonText)
     console.log('✅ Gemini analysis complete')
@@ -289,7 +334,7 @@ Ensure all numeric values remain strings as shown in the template.`
     }
 
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to analyze image. Please try again.',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

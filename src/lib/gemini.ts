@@ -4,10 +4,23 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 const requestThrottle = new Map<string, number>()
 const THROTTLE_DELAY = 2000 // 2 seconds between requests for same image
 
-// Initialize Gemini API
-const genAI = new GoogleGenerativeAI(
-  process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
-)
+type GeminiKeyOptions = {
+  apiKeys?: string[]
+}
+
+function normalizeApiKeys(options?: GeminiKeyOptions): string[] {
+  const envKey = (process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '').trim()
+  const extra = (options?.apiKeys || []).map(k => k.trim()).filter(Boolean)
+  const all = [envKey, ...extra].filter(Boolean)
+  return all.filter((k, i) => all.indexOf(k) === i)
+}
+
+function isInvalidKeyError(error: unknown): boolean {
+  const anyErr = error as any
+  const status = anyErr?.status
+  const msg = (anyErr?.message || '').toString().toLowerCase()
+  return status === 401 || status === 403 || msg.includes('api key') || msg.includes('permission denied') || msg.includes('unauthorized')
+}
 
 // Model selection: allow env override, but default to a single high-quality model
 // You can set NEXT_PUBLIC_GEMINI_MODEL to a single model to override the default
@@ -17,7 +30,7 @@ const configuredModels = envModelPreference
   : []
 
 // Default to Gemini 2.5 Pro (no graceful degradation)
-const defaultModelPreference = ['gemini-2.5-pro']
+const defaultModelPreference = ['gemini-2.5-flash']
 
 // Always use only the first configured model to avoid fallback chains
 const modelPreference = configuredModels.length > 0
@@ -41,12 +54,18 @@ const isAbortError = (error: unknown): boolean => {
   return false
 }
 
-function getModelInstance(modelName: string) {
-  return genAI.getGenerativeModel({ model: modelName })
+function getModelInstance(apiKey: string, modelName: string) {
+  const client = new GoogleGenerativeAI(apiKey)
+  return client.getGenerativeModel({ model: modelName })
 }
 
 // Helper function to execute the preferred model (no fallback chain)
-async function generateContentWithFallback(prompt: string, imageData: InlineImageData, abortSignal?: AbortSignal) {
+async function generateContentWithFallback(
+  apiKeys: string[],
+  prompt: string,
+  imageData: InlineImageData,
+  abortSignal?: AbortSignal
+) {
   if (abortSignal?.aborted) {
     const abortError = new Error('Request aborted')
     abortError.name = 'AbortError'
@@ -55,25 +74,40 @@ async function generateContentWithFallback(prompt: string, imageData: InlineImag
 
   let lastError: unknown = null
 
-  for (const modelName of modelPreference) {
-    if (abortSignal?.aborted) {
-      const abortError = new Error('Request aborted')
-      abortError.name = 'AbortError'
-      throw abortError
-    }
+  apiKeys.forEach((k, idx) => {
+    console.log(`[Gemini] Candidate API key #${idx + 1}: ${k.slice(0, 8)}...`)
+  })
 
-    try {
-      console.log(`Using Gemini model: ${modelName}`)
-      const model = getModelInstance(modelName)
-      const result = await model.generateContent([prompt, imageData])
-      console.log(`✅ Gemini model completed: ${modelName}`)
-      return result
-    } catch (error: unknown) {
-      lastError = error
-      const message = error instanceof Error ? error.message : String(error)
-      console.warn(`Gemini model failed: ${modelName} -> ${message}`)
-      // Continue to next configured model (if any; typically none)
-      continue
+  for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
+    const apiKey = apiKeys[keyIndex]
+    for (const modelName of modelPreference) {
+      if (abortSignal?.aborted) {
+        const abortError = new Error('Request aborted')
+        abortError.name = 'AbortError'
+        throw abortError
+      }
+
+      try {
+        console.log(
+          `[Gemini] Using API key #${keyIndex + 1} with model ${modelName}`
+        )
+        const model = getModelInstance(apiKey, modelName)
+        const result = await model.generateContent([prompt, imageData])
+        console.log(`✅ Gemini model completed: ${modelName}`)
+        return result
+      } catch (error: unknown) {
+        lastError = error
+        const message = error instanceof Error ? error.message : String(error)
+        console.warn(`Gemini model failed: ${modelName} -> ${message}`)
+
+        // If the key is invalid/unauthorized, try the next key.
+        if (isInvalidKeyError(error)) {
+          break
+        }
+
+        // Otherwise, keep behavior: try next model (if any).
+        continue
+      }
     }
   }
 
@@ -141,8 +175,17 @@ export interface YOLOEnhancedUrinalysisResult extends UrinalysisResult {
   }
 }
 
-export async function analyzeUrinalysisImage(imageFile: File, abortSignal?: AbortSignal): Promise<UrinalysisResult> {
+export async function analyzeUrinalysisImage(
+  imageFile: File,
+  abortSignal?: AbortSignal,
+  options?: GeminiKeyOptions
+): Promise<UrinalysisResult> {
   try {
+    const apiKeys = normalizeApiKeys(options)
+    if (apiKeys.length === 0) {
+      throw new Error('Gemini API key not configured')
+    }
+
     // Convert image to base64
     const base64Image = await fileToBase64(imageFile)
     
@@ -187,7 +230,7 @@ Guidance for recognition (use as visual references only):
 Ensure all numeric values remain strings as shown in the template.`
 
     // Generate content with image using fallback mechanism
-    const result = await generateContentWithFallback(prompt, {
+    const result = await generateContentWithFallback(apiKeys, prompt, {
       inlineData: {
         mimeType: imageFile.type,
         data: base64Image.split(',')[1] // Remove data:image/...;base64, prefix
@@ -250,8 +293,17 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 // Function to detect LPF sediments using Gemini AI
-export async function detectLPFSediments(imageFile: File, abortSignal?: AbortSignal): Promise<LPFSedimentDetection> {
+export async function detectLPFSediments(
+  imageFile: File,
+  abortSignal?: AbortSignal,
+  options?: GeminiKeyOptions
+): Promise<LPFSedimentDetection> {
   try {
+    const apiKeys = normalizeApiKeys(options)
+    if (apiKeys.length === 0) {
+      throw new Error('Gemini API key not configured')
+    }
+
     // Create a unique key for this image to prevent duplicate requests
     const imageKey = `lpf-${imageFile.name}-${imageFile.size}-${imageFile.lastModified}`
     const lastRequestTime = requestThrottle.get(imageKey)
@@ -294,7 +346,7 @@ IMPORTANT: Return ONLY the JSON object below, no additional text or explanations
 Provide accurate counts for each sediment type. Use 0 if none are present. Be conservative in your counting - only count items you are reasonably confident about. Set confidence as a percentage (0-100) based on image quality and clarity.`
 
     // Generate content with image using fallback mechanism
-    const result = await generateContentWithFallback(prompt, {
+    const result = await generateContentWithFallback(apiKeys, prompt, {
       inlineData: {
         mimeType: imageFile.type,
         data: base64Image.split(',')[1] // Remove data:image/...;base64, prefix
@@ -335,8 +387,17 @@ Provide accurate counts for each sediment type. Use 0 if none are present. Be co
 }
 
 // Function to detect HPF sediments using Gemini AI with improved accuracy
-export async function detectHPFSediments(imageFile: File, abortSignal?: AbortSignal): Promise<HPFSedimentDetection> {
+export async function detectHPFSediments(
+  imageFile: File,
+  abortSignal?: AbortSignal,
+  options?: GeminiKeyOptions
+): Promise<HPFSedimentDetection> {
   try {
+    const apiKeys = normalizeApiKeys(options)
+    if (apiKeys.length === 0) {
+      throw new Error('Gemini API key not configured')
+    }
+
     // Create a unique key for this image to prevent duplicate requests
     const imageKey = `hpf-${imageFile.name}-${imageFile.size}-${imageFile.lastModified}`
     const lastRequestTime = requestThrottle.get(imageKey)
@@ -399,7 +460,7 @@ IMPORTANT: Return ONLY the JSON object below, no additional text or explanations
 Provide accurate counts for each sediment type. Use 0 if none are present. Be extremely conservative in your counting - only count items you are 100% confident about. Set confidence as a percentage (0-100) based on image quality and clarity.`
 
     // Single attempt with better error handling (removed multiple attempts to reduce API calls)
-    const result = await generateContentWithFallback(prompt, {
+    const result = await generateContentWithFallback(apiKeys, prompt, {
       inlineData: {
         mimeType: imageFile.type,
         data: base64Image.split(',')[1] // Remove data:image/...;base64, prefix
@@ -458,9 +519,15 @@ export async function analyzeUrinalysisImageWithYOLO(
       by_class: Record<string, number>
     }
   },
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  options?: GeminiKeyOptions
 ): Promise<YOLOEnhancedUrinalysisResult> {
   try {
+    const apiKeys = normalizeApiKeys(options)
+    if (apiKeys.length === 0) {
+      throw new Error('Gemini API key not configured')
+    }
+
     // Convert image to base64
     const base64Image = await fileToBase64(imageFile)
     
@@ -542,6 +609,7 @@ Ensure all numeric values remain strings as shown in the template.`
 
     // Generate content with image using fallback mechanism
     const result = await generateContentWithFallback(
+      apiKeys,
       prompt,
       {
         inlineData: {

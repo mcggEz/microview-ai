@@ -58,6 +58,7 @@ import BoundingBoxOverlay from "@/components/BoundingBoxOverlay";
 import MotorEventsLog from "@/components/MotorEventsLog";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { getGeminiKeysFromLocalStorage } from "@/lib/client-gemini-keys";
 
 export default function Report() {
   const router = useRouter();
@@ -2928,7 +2929,17 @@ export default function Report() {
                     {user?.full_name || user?.email || 'User'}
                   </div>
                 </div>
-                {/* Logout Button */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button
+                    onClick={() => router.push("/settings")}
+                    variant="outline"
+                    className="h-9 w-9 p-0 rounded-lg bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-all duration-200 shadow-sm border border-gray-300"
+                    title="Settings"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+
+                  {/* Logout Button */}
                 <Button
                   onClick={async () => {
                     try {
@@ -2958,6 +2969,7 @@ export default function Report() {
                   <LogOut className="h-3.5 w-3.5 mr-1.5 group-hover:translate-x-0.5 transition-transform" />
                   <span className="hidden sm:inline">Logout</span>
                 </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -5278,6 +5290,9 @@ export default function Report() {
         method: "POST",
         body: form,
         credentials: "include",
+        headers: {
+          "x-gemini-api-keys": JSON.stringify(getGeminiKeysFromLocalStorage()),
+        },
       });
 
       if (!res.ok) {
@@ -5334,6 +5349,30 @@ export default function Report() {
         setLpfSedimentDetection(detection);
         setLpfYoloDetections(result.yolo_detections);
 
+        // Crop images from YOLO detections returned by Gemini pipeline
+        if (result.yolo_detections.predictions.length > 0) {
+          console.log(`🖼️ [Gemini] Starting to crop ${result.yolo_detections.predictions.length} images from LPF detections`);
+          const croppedImages: Record<string, string> = {};
+          for (const pred of result.yolo_detections.predictions) {
+            try {
+              const cropped = await cropImageFromBoundingBox(
+                imageUrl,
+                pred.x,
+                pred.y,
+                pred.width,
+                pred.height
+              );
+              if (cropped) {
+                croppedImages[pred.detection_id] = cropped;
+              }
+            } catch (error) {
+              console.error(`❌ Failed to crop image for Gemini-YOLO detection ${pred.detection_id}:`, error);
+            }
+          }
+          setLpfCroppedImages(croppedImages);
+          console.log(`✅ [Gemini] Cropped ${Object.keys(croppedImages).length} images from LPF detections`);
+        }
+
         await upsertImageAnalysis({
           test_id: selectedTest.id,
           power_mode: "LPF",
@@ -5370,6 +5409,30 @@ export default function Report() {
 
         setHpfSedimentDetection(detection);
         setHpfYoloDetections(result.yolo_detections);
+
+        // Crop images from YOLO detections returned by Gemini pipeline
+        if (result.yolo_detections.predictions.length > 0) {
+          console.log(`🖼️ [Gemini] Starting to crop ${result.yolo_detections.predictions.length} images from HPF detections`);
+          const croppedImages: Record<string, string> = {};
+          for (const pred of result.yolo_detections.predictions) {
+            try {
+              const cropped = await cropImageFromBoundingBox(
+                imageUrl,
+                pred.x,
+                pred.y,
+                pred.width,
+                pred.height
+              );
+              if (cropped) {
+                croppedImages[pred.detection_id] = cropped;
+              }
+            } catch (error) {
+              console.error(`❌ Failed to crop image for Gemini-YOLO detection ${pred.detection_id}:`, error);
+            }
+          }
+          setHpfCroppedImages(croppedImages);
+          console.log(`✅ [Gemini] Cropped ${Object.keys(croppedImages).length} images from HPF detections`);
+        }
 
         await upsertImageAnalysis({
           test_id: selectedTest.id,
