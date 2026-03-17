@@ -1,320 +1,159 @@
 /*
- * Servo Motor Control for X and Y Axis
+ * Stepper Motor Control for X and Y Axis
  * MicroView AI - Urinalysis System
  * 
- * Controls two servo motors for X and Y axis positioning
- * Accepts serial commands for precise sample positioning
+ * Controls two stepper motors (e.g. ULN2003 + 28BYJ-48)
+ * Y-axis: Pins 4, 5, 6, 7
+ * X-axis: Pins 8, 9, 10, 11
  */
 
-#include <Servo.h>
+#include <Stepper.h>
 
-// Servo pin definitions
-#define SERVO_X_PIN 3    // X-axis servo on pin 3 (PWM)
-#define SERVO_Y_PIN 5    // Y-axis servo on pin 5 (PWM)
+// Motor configuration
+const int STEPS_PER_REVOLUTION = 2048; // Adjust based on your motor (2048 for 28BYJ-48)
 
-// Servo objects
-Servo servoX;
-Servo servoY;
+// Speed in RPM
+const int MOTOR_SPEED = 10; 
 
-// Servo configuration
-#define SERVO_MIN_ANGLE 0      // Minimum servo angle (degrees)
-#define SERVO_MAX_ANGLE 180     // Maximum servo angle (degrees)
-#define SERVO_X_CENTER 90      // Center position for X-axis (degrees)
-#define SERVO_Y_CENTER 90      // Center position for Y-axis (degrees)
+// Stepper instances
+// Note: Sequence 1-3-2-4 (8, 10, 9, 11) is often required for ULN2003/28BYJ-48
+Stepper stepperX(STEPS_PER_REVOLUTION, 8, 10, 9, 11);
+Stepper stepperY(STEPS_PER_REVOLUTION, 4, 6, 5, 7);
 
-// Position tracking (in degrees)
-float currentX = SERVO_X_CENTER;
-float currentY = SERVO_Y_CENTER;
+// Position Tracking (in steps)
+long currentXSteps = 0;
+long currentYSteps = 0;
 
-// Movement speed (delay in milliseconds between degree steps)
-#define MOVEMENT_DELAY 15
+// Conversion factor: Units (degrees/mm) to Steps
+// Adjust this based on your mechanical gear ratio
+const float UNITS_TO_STEPS = 400.0; 
 
-// Sample positions (in degrees from center)
-// These correspond to the sample positions in motor_server.py
+// Sample positions (in "units" matching motor_server.py logic)
 struct Position {
   float x;
   float y;
 };
 
-// Sample positions mapping
+const float CENTER_X = 90.0;
+const float CENTER_Y = 90.0;
+
 Position samplePositions[] = {
-  {SERVO_X_CENTER, SERVO_Y_CENTER},      // Home position (lpf)
-  {SERVO_X_CENTER + 5, SERVO_Y_CENTER + 5},   // lpf_1
-  {SERVO_X_CENTER + 15, SERVO_Y_CENTER + 5},  // lpf_2
-  {SERVO_X_CENTER + 25, SERVO_Y_CENTER + 5},  // lpf_3
-  {SERVO_X_CENTER + 35, SERVO_Y_CENTER + 5},  // lpf_4
-  {SERVO_X_CENTER + 45, SERVO_Y_CENTER + 5},  // lpf_5
-  {SERVO_X_CENTER + 5, SERVO_Y_CENTER + 15},  // lpf_6
-  {SERVO_X_CENTER + 15, SERVO_Y_CENTER + 15}, // lpf_7
-  {SERVO_X_CENTER + 25, SERVO_Y_CENTER + 15}, // lpf_8
-  {SERVO_X_CENTER + 35, SERVO_Y_CENTER + 15}, // lpf_9
-  {SERVO_X_CENTER + 45, SERVO_Y_CENTER + 15}, // lpf_10
-  {SERVO_X_CENTER + 2, SERVO_Y_CENTER + 2},   // hpf_1
-  {SERVO_X_CENTER + 6, SERVO_Y_CENTER + 2},   // hpf_2
-  {SERVO_X_CENTER + 10, SERVO_Y_CENTER + 2},  // hpf_3
-  {SERVO_X_CENTER + 14, SERVO_Y_CENTER + 2},  // hpf_4
-  {SERVO_X_CENTER + 18, SERVO_Y_CENTER + 2},  // hpf_5
-  {SERVO_X_CENTER + 2, SERVO_Y_CENTER + 6},   // hpf_6
-  {SERVO_X_CENTER + 6, SERVO_Y_CENTER + 6},  // hpf_7
-  {SERVO_X_CENTER + 10, SERVO_Y_CENTER + 6}, // hpf_8
-  {SERVO_X_CENTER + 14, SERVO_Y_CENTER + 6}, // hpf_9
-  {SERVO_X_CENTER + 18, SERVO_Y_CENTER + 6}  // hpf_10
+  {CENTER_X, CENTER_Y},            // Home (0)
+  {CENTER_X + 5, CENTER_Y + 5},    // lpf_1 (1)
+  {CENTER_X + 15, CENTER_Y + 5},   // lpf_2 (2)
+  {CENTER_X + 25, CENTER_Y + 5},   // lpf_3 (3)
+  {CENTER_X + 35, CENTER_Y + 5},   // lpf_4 (4)
+  {CENTER_X + 45, CENTER_Y + 5},   // lpf_5 (5)
+  {CENTER_X + 45, CENTER_Y + 15},  // lpf_6 (6) - Serpentine START (Right)
+  {CENTER_X + 35, CENTER_Y + 15},  // lpf_7 (7)
+  {CENTER_X + 25, CENTER_Y + 15},  // lpf_8 (8)
+  {CENTER_X + 15, CENTER_Y + 15},  // lpf_9 (9)
+  {CENTER_X + 5, CENTER_Y + 15},   // lpf_10 (10) - Serpentine END (Left)
+  {CENTER_X + 2, CENTER_Y + 2},    // hpf_1 (11)
+  {CENTER_X + 6, CENTER_Y + 2},    // hpf_2 (12)
+  {CENTER_X + 10, CENTER_Y + 2},   // hpf_3 (13)
+  {CENTER_X + 14, CENTER_Y + 2},   // hpf_4 (14)
+  {CENTER_X + 18, CENTER_Y + 2},   // hpf_5 (15)
+  {CENTER_X + 18, CENTER_Y + 6},   // hpf_6 (16) - Serpentine START (Right)
+  {CENTER_X + 14, CENTER_Y + 6},   // hpf_7 (17)
+  {CENTER_X + 10, CENTER_Y + 6},   // hpf_8 (18)
+  {CENTER_X + 6, CENTER_Y + 6},    // hpf_9 (19)
+  {CENTER_X + 2, CENTER_Y + 6}     // hpf_10 (20) - Serpentine END (Left)
 };
 
-String currentSample = "";
-
 void setup() {
-  // Initialize serial communication
   Serial.begin(9600);
-  while (!Serial) {
-    ; // Wait for serial port to connect
-  }
   
-  Serial.println("=== Servo Motor Control System ===");
-  Serial.println("Initializing servos...");
+  stepperX.setSpeed(MOTOR_SPEED);
+  stepperY.setSpeed(MOTOR_SPEED);
   
-  // Attach servos to pins
-  servoX.attach(SERVO_X_PIN);
-  servoY.attach(SERVO_Y_PIN);
-  
-  // Move to center/home position
-  homeServos();
-  
-  Serial.println("System ready!");
-  Serial.println("Commands:");
-  Serial.println("  HOME - Home servos to center");
-  Serial.println("  MOVE x,y - Move to absolute position (degrees)");
-  Serial.println("  SAMPLE lpf_1 to lpf_10 or hpf_1 to hpf_10");
-  Serial.println("  STATUS - Get current position");
-  Serial.println("  HELP - Show this help");
+  Serial.println("=== Stepper Control System Ready ===");
+  Serial.println("OK"); // Initial ready signal
 }
 
 void loop() {
-  // Check for serial commands
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
     command.trim();
-    command.toUpperCase();
     
-    processCommand(command);
-  }
-  
-  delay(10);
-}
-
-void processCommand(String cmd) {
-  if (cmd.startsWith("HOME")) {
-    homeServos();
-    sendResponse("SUCCESS", "Servos homed to center position");
-  }
-  else if (cmd.startsWith("MOVE")) {
-    // Parse MOVE x,y command
-    int commaIndex = cmd.indexOf(',');
-    if (commaIndex > 0) {
-      float x = cmd.substring(5, commaIndex).toFloat();
-      float y = cmd.substring(commaIndex + 1).toFloat();
-      moveToPosition(x, y);
-      sendResponse("SUCCESS", "Moved to position");
-    } else {
-      sendResponse("ERROR", "Invalid MOVE command. Use: MOVE x,y");
+    if (command.startsWith("HOME")) {
+      moveToPosition(CENTER_X, CENTER_Y);
+      Serial.println("OK");
+    } 
+    else if (command.startsWith("MOVE ")) {
+      int commaIndex = command.indexOf(',');
+      if (commaIndex > 0) {
+        float tx = command.substring(5, commaIndex).toFloat();
+        float ty = command.substring(commaIndex + 1).toFloat();
+        moveToPosition(tx, ty);
+        Serial.println("OK");
+      }
+    } 
+    else if (command.startsWith("STATUS")) {
+      Serial.println("OK"); // Respond to auto-detection
+    }
+    else if (command.startsWith("SAMPLE ")) {
+      String sampleName = command.substring(7);
+      sampleName.trim();
+      processSample(sampleName);
     }
   }
-  else if (cmd.startsWith("SAMPLE")) {
-    // Parse SAMPLE command (e.g., SAMPLE lpf_1)
-    String sampleName = cmd.substring(7);
-    sampleName.trim();
-    sampleName.toLowerCase();
-    moveToSample(sampleName);
-  }
-  else if (cmd.startsWith("STATUS")) {
-    sendStatus();
-  }
-  else if (cmd.startsWith("HELP")) {
-    printHelp();
-  }
-  else {
-    sendResponse("ERROR", "Unknown command: " + cmd);
-  }
 }
 
-void homeServos() {
-  Serial.println("Homing servos to center position...");
-  moveToPosition(SERVO_X_CENTER, SERVO_Y_CENTER);
-  currentSample = "";
-  Serial.println("Homing complete");
-}
-
-void moveToPosition(float targetX, float targetY) {
-  // Constrain target positions to valid servo range
-  targetX = constrain(targetX, SERVO_MIN_ANGLE, SERVO_MAX_ANGLE);
-  targetY = constrain(targetY, SERVO_MIN_ANGLE, SERVO_MAX_ANGLE);
+void moveToPosition(float targetXUnits, float targetYUnits) {
+  Serial.print("Target:"); Serial.print(targetXUnits); Serial.print(","); Serial.println(targetYUnits);
   
-  Serial.print("Moving from (");
-  Serial.print(currentX);
-  Serial.print(", ");
-  Serial.print(currentY);
-  Serial.print(") to (");
-  Serial.print(targetX);
-  Serial.print(", ");
-  Serial.print(targetY);
-  Serial.println(")");
+  long targetXSteps = (long)(targetXUnits * UNITS_TO_STEPS);
+  long targetYSteps = (long)(targetYUnits * UNITS_TO_STEPS);
   
-  // Calculate step size for smooth movement
-  float deltaX = targetX - currentX;
-  float deltaY = targetY - currentY;
-  float maxDelta = max(abs(deltaX), abs(deltaY));
+  long diffX = targetXSteps - currentXSteps;
+  long diffY = targetYSteps - currentYSteps;
   
-  if (maxDelta > 0) {
-    int steps = (int)maxDelta;
-    float stepX = deltaX / steps;
-    float stepY = deltaY / steps;
-    
-    for (int i = 0; i <= steps; i++) {
-      float newX = currentX + (stepX * i);
-      float newY = currentY + (stepY * i);
-      
-      servoX.write((int)newX);
-      servoY.write((int)newY);
-      
-      delay(MOVEMENT_DELAY);
-    }
+  if (diffX != 0) {
+    stepperX.step(diffX);
+    currentXSteps = targetXSteps;
   }
   
-  // Update current position
-  currentX = targetX;
-  currentY = targetY;
-  
-  servoX.write((int)currentX);
-  servoY.write((int)currentY);
-  
-  Serial.print("Movement complete. Current position: (");
-  Serial.print(currentX);
-  Serial.print(", ");
-  Serial.print(currentY);
-  Serial.println(")");
-}
-
-void moveToSample(String sampleName) {
-  int index = -1;
-  
-  // Map sample names to indices
-  if (sampleName == "lpf" || sampleName == "home") {
-    index = 0;
-  } else if (sampleName == "lpf_1") {
-    index = 1;
-  } else if (sampleName == "lpf_2") {
-    index = 2;
-  } else if (sampleName == "lpf_3") {
-    index = 3;
-  } else if (sampleName == "lpf_4") {
-    index = 4;
-  } else if (sampleName == "lpf_5") {
-    index = 5;
-  } else if (sampleName == "lpf_6") {
-    index = 6;
-  } else if (sampleName == "lpf_7") {
-    index = 7;
-  } else if (sampleName == "lpf_8") {
-    index = 8;
-  } else if (sampleName == "lpf_9") {
-    index = 9;
-  } else if (sampleName == "lpf_10") {
-    index = 10;
-  } else if (sampleName == "hpf_1") {
-    index = 11;
-  } else if (sampleName == "hpf_2") {
-    index = 12;
-  } else if (sampleName == "hpf_3") {
-    index = 13;
-  } else if (sampleName == "hpf_4") {
-    index = 14;
-  } else if (sampleName == "hpf_5") {
-    index = 15;
-  } else if (sampleName == "hpf_6") {
-    index = 16;
-  } else if (sampleName == "hpf_7") {
-    index = 17;
-  } else if (sampleName == "hpf_8") {
-    index = 18;
-  } else if (sampleName == "hpf_9") {
-    index = 19;
-  } else if (sampleName == "hpf_10") {
-    index = 20;
+  if (diffY != 0) {
+    stepperY.step(diffY);
+    currentYSteps = targetYSteps;
   }
   
-  if (index >= 0 && index < sizeof(samplePositions) / sizeof(samplePositions[0])) {
-    // Extract sample number for logging
-    int sampleNum = 0;
-    String fieldType = "";
-    if (sampleName.startsWith("lpf_")) {
-      fieldType = "LPF";
-      sampleNum = sampleName.substring(4).toInt();
-    } else if (sampleName.startsWith("hpf_")) {
-      fieldType = "HPF";
-      sampleNum = sampleName.substring(4).toInt();
-    }
-    
-    // Log movement start
-    Serial.println("========================================");
-    Serial.print("MOVED TO SAMPLE ");
-    Serial.print(sampleNum);
-    Serial.print(" ");
-    Serial.println(fieldType);
-    Serial.println("========================================");
-    
-    Position target = samplePositions[index];
-    Serial.print("Target position: X=");
-    Serial.print(target.x);
-    Serial.print(", Y=");
-    Serial.println(target.y);
-    
-    // Move to position
-    moveToPosition(target.x, target.y);
-    currentSample = sampleName;
-    
-    // Log completion
-    Serial.print("✓ Successfully moved to sample ");
-    Serial.print(sampleNum);
-    Serial.print(" ");
-    Serial.println(fieldType);
-    Serial.print("Current position: X=");
-    Serial.print(currentX);
-    Serial.print(", Y=");
-    Serial.println(currentY);
-    Serial.println("========================================");
-    
-    sendResponse("SUCCESS", "Moved to sample: " + sampleName);
+  // Power down pins after move to prevent overheating
+  digitalWrite(4, LOW); digitalWrite(5, LOW); digitalWrite(6, LOW); digitalWrite(7, LOW);
+  digitalWrite(8, LOW); digitalWrite(9, LOW); digitalWrite(10, LOW); digitalWrite(11, LOW);
+}
+
+void processSample(String name) {
+  name.toLowerCase();
+  int idx = -1;
+  
+  if (name == "lpf_1") idx = 1;
+  else if (name == "lpf_2") idx = 2;
+  else if (name == "lpf_3") idx = 3;
+  else if (name == "lpf_4") idx = 4;
+  else if (name == "lpf_5") idx = 5;
+  else if (name == "lpf_6") idx = 6;
+  else if (name == "lpf_7") idx = 7;
+  else if (name == "lpf_8") idx = 8;
+  else if (name == "lpf_9") idx = 9;
+  else if (name == "lpf_10") idx = 10;
+  else if (name == "hpf_1") idx = 11;
+  else if (name == "hpf_2") idx = 12;
+  else if (name == "hpf_3") idx = 13;
+  else if (name == "hpf_4") idx = 14;
+  else if (name == "hpf_5") idx = 15;
+  else if (name == "hpf_6") idx = 16;
+  else if (name == "hpf_7") idx = 17;
+  else if (name == "hpf_8") idx = 18;
+  else if (name == "hpf_9") idx = 19;
+  else if (name == "hpf_10") idx = 20;
+  else if (name == "home") idx = 0;
+  
+  if (idx != -1) {
+    moveToPosition(samplePositions[idx].x, samplePositions[idx].y);
+    Serial.println("OK");
   } else {
-    sendResponse("ERROR", "Invalid sample name: " + sampleName);
+    Serial.println("ERROR: Invalid Sample");
   }
-}
-
-void sendStatus() {
-  Serial.println("=== STATUS ===");
-  Serial.print("X Position: ");
-  Serial.print(currentX);
-  Serial.println(" degrees");
-  Serial.print("Y Position: ");
-  Serial.print(currentY);
-  Serial.println(" degrees");
-  Serial.print("Current Sample: ");
-  Serial.println(currentSample.length() > 0 ? currentSample : "None");
-  Serial.println("==============");
-}
-
-void sendResponse(String status, String message) {
-  Serial.print("[");
-  Serial.print(status);
-  Serial.print("] ");
-  Serial.println(message);
-}
-
-void printHelp() {
-  Serial.println("=== COMMAND HELP ===");
-  Serial.println("HOME              - Move servos to center/home position");
-  Serial.println("MOVE x,y          - Move to absolute position (e.g., MOVE 90,90)");
-  Serial.println("SAMPLE lpf_1      - Move to sample position (lpf_1 to lpf_10, hpf_1 to hpf_10)");
-  Serial.println("STATUS            - Get current position and status");
-  Serial.println("HELP              - Show this help message");
-  Serial.println("===================");
 }

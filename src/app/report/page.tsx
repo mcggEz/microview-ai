@@ -50,6 +50,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+import { getMotorServerUrl } from "@/lib/motor-config";
 import ImageModal from "@/components/ImageModal";
 import Notification from "@/components/Notification";
 import StrasingerReferenceTable from "@/components/StrasingerReferenceTable";
@@ -59,6 +60,8 @@ import MotorEventsLog from "@/components/MotorEventsLog";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { getGeminiKeysFromLocalStorage } from "@/lib/client-gemini-keys";
+import { getScanMethodFromLocalStorage } from "@/lib/scan-method";
+import ObjectiveSwitchModal from "@/components/ObjectiveSwitchModal";
 
 export default function Report() {
   const router = useRouter();
@@ -95,6 +98,9 @@ export default function Report() {
   // Derived motor state for UI
   const hasMotorEvents = motorEvents.length > 0;
   const hasMotorErrors = motorEvents.some((e) => e.type === "error");
+
+  const [showSwitchModal, setShowSwitchModal] = useState(false);
+  const switchModalResolver = useRef<((value: boolean) => void) | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState<{ full_name?: string; email?: string } | null>(null);
@@ -1213,7 +1219,8 @@ export default function Report() {
   }, [startLiveCamera]);
 
   // Capture image from camera
-  const captureImage = async () => {
+  const captureImage = async (overrideMode?: "high" | "low") => {
+    const currentMode = overrideMode || powerMode;
     if (!videoRef.current || !mediaStream || !selectedTest) {
       setNotificationMessage("Please select a test first");
       setNotificationType("error");
@@ -1223,11 +1230,11 @@ export default function Report() {
 
     // Check image limit based on current power mode
     const currentImageCount =
-      powerMode === "high" ? highPowerImages.length : lowPowerImages.length;
+      currentMode === "high" ? highPowerImages.length : lowPowerImages.length;
     if (currentImageCount >= 10) {
       setNotificationMessage(
         `Maximum of 10 ${
-          powerMode === "high" ? "HPF" : "LPF"
+          currentMode === "high" ? "HPF" : "LPF"
         } images reached. Please delete some images before adding more.`
       );
       setNotificationType("error");
@@ -1257,7 +1264,7 @@ export default function Report() {
 
       // Create a File object from the blob
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const powerType = powerMode === "high" ? "hpf" : "lpf";
+      const powerType = currentMode === "high" ? "hpf" : "lpf";
       const filename = `${powerType}-${selectedTest.test_code}-${timestamp}.jpg`;
       const file = new File([blob], filename, { type: "image/jpeg" });
 
@@ -1275,7 +1282,7 @@ export default function Report() {
         await addImageToTest(selectedTest.id, imageUrl, powerType);
 
         // Clear existing analysis data for new image
-        if (powerMode === "high") {
+        if (currentMode === "high") {
           setHpfSedimentDetection(null);
           setIsAnalyzingHPF({});
         } else {
@@ -1285,7 +1292,7 @@ export default function Report() {
 
         // Update local state based on power mode
         const imageDataUrl = canvas.toDataURL("image/jpeg", 0.8);
-        if (powerMode === "high") {
+        if (currentMode === "high") {
           setHighPowerImages((prev) => {
             const newImages = [...prev, imageDataUrl];
             setCurrentHPFIndex(newImages.length - 1);
@@ -2461,15 +2468,19 @@ export default function Report() {
                       ...prev,
                       {
                         timestamp: startTime,
-                        message: "Starting Get Samples routine…",
+                        message: `Starting Get Samples routine (${scanMethod} method)…`,
                         type: "info",
                       },
                     ]);
 
-                    const base = "http://127.0.0.1:3001";
+                    const base = getMotorServerUrl();
+                    const scanMethod = getScanMethodFromLocalStorage();
+
                     // Step 1: Initialize routine (home motors + first sample)
                     const firstRes = await fetch(`${base}/get_samples`, {
                       method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ method: scanMethod }),
                     });
                     if (!firstRes.ok) {
                       throw new Error(`Motor server error ${firstRes.status}`);
@@ -2497,7 +2508,10 @@ export default function Report() {
                     const fieldTypeLabel =
                       (firstData.field_type || "lpf").toString().toUpperCase();
 
-                    // Log first sample from /get_samples
+                    // Log first sample and capture it
+                    const firstFieldType = (firstData.field_type || "lpf").toString().toLowerCase();
+                    const firstMode = firstFieldType === "hpf" ? "high" : "low" as "high" | "low";
+                    
                     setMotorEvents((prev) => [
                       ...prev,
                       {
@@ -2506,12 +2520,15 @@ export default function Report() {
                           firstData.sample_number ?? 1
                         }/${totalSamples} (${
                           firstData.sample || "lpf_1"
-                        }) positioned at X=${firstData.position?.x?.toFixed?.(
-                          1
-                        )}, Y=${firstData.position?.y?.toFixed?.(1)}`,
+                        }) positioned. Capturing image…`,
                         type: "info",
                       },
                     ]);
+
+                    // Sync UI state and capture
+                    setPowerMode(firstMode);
+                    await new Promise(r => setTimeout(r, 1500)); // Wait for settle
+                    await captureImage(firstMode);
 
                     // Step 2: Loop through remaining samples via /next_sample
                     let continueLoop = true;
@@ -2544,11 +2561,9 @@ export default function Report() {
                       if (nextData.status === "success") {
                         const nextTotal =
                           nextData.total_samples ?? totalSamples ?? 10;
-                        const nextFieldTypeLabel = (
-                          nextData.field_type || "lpf"
-                        )
-                          .toString()
-                          .toUpperCase();
+                        const nextFieldType = (nextData.field_type || "lpf").toString().toLowerCase();
+                        const nextFieldTypeLabel = nextFieldType.toUpperCase();
+                        const nextMode = nextFieldType === "hpf" ? "high" : "low" as "high" | "low";
 
                         setMotorEvents((prev) => [
                           ...prev,
@@ -2558,12 +2573,83 @@ export default function Report() {
                               nextData.sample_number ?? "?"
                             }/${nextTotal} (${
                               nextData.sample || "unknown"
-                            }) positioned at X=${nextData.position?.x?.toFixed?.(
-                              1
-                            )}, Y=${nextData.position?.y?.toFixed?.(1)}`,
+                            }) positioned. Capturing image…`,
                             type: "info",
                           },
                         ]);
+
+                        // Sync UI state and capture
+                        setPowerMode(nextMode);
+                        await new Promise(r => setTimeout(r, 1500)); // Wait for settle
+                        await captureImage(nextMode);
+
+                      } else if (nextData.status === "switch_objective") {
+                        // User needs to switch the microscope objective (LPF -> HPF)
+                        setMotorEvents((prev) => [
+                          ...prev,
+                          {
+                            timestamp: new Date().toLocaleTimeString(),
+                            message:
+                              "LPF samples complete. Please switch to HPF objective.",
+                            type: "info",
+                          },
+                        ]);
+
+                        // Prompt user to confirm they've switched the objective
+                        setShowSwitchModal(true);
+                        const userConfirmed = await new Promise<boolean>((resolve) => {
+                          switchModalResolver.current = resolve;
+                        });
+                        setShowSwitchModal(false);
+
+                        if (!userConfirmed) {
+                          setMotorEvents((prev) => [
+                            ...prev,
+                            {
+                              timestamp: new Date().toLocaleTimeString(),
+                              message:
+                                "Objective switch cancelled by user. Stopping.",
+                              type: "error",
+                            },
+                          ]);
+                          continueLoop = false;
+                          break;
+                        }
+
+                        // Tell motor server to proceed
+                        const proceedRes = await fetch(
+                          `${base}/continue_after_switch`,
+                          {
+                            method: "POST",
+                          }
+                        );
+                        if (!proceedRes.ok) {
+                          throw new Error(
+                            `Motor server error (continue_after_switch) ${proceedRes.status}`
+                          );
+                        }
+                        const proceedData = await proceedRes.json().catch(() => null);
+                        if (proceedData?.status === "success") {
+                            // After switch, take photo of first HPF sample if move was successful
+                            const switchFieldType = (proceedData.field_type || "hpf").toString().toLowerCase();
+                            const switchMode = switchFieldType === "hpf" ? "high" : "low" as "high" | "low";
+                            
+                            setMotorEvents((prev) => [
+                              ...prev,
+                              {
+                                timestamp: new Date().toLocaleTimeString(),
+                                message: `Objective switched. ${switchFieldType.toUpperCase()} routine starting...`,
+                                type: "success",
+                              },
+                            ]);
+                            
+                            // captureImage will be triggered by next iterations of the loop if appropriate,
+                            // or we can take the first one here. 
+                            // The backend's continue_after_switch moves to hpf_1.
+                            setPowerMode(switchMode);
+                            await new Promise(r => setTimeout(r, 1500));
+                            await captureImage(switchMode);
+                        }
                       } else if (nextData.status === "complete") {
                         setMotorEvents((prev) => [
                           ...prev,
@@ -3107,7 +3193,7 @@ export default function Report() {
                           </span>
                         </button>
                         <button
-                          onClick={captureImage}
+                          onClick={() => captureImage(powerMode)}
                           disabled={
                             !liveStreamActive ||
                             !mediaStream ||
@@ -5243,16 +5329,20 @@ export default function Report() {
         />
 
         {/* Notification */}
-        {showNotification && (
-          <div className="fixed top-20 right-4 z-[9999]">
-            <Notification
-              message={notificationMessage}
-              type={notificationType}
-              onClose={() => setShowNotification(false)}
-              duration={4000}
-            />
-          </div>
-        )}
+        <Notification
+          isOpen={showNotification}
+          message={notificationMessage}
+          type={notificationType}
+          onClose={() => setShowNotification(false)}
+        />
+
+        <ObjectiveSwitchModal
+          isOpen={showSwitchModal}
+          onConfirm={() => switchModalResolver.current?.(true)}
+          onCancel={() => switchModalResolver.current?.(false)}
+          fromObjective="LPF"
+          toObjective="HPF"
+        />
       </div>
     </Suspense>
   );

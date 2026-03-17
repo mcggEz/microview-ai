@@ -7826,3 +7826,1566 @@
 2026-01-21 00:48:24,208 - INFO - 127.0.0.1 - - [21/Jan/2026 00:48:24] "POST /next_sample HTTP/1.1" 200 -
 2026-01-21 00:48:24,214 - INFO - Cleaning up...
 2026-01-21 00:48:24,215 - INFO - Server shutdown complete
+2026-03-14 20:30:07,900 - INFO - ==================================================
+2026-03-14 20:30:07,900 - INFO - Starting Motor Control Server...
+2026-03-14 20:30:07,901 - INFO - Platform: Windows
+2026-03-14 20:30:07,901 - INFO - ==================================================
+2026-03-14 20:30:07,901 - INFO - Using Arduino servo motors
+2026-03-14 20:30:07,901 - INFO - Attempting to connect to Arduino on COM7...
+2026-03-14 20:30:07,901 - INFO - Connecting to Arduino on COM7 at 9600 baud...
+2026-03-14 20:30:07,902 - ERROR - Failed to connect to Arduino: could not open port 'COM7': FileNotFoundError(2, 'The system cannot find the file specified.', None, 2)
+2026-03-14 20:30:07,902 - ERROR - ============================================================
+2026-03-14 20:30:07,902 - ERROR - COM PORT IS LOCKED BY ANOTHER PROGRAM!
+2026-03-14 20:30:07,902 - ERROR - ============================================================
+2026-03-14 20:30:07,902 - ERROR - SOLUTION:
+2026-03-14 20:30:07,902 - ERROR -   1. Close Arduino IDE Serial Monitor (if open)
+2026-03-14 20:30:07,903 - ERROR -   2. Close any other programs using COM7
+2026-03-14 20:30:07,903 - ERROR -   3. Unplug and replug Arduino USB cable
+2026-03-14 20:30:07,903 - ERROR -   4. Restart this server
+2026-03-14 20:30:07,903 - ERROR - ============================================================
+2026-03-14 20:30:07,903 - ERROR - ==================================================
+2026-03-14 20:30:07,903 - ERROR - ARDUINO INITIALIZATION FAILED!
+2026-03-14 20:30:07,903 - ERROR - Possible reasons:
+2026-03-14 20:30:07,904 - ERROR -   1. Arduino not connected to COM7
+2026-03-14 20:30:07,904 - ERROR -   2. Wrong COM port (check Device Manager)
+2026-03-14 20:30:07,904 - ERROR -   3. Arduino sketch not uploaded
+2026-03-14 20:30:07,904 - ERROR -   4. Another program using the COM port
+2026-03-14 20:30:07,904 - ERROR - ==================================================
+2026-03-14 20:30:07,904 - WARNING - Server will continue but motor control will be SIMULATED (no actual movement)
+2026-03-14 20:30:07,905 - INFO - Server starting on http://127.0.0.1:3001
+2026-03-14 20:30:07,905 - INFO - Available endpoints:
+2026-03-14 20:30:07,905 - INFO -   GET  /status - Get current status
+2026-03-14 20:30:07,905 - INFO -   POST /home - Home all motors
+2026-03-14 20:30:07,905 - INFO -   POST /get_samples - Start sample collection
+2026-03-14 20:30:07,905 - INFO -   POST /next_sample - Move to next sample
+2026-03-14 20:30:07,905 - INFO -   POST /sync_mode - Sync with frontend LPF/HPF mode
+2026-03-14 20:30:07,906 - INFO -   POST /configure_microscope - Configure microscope with motors
+2026-03-14 20:30:07,907 - INFO -   POST /emergency_stop - Emergency stop
+2026-03-14 20:30:07,907 - INFO - ==================================================
+2026-03-14 20:30:07,938 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3001
+2026-03-14 20:30:07,938 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-14 20:30:35,556 - INFO - Cleaning up...
+2026-03-14 20:30:35,556 - INFO - Server shutdown complete
+2026-03-14 20:30:37,738 - INFO - ==================================================
+2026-03-14 20:30:37,738 - INFO - Starting Motor Control Server...
+2026-03-14 20:30:37,738 - INFO - Platform: Windows
+2026-03-14 20:30:37,738 - INFO - ==================================================
+2026-03-14 20:30:37,739 - INFO - Using Arduino servo motors
+2026-03-14 20:30:37,739 - INFO - Attempting to connect to Arduino on COM7...
+2026-03-14 20:30:37,739 - INFO - Connecting to Arduino on COM7 at 9600 baud...
+2026-03-14 20:30:37,739 - ERROR - Failed to connect to Arduino: could not open port 'COM7': FileNotFoundError(2, 'The system cannot find the file specified.', None, 2)
+2026-03-14 20:30:37,739 - ERROR - ============================================================
+2026-03-14 20:30:37,740 - ERROR - COM PORT IS LOCKED BY ANOTHER PROGRAM!
+2026-03-14 20:30:37,740 - ERROR - ============================================================
+2026-03-14 20:30:37,740 - ERROR - SOLUTION:
+2026-03-14 20:30:37,740 - ERROR -   1. Close Arduino IDE Serial Monitor (if open)
+2026-03-14 20:30:37,740 - ERROR -   2. Close any other programs using COM7
+2026-03-14 20:30:37,740 - ERROR -   3. Unplug and replug Arduino USB cable
+2026-03-14 20:30:37,740 - ERROR -   4. Restart this server
+2026-03-14 20:30:37,741 - ERROR - ============================================================
+2026-03-14 20:30:37,741 - ERROR - ==================================================
+2026-03-14 20:30:37,741 - ERROR - ARDUINO INITIALIZATION FAILED!
+2026-03-14 20:30:37,741 - ERROR - Possible reasons:
+2026-03-14 20:30:37,741 - ERROR -   1. Arduino not connected to COM7
+2026-03-14 20:30:37,741 - ERROR -   2. Wrong COM port (check Device Manager)
+2026-03-14 20:30:37,741 - ERROR -   3. Arduino sketch not uploaded
+2026-03-14 20:30:37,741 - ERROR -   4. Another program using the COM port
+2026-03-14 20:30:37,742 - ERROR - ==================================================
+2026-03-14 20:30:37,742 - WARNING - Server will continue but motor control will be SIMULATED (no actual movement)
+2026-03-14 20:30:37,742 - INFO - Server starting on http://127.0.0.1:3001
+2026-03-14 20:30:37,742 - INFO - Available endpoints:
+2026-03-14 20:30:37,742 - INFO -   GET  /status - Get current status
+2026-03-14 20:30:37,742 - INFO -   POST /home - Home all motors
+2026-03-14 20:30:37,742 - INFO -   POST /get_samples - Start sample collection
+2026-03-14 20:30:37,742 - INFO -   POST /next_sample - Move to next sample
+2026-03-14 20:30:37,743 - INFO -   POST /sync_mode - Sync with frontend LPF/HPF mode
+2026-03-14 20:30:37,743 - INFO -   POST /configure_microscope - Configure microscope with motors
+2026-03-14 20:30:37,743 - INFO -   POST /emergency_stop - Emergency stop
+2026-03-14 20:30:37,743 - INFO - ==================================================
+2026-03-14 20:30:37,754 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3001
+2026-03-14 20:30:37,754 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-14 20:31:18,118 - INFO - Cleaning up...
+2026-03-14 20:31:18,118 - INFO - Server shutdown complete
+2026-03-14 20:31:20,069 - INFO - ==================================================
+2026-03-14 20:31:20,070 - INFO - Starting Motor Control Server...
+2026-03-14 20:31:20,070 - INFO - Platform: Windows
+2026-03-14 20:31:20,070 - INFO - ==================================================
+2026-03-14 20:31:20,070 - INFO - Using Arduino servo motors
+2026-03-14 20:31:20,070 - INFO - Attempting to connect to Arduino on COM7...
+2026-03-14 20:31:20,070 - INFO - Connecting to Arduino on COM7 at 9600 baud...
+2026-03-14 20:31:20,071 - ERROR - Failed to connect to Arduino: could not open port 'COM7': FileNotFoundError(2, 'The system cannot find the file specified.', None, 2)
+2026-03-14 20:31:20,071 - ERROR - ============================================================
+2026-03-14 20:31:20,071 - ERROR - COM PORT IS LOCKED BY ANOTHER PROGRAM!
+2026-03-14 20:31:20,071 - ERROR - ============================================================
+2026-03-14 20:31:20,071 - ERROR - SOLUTION:
+2026-03-14 20:31:20,072 - ERROR -   1. Close Arduino IDE Serial Monitor (if open)
+2026-03-14 20:31:20,072 - ERROR -   2. Close any other programs using COM7
+2026-03-14 20:31:20,072 - ERROR -   3. Unplug and replug Arduino USB cable
+2026-03-14 20:31:20,072 - ERROR -   4. Restart this server
+2026-03-14 20:31:20,072 - ERROR - ============================================================
+2026-03-14 20:31:20,072 - ERROR - ==================================================
+2026-03-14 20:31:20,073 - ERROR - ARDUINO INITIALIZATION FAILED!
+2026-03-14 20:31:20,073 - ERROR - Possible reasons:
+2026-03-14 20:31:20,073 - ERROR -   1. Arduino not connected to COM7
+2026-03-14 20:31:20,073 - ERROR -   2. Wrong COM port (check Device Manager)
+2026-03-14 20:31:20,073 - ERROR -   3. Arduino sketch not uploaded
+2026-03-14 20:31:20,073 - ERROR -   4. Another program using the COM port
+2026-03-14 20:31:20,074 - ERROR - ==================================================
+2026-03-14 20:31:20,074 - WARNING - Server will continue but motor control will be SIMULATED (no actual movement)
+2026-03-14 20:31:20,074 - INFO - Server starting on http://127.0.0.1:3001
+2026-03-14 20:31:20,074 - INFO - Available endpoints:
+2026-03-14 20:31:20,075 - INFO -   GET  /status - Get current status
+2026-03-14 20:31:20,075 - INFO -   POST /home - Home all motors
+2026-03-14 20:31:20,075 - INFO -   POST /get_samples - Start sample collection
+2026-03-14 20:31:20,075 - INFO -   POST /next_sample - Move to next sample
+2026-03-14 20:31:20,075 - INFO -   POST /sync_mode - Sync with frontend LPF/HPF mode
+2026-03-14 20:31:20,076 - INFO -   POST /configure_microscope - Configure microscope with motors
+2026-03-14 20:31:20,076 - INFO -   POST /emergency_stop - Emergency stop
+2026-03-14 20:31:20,077 - INFO - ==================================================
+2026-03-14 20:31:20,091 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3001
+2026-03-14 20:31:20,092 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-14 20:32:24,989 - INFO - Cleaning up...
+2026-03-14 20:32:24,989 - INFO - Server shutdown complete
+2026-03-14 20:41:33,949 - INFO - ==================================================
+2026-03-14 20:41:33,949 - INFO - Starting Motor Control Server...
+2026-03-14 20:41:33,949 - INFO - Platform: Windows
+2026-03-14 20:41:33,949 - INFO - ==================================================
+2026-03-14 20:41:33,949 - INFO - Using Arduino servo motors
+2026-03-14 20:41:33,950 - INFO - Attempting to connect to Arduino on COM7...
+2026-03-14 20:41:33,950 - INFO - Connecting to Arduino on COM7 at 9600 baud...
+2026-03-14 20:41:33,950 - ERROR - Failed to connect to Arduino: could not open port 'COM7': FileNotFoundError(2, 'The system cannot find the file specified.', None, 2)
+2026-03-14 20:41:33,950 - ERROR - ============================================================
+2026-03-14 20:41:33,950 - ERROR - COM PORT IS LOCKED BY ANOTHER PROGRAM!
+2026-03-14 20:41:33,951 - ERROR - ============================================================
+2026-03-14 20:41:33,951 - ERROR - SOLUTION:
+2026-03-14 20:41:33,951 - ERROR -   1. Close Arduino IDE Serial Monitor (if open)
+2026-03-14 20:41:33,951 - ERROR -   2. Close any other programs using COM7
+2026-03-14 20:41:33,951 - ERROR -   3. Unplug and replug Arduino USB cable
+2026-03-14 20:41:33,951 - ERROR -   4. Restart this server
+2026-03-14 20:41:33,951 - ERROR - ============================================================
+2026-03-14 20:41:33,952 - ERROR - ==================================================
+2026-03-14 20:41:33,952 - ERROR - ARDUINO INITIALIZATION FAILED!
+2026-03-14 20:41:33,952 - ERROR - Possible reasons:
+2026-03-14 20:41:33,952 - ERROR -   1. Arduino not connected to COM7
+2026-03-14 20:41:33,953 - ERROR -   2. Wrong COM port (check Device Manager)
+2026-03-14 20:41:33,953 - ERROR -   3. Arduino sketch not uploaded
+2026-03-14 20:41:33,953 - ERROR -   4. Another program using the COM port
+2026-03-14 20:41:33,953 - ERROR - ==================================================
+2026-03-14 20:41:33,953 - WARNING - Server will continue but motor control will be SIMULATED (no actual movement)
+2026-03-14 20:41:33,953 - INFO - Server starting on http://127.0.0.1:3001
+2026-03-14 20:41:33,953 - INFO - Available endpoints:
+2026-03-14 20:41:33,953 - INFO -   GET  /status - Get current status
+2026-03-14 20:41:33,954 - INFO -   POST /home - Home all motors
+2026-03-14 20:41:33,954 - INFO -   POST /get_samples - Start sample collection
+2026-03-14 20:41:33,954 - INFO -   POST /next_sample - Move to next sample
+2026-03-14 20:41:33,954 - INFO -   POST /sync_mode - Sync with frontend LPF/HPF mode
+2026-03-14 20:41:33,954 - INFO -   POST /configure_microscope - Configure microscope with motors
+2026-03-14 20:41:33,954 - INFO -   POST /emergency_stop - Emergency stop
+2026-03-14 20:41:33,954 - INFO - ==================================================
+2026-03-14 20:41:33,966 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3001
+2026-03-14 20:41:33,967 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-14 20:43:18,837 - INFO - ==================================================
+2026-03-14 20:43:18,838 - INFO - Starting Motor Control Server...
+2026-03-14 20:43:18,838 - INFO - Platform: Windows
+2026-03-14 20:43:18,838 - INFO - ==================================================
+2026-03-14 20:43:18,838 - INFO - Using Arduino servo motors
+2026-03-14 20:43:18,838 - INFO - Attempting to auto-connect to Arduino...
+2026-03-14 20:43:18,847 - INFO - Scanning for available COM ports...
+2026-03-14 20:43:18,861 - INFO - Checking port: COM5 - Standard Serial over Bluetooth link (COM5)
+2026-03-14 20:43:18,861 - INFO - Connecting to Arduino on COM5 at 9600 baud...
+2026-03-14 20:43:23,998 - ERROR - Failed to connect to Arduino: could not open port 'COM5': OSError(22, 'The semaphore timeout period has expired.', None, 121)
+2026-03-14 20:43:23,998 - ERROR - ============================================================
+2026-03-14 20:43:23,999 - ERROR - COM PORT IS LOCKED BY ANOTHER PROGRAM!
+2026-03-14 20:43:23,999 - ERROR - ============================================================
+2026-03-14 20:43:23,999 - ERROR - SOLUTION:
+2026-03-14 20:43:23,999 - ERROR -   1. Close Arduino IDE Serial Monitor (if open)
+2026-03-14 20:43:23,999 - ERROR -   2. Close any other programs using COM7
+2026-03-14 20:43:24,000 - ERROR -   3. Unplug and replug Arduino USB cable
+2026-03-14 20:43:24,000 - ERROR -   4. Restart this server
+2026-03-14 20:43:24,000 - ERROR - ============================================================
+2026-03-14 20:43:24,000 - ERROR - ==================================================
+2026-03-14 20:43:24,001 - ERROR - ARDUINO INITIALIZATION FAILED!
+2026-03-14 20:43:24,001 - ERROR - Possible reasons:
+2026-03-14 20:43:24,001 - ERROR -   1. Arduino not connected via USB
+2026-03-14 20:43:24,001 - ERROR -   2. Wrong COM port (check Device Manager)
+2026-03-14 20:43:24,001 - ERROR -   3. Arduino sketch not uploaded
+2026-03-14 20:43:24,002 - ERROR -   4. Another program using the COM port
+2026-03-14 20:43:24,002 - ERROR - ==================================================
+2026-03-14 20:43:24,002 - WARNING - Server will continue but motor control will be SIMULATED (no actual movement)
+2026-03-14 20:43:24,002 - INFO - Server starting on http://127.0.0.1:3001
+2026-03-14 20:43:24,002 - INFO - Available endpoints:
+2026-03-14 20:43:24,002 - INFO -   GET  /status - Get current status
+2026-03-14 20:43:24,003 - INFO -   POST /home - Home all motors
+2026-03-14 20:43:24,003 - INFO -   POST /get_samples - Start sample collection
+2026-03-14 20:43:24,003 - INFO -   POST /next_sample - Move to next sample
+2026-03-14 20:43:24,003 - INFO -   POST /sync_mode - Sync with frontend LPF/HPF mode
+2026-03-14 20:43:24,003 - INFO -   POST /configure_microscope - Configure microscope with motors
+2026-03-14 20:43:24,003 - INFO -   POST /emergency_stop - Emergency stop
+2026-03-14 20:43:24,004 - INFO - ==================================================
+2026-03-14 20:43:24,013 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3001
+2026-03-14 20:43:24,014 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-14 20:44:19,343 - INFO - Cleaning up...
+2026-03-14 20:44:19,344 - INFO - Server shutdown complete
+2026-03-14 20:44:21,934 - INFO - ==================================================
+2026-03-14 20:44:21,934 - INFO - Starting Motor Control Server...
+2026-03-14 20:44:21,934 - INFO - Platform: Windows
+2026-03-14 20:44:21,934 - INFO - ==================================================
+2026-03-14 20:44:21,934 - INFO - Using Arduino servo motors
+2026-03-14 20:44:21,934 - INFO - Attempting to auto-connect to Arduino...
+2026-03-14 20:44:21,941 - INFO - Scanning for available COM ports...
+2026-03-14 20:44:21,949 - INFO - Checking port: COM5 - Standard Serial over Bluetooth link (COM5)
+2026-03-14 20:44:21,950 - INFO - Connecting to Arduino on COM5 at 9600 baud...
+2026-03-14 20:44:27,074 - ERROR - Failed to connect to Arduino: could not open port 'COM5': OSError(22, 'The semaphore timeout period has expired.', None, 121)
+2026-03-14 20:44:27,075 - ERROR - ============================================================
+2026-03-14 20:44:27,075 - ERROR - COM PORT IS LOCKED BY ANOTHER PROGRAM!
+2026-03-14 20:44:27,075 - ERROR - ============================================================
+2026-03-14 20:44:27,076 - ERROR - SOLUTION:
+2026-03-14 20:44:27,076 - ERROR -   1. Close Arduino IDE Serial Monitor (if open)
+2026-03-14 20:44:27,076 - ERROR -   2. Close any other programs using COM7
+2026-03-14 20:44:27,077 - ERROR -   3. Unplug and replug Arduino USB cable
+2026-03-14 20:44:27,077 - ERROR -   4. Restart this server
+2026-03-14 20:44:27,077 - ERROR - ============================================================
+2026-03-14 20:44:27,078 - ERROR - ==================================================
+2026-03-14 20:44:27,078 - ERROR - ARDUINO INITIALIZATION FAILED!
+2026-03-14 20:44:27,078 - ERROR - Possible reasons:
+2026-03-14 20:44:27,078 - ERROR -   1. Arduino not connected via USB
+2026-03-14 20:44:27,078 - ERROR -   2. Wrong COM port (check Device Manager)
+2026-03-14 20:44:27,078 - ERROR -   3. Arduino sketch not uploaded
+2026-03-14 20:44:27,079 - ERROR -   4. Another program using the COM port
+2026-03-14 20:44:27,079 - ERROR - ==================================================
+2026-03-14 20:44:27,079 - WARNING - Server will continue but motor control will be SIMULATED (no actual movement)
+2026-03-14 20:44:27,079 - INFO - Server starting on http://127.0.0.1:3001
+2026-03-14 20:44:27,079 - INFO - Available endpoints:
+2026-03-14 20:44:27,079 - INFO -   GET  /status - Get current status
+2026-03-14 20:44:27,080 - INFO -   POST /home - Home all motors
+2026-03-14 20:44:27,080 - INFO -   POST /get_samples - Start sample collection
+2026-03-14 20:44:27,080 - INFO -   POST /next_sample - Move to next sample
+2026-03-14 20:44:27,080 - INFO -   POST /sync_mode - Sync with frontend LPF/HPF mode
+2026-03-14 20:44:27,080 - INFO -   POST /configure_microscope - Configure microscope with motors
+2026-03-14 20:44:27,081 - INFO -   POST /emergency_stop - Emergency stop
+2026-03-14 20:44:27,081 - INFO - ==================================================
+2026-03-14 20:44:27,094 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3001
+2026-03-14 20:44:27,095 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-14 20:44:56,595 - INFO - Cleaning up...
+2026-03-14 20:44:56,596 - INFO - Server shutdown complete
+2026-03-14 20:44:59,149 - INFO - ==================================================
+2026-03-14 20:44:59,150 - INFO - Starting Motor Control Server...
+2026-03-14 20:44:59,150 - INFO - Platform: Windows
+2026-03-14 20:44:59,150 - INFO - ==================================================
+2026-03-14 20:44:59,150 - INFO - Using Arduino servo motors
+2026-03-14 20:44:59,150 - INFO - Attempting to auto-connect to Arduino...
+2026-03-14 20:44:59,154 - INFO - Scanning for available COM ports...
+2026-03-14 20:44:59,162 - INFO - Checking port: COM5 - Standard Serial over Bluetooth link (COM5)
+2026-03-14 20:44:59,162 - INFO - Connecting to Arduino on COM5 at 9600 baud...
+2026-03-14 20:45:04,282 - ERROR - Failed to connect to Arduino: could not open port 'COM5': OSError(22, 'The semaphore timeout period has expired.', None, 121)
+2026-03-14 20:45:04,282 - ERROR - ============================================================
+2026-03-14 20:45:04,282 - ERROR - COM PORT IS LOCKED BY ANOTHER PROGRAM!
+2026-03-14 20:45:04,282 - ERROR - ============================================================
+2026-03-14 20:45:04,282 - ERROR - SOLUTION:
+2026-03-14 20:45:04,289 - ERROR -   1. Close Arduino IDE Serial Monitor (if open)
+2026-03-14 20:45:04,289 - ERROR -   2. Close any other programs using COM7
+2026-03-14 20:45:04,289 - ERROR -   3. Unplug and replug Arduino USB cable
+2026-03-14 20:45:04,289 - ERROR -   4. Restart this server
+2026-03-14 20:45:04,289 - ERROR - ============================================================
+2026-03-14 20:45:04,289 - ERROR - ==================================================
+2026-03-14 20:45:04,289 - ERROR - ARDUINO INITIALIZATION FAILED!
+2026-03-14 20:45:04,289 - ERROR - Possible reasons:
+2026-03-14 20:45:04,289 - ERROR -   1. Arduino not connected via USB
+2026-03-14 20:45:04,289 - ERROR -   2. Wrong COM port (check Device Manager)
+2026-03-14 20:45:04,289 - ERROR -   3. Arduino sketch not uploaded
+2026-03-14 20:45:04,289 - ERROR -   4. Another program using the COM port
+2026-03-14 20:45:04,289 - ERROR - ==================================================
+2026-03-14 20:45:04,289 - WARNING - Server will continue but motor control will be SIMULATED (no actual movement)
+2026-03-14 20:45:04,289 - INFO - Server starting on http://127.0.0.1:3001
+2026-03-14 20:45:04,289 - INFO - Available endpoints:
+2026-03-14 20:45:04,289 - INFO -   GET  /status - Get current status
+2026-03-14 20:45:04,289 - INFO -   POST /home - Home all motors
+2026-03-14 20:45:04,289 - INFO -   POST /get_samples - Start sample collection
+2026-03-14 20:45:04,292 - INFO -   POST /next_sample - Move to next sample
+2026-03-14 20:45:04,292 - INFO -   POST /sync_mode - Sync with frontend LPF/HPF mode
+2026-03-14 20:45:04,292 - INFO -   POST /configure_microscope - Configure microscope with motors
+2026-03-14 20:45:04,292 - INFO -   POST /emergency_stop - Emergency stop
+2026-03-14 20:45:04,292 - INFO - ==================================================
+2026-03-14 20:45:04,301 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3001
+2026-03-14 20:45:04,301 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-14 20:45:24,079 - INFO - Cleaning up...
+2026-03-14 20:45:24,079 - INFO - Server shutdown complete
+2026-03-14 20:45:26,081 - INFO - ==================================================
+2026-03-14 20:45:26,081 - INFO - Starting Motor Control Server...
+2026-03-14 20:45:26,081 - INFO - Platform: Windows
+2026-03-14 20:45:26,081 - INFO - ==================================================
+2026-03-14 20:45:26,081 - INFO - Using Arduino servo motors
+2026-03-14 20:45:26,081 - INFO - Attempting to auto-connect to Arduino...
+2026-03-14 20:45:26,081 - INFO - Scanning for available COM ports...
+2026-03-14 20:45:26,096 - INFO - Checking port: COM5 - Standard Serial over Bluetooth link (COM5)
+2026-03-14 20:45:26,097 - INFO - Connecting to Arduino on COM5 at 9600 baud...
+2026-03-14 20:45:31,215 - ERROR - Failed to connect to Arduino: could not open port 'COM5': OSError(22, 'The semaphore timeout period has expired.', None, 121)
+2026-03-14 20:45:31,215 - ERROR - ============================================================
+2026-03-14 20:45:31,215 - ERROR - COM PORT IS LOCKED BY ANOTHER PROGRAM!
+2026-03-14 20:45:31,215 - ERROR - ============================================================
+2026-03-14 20:45:31,215 - ERROR - SOLUTION:
+2026-03-14 20:45:31,222 - ERROR -   1. Close Arduino IDE Serial Monitor (if open)
+2026-03-14 20:45:31,222 - ERROR -   2. Close any other programs using COM7
+2026-03-14 20:45:31,222 - ERROR -   3. Unplug and replug Arduino USB cable
+2026-03-14 20:45:31,222 - ERROR -   4. Restart this server
+2026-03-14 20:45:31,222 - ERROR - ============================================================
+2026-03-14 20:45:31,222 - ERROR - ==================================================
+2026-03-14 20:45:31,222 - ERROR - ARDUINO INITIALIZATION FAILED!
+2026-03-14 20:45:31,222 - ERROR - Possible reasons:
+2026-03-14 20:45:31,222 - ERROR -   1. Arduino not connected via USB
+2026-03-14 20:45:31,224 - ERROR -   2. Wrong COM port (check Device Manager)
+2026-03-14 20:45:31,224 - ERROR -   3. Arduino sketch not uploaded
+2026-03-14 20:45:31,224 - ERROR -   4. Another program using the COM port
+2026-03-14 20:45:31,224 - ERROR - ==================================================
+2026-03-14 20:45:31,224 - WARNING - Server will continue but motor control will be SIMULATED (no actual movement)
+2026-03-14 20:45:31,224 - INFO - Server starting on http://127.0.0.1:3001
+2026-03-14 20:45:31,224 - INFO - Available endpoints:
+2026-03-14 20:45:31,224 - INFO -   GET  /status - Get current status
+2026-03-14 20:45:31,224 - INFO -   POST /home - Home all motors
+2026-03-14 20:45:31,224 - INFO -   POST /get_samples - Start sample collection
+2026-03-14 20:45:31,224 - INFO -   POST /next_sample - Move to next sample
+2026-03-14 20:45:31,224 - INFO -   POST /sync_mode - Sync with frontend LPF/HPF mode
+2026-03-14 20:45:31,224 - INFO -   POST /configure_microscope - Configure microscope with motors
+2026-03-14 20:45:31,224 - INFO -   POST /emergency_stop - Emergency stop
+2026-03-14 20:45:31,224 - INFO - ==================================================
+2026-03-14 20:45:31,237 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3001
+2026-03-14 20:45:31,237 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-14 20:46:00,129 - INFO - Cleaning up...
+2026-03-14 20:46:00,129 - INFO - Server shutdown complete
+2026-03-14 20:46:01,982 - INFO - ==================================================
+2026-03-14 20:46:01,982 - INFO - Starting Motor Control Server...
+2026-03-14 20:46:01,984 - INFO - Platform: Windows
+2026-03-14 20:46:01,984 - INFO - ==================================================
+2026-03-14 20:46:01,984 - INFO - Using Arduino servo motors
+2026-03-14 20:46:01,984 - INFO - Attempting to auto-connect to Arduino...
+2026-03-14 20:46:01,989 - INFO - Scanning for available COM ports...
+2026-03-14 20:46:01,996 - INFO - Checking port: COM5 - Standard Serial over Bluetooth link (COM5)
+2026-03-14 20:46:01,996 - INFO - Connecting to Arduino on COM5 at 9600 baud...
+2026-03-14 20:46:07,139 - ERROR - Failed to connect to Arduino: could not open port 'COM5': OSError(22, 'The semaphore timeout period has expired.', None, 121)
+2026-03-14 20:46:07,139 - ERROR - ============================================================
+2026-03-14 20:46:07,139 - ERROR - COM PORT IS LOCKED BY ANOTHER PROGRAM!
+2026-03-14 20:46:07,139 - ERROR - ============================================================
+2026-03-14 20:46:07,139 - ERROR - SOLUTION:
+2026-03-14 20:46:07,139 - ERROR -   1. Close Arduino IDE Serial Monitor (if open)
+2026-03-14 20:46:07,139 - ERROR -   2. Close any other programs using COM7
+2026-03-14 20:46:07,139 - ERROR -   3. Unplug and replug Arduino USB cable
+2026-03-14 20:46:07,139 - ERROR -   4. Restart this server
+2026-03-14 20:46:07,139 - ERROR - ============================================================
+2026-03-14 20:46:07,139 - ERROR - ==================================================
+2026-03-14 20:46:07,142 - ERROR - ARDUINO INITIALIZATION FAILED!
+2026-03-14 20:46:07,142 - ERROR - Possible reasons:
+2026-03-14 20:46:07,142 - ERROR -   1. Arduino not connected via USB
+2026-03-14 20:46:07,142 - ERROR -   2. Wrong COM port (check Device Manager)
+2026-03-14 20:46:07,142 - ERROR -   3. Arduino sketch not uploaded
+2026-03-14 20:46:07,142 - ERROR -   4. Another program using the COM port
+2026-03-14 20:46:07,142 - ERROR - ==================================================
+2026-03-14 20:46:07,142 - WARNING - Server will continue but motor control will be SIMULATED (no actual movement)
+2026-03-14 20:46:07,142 - INFO - Server starting on http://127.0.0.1:3001
+2026-03-14 20:46:07,142 - INFO - Available endpoints:
+2026-03-14 20:46:07,142 - INFO -   GET  /status - Get current status
+2026-03-14 20:46:07,142 - INFO -   POST /home - Home all motors
+2026-03-14 20:46:07,142 - INFO -   POST /get_samples - Start sample collection
+2026-03-14 20:46:07,142 - INFO -   POST /next_sample - Move to next sample
+2026-03-14 20:46:07,142 - INFO -   POST /sync_mode - Sync with frontend LPF/HPF mode
+2026-03-14 20:46:07,142 - INFO -   POST /configure_microscope - Configure microscope with motors
+2026-03-14 20:46:07,144 - INFO -   POST /emergency_stop - Emergency stop
+2026-03-14 20:46:07,144 - INFO - ==================================================
+2026-03-14 20:46:07,155 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3001
+2026-03-14 20:46:07,155 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-14 20:50:24,779 - INFO - ==================================================
+2026-03-14 20:50:24,779 - INFO - Starting Motor Control Server...
+2026-03-14 20:50:24,779 - INFO - Platform: Windows
+2026-03-14 20:50:24,780 - INFO - ==================================================
+2026-03-14 20:50:24,780 - INFO - Using Arduino servo motors
+2026-03-14 20:50:24,780 - INFO - Attempting to auto-connect to Arduino...
+2026-03-14 20:50:24,785 - INFO - Scanning for available COM ports...
+2026-03-14 20:50:24,794 - INFO - Checking port: COM15 - Arduino Uno (COM15)
+2026-03-14 20:50:27,311 - INFO - Active verification failed. Falling back to descriptions...
+2026-03-14 20:50:27,311 - INFO - Fallback guess: Arduino is likely on COM15
+2026-03-14 20:50:27,312 - INFO - Re-connecting to Arduino on COM15 at 9600 baud...
+2026-03-14 20:50:29,320 - INFO - Arduino connected successfully
+2026-03-14 20:50:29,970 - INFO - Server starting on http://127.0.0.1:3001
+2026-03-14 20:50:29,970 - INFO - Available endpoints:
+2026-03-14 20:50:29,970 - INFO -   GET  /status - Get current status
+2026-03-14 20:50:29,971 - INFO -   POST /home - Home all motors
+2026-03-14 20:50:29,971 - INFO -   POST /get_samples - Start sample collection
+2026-03-14 20:50:29,971 - INFO -   POST /next_sample - Move to next sample
+2026-03-14 20:50:29,972 - INFO -   POST /sync_mode - Sync with frontend LPF/HPF mode
+2026-03-14 20:50:29,972 - INFO -   POST /configure_microscope - Configure microscope with motors
+2026-03-14 20:50:29,972 - INFO -   POST /emergency_stop - Emergency stop
+2026-03-14 20:50:29,972 - INFO - ==================================================
+2026-03-14 20:50:29,982 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3001
+2026-03-14 20:50:29,983 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-14 20:51:06,751 - INFO - Cleaning up...
+2026-03-14 20:51:06,751 - INFO - Server shutdown complete
+2026-03-14 20:51:10,176 - INFO - ==================================================
+2026-03-14 20:51:10,177 - INFO - Starting Motor Control Server...
+2026-03-14 20:51:10,177 - INFO - Platform: Windows
+2026-03-14 20:51:10,177 - INFO - ==================================================
+2026-03-14 20:51:10,177 - INFO - Using Arduino servo motors
+2026-03-14 20:51:10,178 - INFO - Attempting to auto-connect to Arduino...
+2026-03-14 20:51:10,182 - INFO - Scanning for available COM ports...
+2026-03-14 20:51:10,188 - INFO - Checking port: COM15 - Arduino Uno (COM15)
+2026-03-14 20:51:10,189 - INFO - Active verification failed. Falling back to descriptions...
+2026-03-14 20:51:10,189 - INFO - Fallback guess: Arduino is likely on COM15
+2026-03-14 20:51:10,189 - INFO - Re-connecting to Arduino on COM15 at 9600 baud...
+2026-03-14 20:51:10,189 - ERROR - Failed to connect to Arduino: could not open port 'COM15': PermissionError(13, 'Access is denied.', None, 5)
+2026-03-14 20:51:10,190 - ERROR - ============================================================
+2026-03-14 20:51:10,190 - ERROR - COM PORT IS LOCKED BY ANOTHER PROGRAM!
+2026-03-14 20:51:10,190 - ERROR - ============================================================
+2026-03-14 20:51:10,190 - ERROR - SOLUTION:
+2026-03-14 20:51:10,191 - ERROR -   1. Close Arduino IDE Serial Monitor (if open)
+2026-03-14 20:51:10,191 - ERROR -   2. Close any other programs using COM7
+2026-03-14 20:51:10,191 - ERROR -   3. Unplug and replug Arduino USB cable
+2026-03-14 20:51:10,191 - ERROR -   4. Restart this server
+2026-03-14 20:51:10,191 - ERROR - ============================================================
+2026-03-14 20:51:10,191 - ERROR - ==================================================
+2026-03-14 20:51:10,192 - ERROR - ARDUINO INITIALIZATION FAILED!
+2026-03-14 20:51:10,192 - ERROR - Possible reasons:
+2026-03-14 20:51:10,192 - ERROR -   1. Arduino not connected via USB
+2026-03-14 20:51:10,192 - ERROR -   2. Wrong COM port (check Device Manager)
+2026-03-14 20:51:10,192 - ERROR -   3. Arduino sketch not uploaded
+2026-03-14 20:51:10,192 - ERROR -   4. Another program using the COM port
+2026-03-14 20:51:10,193 - ERROR - ==================================================
+2026-03-14 20:51:10,193 - WARNING - Server will continue but motor control will be SIMULATED (no actual movement)
+2026-03-14 20:51:10,193 - INFO - Server starting on http://127.0.0.1:3001
+2026-03-14 20:51:10,193 - INFO - Available endpoints:
+2026-03-14 20:51:10,193 - INFO -   GET  /status - Get current status
+2026-03-14 20:51:10,193 - INFO -   POST /home - Home all motors
+2026-03-14 20:51:10,194 - INFO -   POST /get_samples - Start sample collection
+2026-03-14 20:51:10,194 - INFO -   POST /next_sample - Move to next sample
+2026-03-14 20:51:10,194 - INFO -   POST /sync_mode - Sync with frontend LPF/HPF mode
+2026-03-14 20:51:10,194 - INFO -   POST /configure_microscope - Configure microscope with motors
+2026-03-14 20:51:10,194 - INFO -   POST /emergency_stop - Emergency stop
+2026-03-14 20:51:10,194 - INFO - ==================================================
+2026-03-14 20:51:10,206 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3001
+2026-03-14 20:51:10,207 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-14 20:51:26,077 - INFO - Cleaning up...
+2026-03-14 20:51:26,077 - INFO - Server shutdown complete
+2026-03-14 20:56:37,492 - INFO - ==================================================
+2026-03-14 20:56:37,492 - INFO - Starting Motor Control Server...
+2026-03-14 20:56:37,492 - INFO - Platform: Windows
+2026-03-14 20:56:37,492 - INFO - ==================================================
+2026-03-14 20:56:37,494 - INFO - Using Arduino servo motors
+2026-03-14 20:56:37,494 - INFO - Attempting to auto-connect to Arduino...
+2026-03-14 20:56:37,498 - INFO - Scanning for available COM ports...
+2026-03-14 20:56:37,524 - INFO - Checking port: COM15 - Arduino Uno (COM15)
+2026-03-14 20:56:40,037 - INFO - Active verification failed. Falling back to descriptions...
+2026-03-14 20:56:40,037 - INFO - Fallback guess: Arduino is likely on COM15
+2026-03-14 20:56:40,037 - INFO - Re-connecting to Arduino on COM15 at 9600 baud...
+2026-03-14 20:56:42,042 - INFO - Arduino connected successfully
+2026-03-14 20:56:42,693 - INFO - Server starting on http://127.0.0.1:3001
+2026-03-14 20:56:42,693 - INFO - Available endpoints:
+2026-03-14 20:56:42,694 - INFO -   GET  /status - Get current status
+2026-03-14 20:56:42,695 - INFO -   POST /home - Home all motors
+2026-03-14 20:56:42,695 - INFO -   POST /get_samples - Start sample collection
+2026-03-14 20:56:42,696 - INFO -   POST /next_sample - Move to next sample
+2026-03-14 20:56:42,696 - INFO -   POST /sync_mode - Sync with frontend LPF/HPF mode
+2026-03-14 20:56:42,696 - INFO -   POST /configure_microscope - Configure microscope with motors
+2026-03-14 20:56:42,697 - INFO -   POST /emergency_stop - Emergency stop
+2026-03-14 20:56:42,697 - INFO - ==================================================
+2026-03-14 20:56:42,743 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3001
+2026-03-14 20:56:42,745 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-14 20:57:16,716 - INFO - === GET SAMPLES ROUTINE (STEP 1) STARTED ===
+2026-03-14 20:57:16,716 - INFO - Starting 'Get Samples' routine (home + first sample)...
+2026-03-14 20:57:16,716 - INFO - Step 1: Homing motors
+2026-03-14 20:57:16,716 - INFO - Starting motor homing sequence...
+2026-03-14 20:57:16,717 - INFO - Sending HOME command to Arduino
+2026-03-14 20:57:17,831 - INFO - Motor homing sequence completed successfully
+2026-03-14 20:57:17,831 - INFO - Motors homed. Position reset to: {'x': 0.0, 'y': 0.0, 'z': 0.0}
+2026-03-14 20:57:18,838 - INFO - Step 2: Moving to first LPF sample (lpf_1)
+2026-03-14 20:57:18,838 - INFO - Target position for lpf_1: {'x': 2, 'y': 2, 'z': 0}
+2026-03-14 20:57:18,839 - INFO - Sending SAMPLE command to Arduino: lpf_1
+2026-03-14 20:57:19,448 - INFO - Current sample updated to: lpf_1
+2026-03-14 20:57:19,549 - INFO - Get samples (step 1) completed successfully. Response: {'status': 'success', 'message': 'LPF sample 1/10 ready for capture', 'sample': 'lpf_1', 'sample_number': 1, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:19,549 - INFO - === GET SAMPLES ROUTINE (STEP 1) COMPLETED ===
+2026-03-14 20:57:19,550 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:19] "POST /get_samples HTTP/1.1" 200 -
+2026-03-14 20:57:19,556 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:19,557 - INFO - Current sample: lpf_1
+2026-03-14 20:57:19,557 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:19,557 - INFO - Next sample determined: lpf_2
+2026-03-14 20:57:19,557 - INFO - Moving to next sample: lpf_2
+2026-03-14 20:57:19,558 - INFO - Target position: {'x': 8, 'y': 2, 'z': 0}
+2026-03-14 20:57:20,170 - INFO - Current sample updated to: lpf_2
+2026-03-14 20:57:20,170 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 2/10 ready for capture', 'sample': 'lpf_2', 'sample_number': 2, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:20,171 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:20] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:20,171 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:20,171 - INFO - Current sample: lpf_2
+2026-03-14 20:57:20,176 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:20,176 - INFO - Next sample determined: lpf_3
+2026-03-14 20:57:20,177 - INFO - Moving to next sample: lpf_3
+2026-03-14 20:57:20,177 - INFO - Target position: {'x': 14, 'y': 2, 'z': 0}
+2026-03-14 20:57:20,781 - INFO - Current sample updated to: lpf_3
+2026-03-14 20:57:20,782 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 3/10 ready for capture', 'sample': 'lpf_3', 'sample_number': 3, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:20,782 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:20] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:20,787 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:20,787 - INFO - Current sample: lpf_3
+2026-03-14 20:57:20,788 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:20,788 - INFO - Next sample determined: lpf_4
+2026-03-14 20:57:20,789 - INFO - Moving to next sample: lpf_4
+2026-03-14 20:57:20,789 - INFO - Target position: {'x': 20, 'y': 2, 'z': 0}
+2026-03-14 20:57:21,406 - INFO - Current sample updated to: lpf_4
+2026-03-14 20:57:21,406 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 4/10 ready for capture', 'sample': 'lpf_4', 'sample_number': 4, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:21,406 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:21] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:21,406 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:21,413 - INFO - Current sample: lpf_4
+2026-03-14 20:57:21,413 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:21,414 - INFO - Next sample determined: lpf_5
+2026-03-14 20:57:21,415 - INFO - Moving to next sample: lpf_5
+2026-03-14 20:57:21,416 - INFO - Target position: {'x': 26, 'y': 2, 'z': 0}
+2026-03-14 20:57:22,031 - INFO - Current sample updated to: lpf_5
+2026-03-14 20:57:22,031 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 5/10 ready for capture', 'sample': 'lpf_5', 'sample_number': 5, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:22,032 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:22] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:22,036 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:22,036 - INFO - Current sample: lpf_5
+2026-03-14 20:57:22,036 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:22,036 - INFO - Next sample determined: lpf_6
+2026-03-14 20:57:22,037 - INFO - Moving to next sample: lpf_6
+2026-03-14 20:57:22,037 - INFO - Target position: {'x': 2, 'y': 8, 'z': 0}
+2026-03-14 20:57:22,653 - INFO - Current sample updated to: lpf_6
+2026-03-14 20:57:22,653 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 6/10 ready for capture', 'sample': 'lpf_6', 'sample_number': 6, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:22,653 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:22] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:22,656 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:22,656 - INFO - Current sample: lpf_6
+2026-03-14 20:57:22,656 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:22,656 - INFO - Next sample determined: lpf_7
+2026-03-14 20:57:22,656 - INFO - Moving to next sample: lpf_7
+2026-03-14 20:57:22,656 - INFO - Target position: {'x': 8, 'y': 8, 'z': 0}
+2026-03-14 20:57:23,273 - INFO - Current sample updated to: lpf_7
+2026-03-14 20:57:23,273 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 7/10 ready for capture', 'sample': 'lpf_7', 'sample_number': 7, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:23,273 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:23] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:23,276 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:23,276 - INFO - Current sample: lpf_7
+2026-03-14 20:57:23,276 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:23,276 - INFO - Next sample determined: lpf_8
+2026-03-14 20:57:23,276 - INFO - Moving to next sample: lpf_8
+2026-03-14 20:57:23,279 - INFO - Target position: {'x': 14, 'y': 8, 'z': 0}
+2026-03-14 20:57:23,898 - INFO - Current sample updated to: lpf_8
+2026-03-14 20:57:23,898 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 8/10 ready for capture', 'sample': 'lpf_8', 'sample_number': 8, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:23,899 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:23] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:23,903 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:23,903 - INFO - Current sample: lpf_8
+2026-03-14 20:57:23,904 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:23,905 - INFO - Next sample determined: lpf_9
+2026-03-14 20:57:23,905 - INFO - Moving to next sample: lpf_9
+2026-03-14 20:57:23,906 - INFO - Target position: {'x': 20, 'y': 8, 'z': 0}
+2026-03-14 20:57:24,509 - INFO - Current sample updated to: lpf_9
+2026-03-14 20:57:24,509 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 9/10 ready for capture', 'sample': 'lpf_9', 'sample_number': 9, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:24,509 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:24] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:24,513 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:24,513 - INFO - Current sample: lpf_9
+2026-03-14 20:57:24,514 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:24,514 - INFO - Next sample determined: lpf_10
+2026-03-14 20:57:24,515 - INFO - Moving to next sample: lpf_10
+2026-03-14 20:57:24,515 - INFO - Target position: {'x': 26, 'y': 8, 'z': 0}
+2026-03-14 20:57:25,128 - INFO - Current sample updated to: lpf_10
+2026-03-14 20:57:25,129 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 10/10 ready for capture', 'sample': 'lpf_10', 'sample_number': 10, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:25,130 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:25] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:25,135 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:25,136 - INFO - Current sample: lpf_10
+2026-03-14 20:57:25,136 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:25,137 - INFO - Next sample determined: hpf_1
+2026-03-14 20:57:25,137 - INFO - Moving to next sample: hpf_1
+2026-03-14 20:57:25,137 - INFO - Target position: {'x': 1, 'y': 1, 'z': 0}
+2026-03-14 20:57:25,758 - INFO - Current sample updated to: hpf_1
+2026-03-14 20:57:25,758 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 1/10 ready for capture', 'sample': 'hpf_1', 'sample_number': 1, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:25,758 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:25] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:25,763 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:25,764 - INFO - Current sample: hpf_1
+2026-03-14 20:57:25,764 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:25,764 - INFO - Next sample determined: hpf_2
+2026-03-14 20:57:25,765 - INFO - Moving to next sample: hpf_2
+2026-03-14 20:57:25,765 - INFO - Target position: {'x': 3, 'y': 1, 'z': 0}
+2026-03-14 20:57:26,394 - INFO - Current sample updated to: hpf_2
+2026-03-14 20:57:26,394 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 2/10 ready for capture', 'sample': 'hpf_2', 'sample_number': 2, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:26,398 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:26] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:26,400 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:26,402 - INFO - Current sample: hpf_2
+2026-03-14 20:57:26,402 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:26,403 - INFO - Next sample determined: hpf_3
+2026-03-14 20:57:26,403 - INFO - Moving to next sample: hpf_3
+2026-03-14 20:57:26,404 - INFO - Target position: {'x': 5, 'y': 1, 'z': 0}
+2026-03-14 20:57:27,008 - INFO - Current sample updated to: hpf_3
+2026-03-14 20:57:27,008 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 3/10 ready for capture', 'sample': 'hpf_3', 'sample_number': 3, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:27,008 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:27] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:27,013 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:27,014 - INFO - Current sample: hpf_3
+2026-03-14 20:57:27,015 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:27,015 - INFO - Next sample determined: hpf_4
+2026-03-14 20:57:27,016 - INFO - Moving to next sample: hpf_4
+2026-03-14 20:57:27,017 - INFO - Target position: {'x': 7, 'y': 1, 'z': 0}
+2026-03-14 20:57:27,632 - INFO - Current sample updated to: hpf_4
+2026-03-14 20:57:27,632 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 4/10 ready for capture', 'sample': 'hpf_4', 'sample_number': 4, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:27,632 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:27] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:27,636 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:27,637 - INFO - Current sample: hpf_4
+2026-03-14 20:57:27,638 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:27,638 - INFO - Next sample determined: hpf_5
+2026-03-14 20:57:27,639 - INFO - Moving to next sample: hpf_5
+2026-03-14 20:57:27,639 - INFO - Target position: {'x': 9, 'y': 1, 'z': 0}
+2026-03-14 20:57:28,250 - INFO - Current sample updated to: hpf_5
+2026-03-14 20:57:28,251 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 5/10 ready for capture', 'sample': 'hpf_5', 'sample_number': 5, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:28,251 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:28] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:28,256 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:28,257 - INFO - Current sample: hpf_5
+2026-03-14 20:57:28,258 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:28,258 - INFO - Next sample determined: hpf_6
+2026-03-14 20:57:28,259 - INFO - Moving to next sample: hpf_6
+2026-03-14 20:57:28,259 - INFO - Target position: {'x': 1, 'y': 3, 'z': 0}
+2026-03-14 20:57:28,881 - INFO - Current sample updated to: hpf_6
+2026-03-14 20:57:28,882 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 6/10 ready for capture', 'sample': 'hpf_6', 'sample_number': 6, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:28,882 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:28] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:28,886 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:28,887 - INFO - Current sample: hpf_6
+2026-03-14 20:57:28,887 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:28,887 - INFO - Next sample determined: hpf_7
+2026-03-14 20:57:28,888 - INFO - Moving to next sample: hpf_7
+2026-03-14 20:57:28,888 - INFO - Target position: {'x': 3, 'y': 3, 'z': 0}
+2026-03-14 20:57:29,494 - INFO - Current sample updated to: hpf_7
+2026-03-14 20:57:29,494 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 7/10 ready for capture', 'sample': 'hpf_7', 'sample_number': 7, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:29,495 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:29] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:29,498 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:29,498 - INFO - Current sample: hpf_7
+2026-03-14 20:57:29,498 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:29,499 - INFO - Next sample determined: hpf_8
+2026-03-14 20:57:29,499 - INFO - Moving to next sample: hpf_8
+2026-03-14 20:57:29,500 - INFO - Target position: {'x': 5, 'y': 3, 'z': 0}
+2026-03-14 20:57:30,117 - INFO - Current sample updated to: hpf_8
+2026-03-14 20:57:30,117 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 8/10 ready for capture', 'sample': 'hpf_8', 'sample_number': 8, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:30,118 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:30] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:30,121 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:30,121 - INFO - Current sample: hpf_8
+2026-03-14 20:57:30,121 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:30,121 - INFO - Next sample determined: hpf_9
+2026-03-14 20:57:30,121 - INFO - Moving to next sample: hpf_9
+2026-03-14 20:57:30,121 - INFO - Target position: {'x': 7, 'y': 3, 'z': 0}
+2026-03-14 20:57:30,745 - INFO - Current sample updated to: hpf_9
+2026-03-14 20:57:30,745 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 9/10 ready for capture', 'sample': 'hpf_9', 'sample_number': 9, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:30,745 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:30] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:30,750 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:30,750 - INFO - Current sample: hpf_9
+2026-03-14 20:57:30,751 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:30,751 - INFO - Next sample determined: hpf_10
+2026-03-14 20:57:30,751 - INFO - Moving to next sample: hpf_10
+2026-03-14 20:57:30,752 - INFO - Target position: {'x': 9, 'y': 3, 'z': 0}
+2026-03-14 20:57:31,374 - INFO - Current sample updated to: hpf_10
+2026-03-14 20:57:31,374 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 10/10 ready for capture', 'sample': 'hpf_10', 'sample_number': 10, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:57:31,374 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:31] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:57:31,381 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:57:31,381 - INFO - Current sample: hpf_10
+2026-03-14 20:57:31,382 - INFO - Determining next sample in sequence...
+2026-03-14 20:57:31,382 - INFO - Next sample determined: None
+2026-03-14 20:57:31,382 - INFO - All samples completed!
+2026-03-14 20:57:31,383 - INFO - 127.0.0.1 - - [14/Mar/2026 20:57:31] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:15,182 - INFO - === GET SAMPLES ROUTINE (STEP 1) STARTED ===
+2026-03-14 20:58:15,182 - INFO - Starting 'Get Samples' routine (home + first sample)...
+2026-03-14 20:58:15,183 - INFO - Step 1: Homing motors
+2026-03-14 20:58:15,183 - INFO - Starting motor homing sequence...
+2026-03-14 20:58:15,183 - INFO - Sending HOME command to Arduino
+2026-03-14 20:58:16,293 - INFO - Motor homing sequence completed successfully
+2026-03-14 20:58:16,293 - INFO - Motors homed. Position reset to: {'x': 0.0, 'y': 0.0, 'z': 0.0}
+2026-03-14 20:58:17,295 - INFO - Step 2: Moving to first LPF sample (lpf_1)
+2026-03-14 20:58:17,295 - INFO - Target position for lpf_1: {'x': 2, 'y': 2, 'z': 0}
+2026-03-14 20:58:17,295 - INFO - Sending SAMPLE command to Arduino: lpf_1
+2026-03-14 20:58:17,906 - INFO - Current sample updated to: lpf_1
+2026-03-14 20:58:17,909 - INFO - Get samples (step 1) completed successfully. Response: {'status': 'success', 'message': 'LPF sample 1/10 ready for capture', 'sample': 'lpf_1', 'sample_number': 1, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:17,909 - INFO - === GET SAMPLES ROUTINE (STEP 1) COMPLETED ===
+2026-03-14 20:58:17,913 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:17] "POST /get_samples HTTP/1.1" 200 -
+2026-03-14 20:58:17,921 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:17,923 - INFO - Current sample: lpf_1
+2026-03-14 20:58:17,923 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:17,924 - INFO - Next sample determined: lpf_2
+2026-03-14 20:58:17,924 - INFO - Moving to next sample: lpf_2
+2026-03-14 20:58:17,924 - INFO - Target position: {'x': 8, 'y': 2, 'z': 0}
+2026-03-14 20:58:18,537 - INFO - Current sample updated to: lpf_2
+2026-03-14 20:58:18,537 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 2/10 ready for capture', 'sample': 'lpf_2', 'sample_number': 2, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:18,538 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:18] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:18,541 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:18,541 - INFO - Current sample: lpf_2
+2026-03-14 20:58:18,541 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:18,541 - INFO - Next sample determined: lpf_3
+2026-03-14 20:58:18,543 - INFO - Moving to next sample: lpf_3
+2026-03-14 20:58:18,543 - INFO - Target position: {'x': 14, 'y': 2, 'z': 0}
+2026-03-14 20:58:19,156 - INFO - Current sample updated to: lpf_3
+2026-03-14 20:58:19,156 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 3/10 ready for capture', 'sample': 'lpf_3', 'sample_number': 3, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:19,157 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:19] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:19,157 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:19,157 - INFO - Current sample: lpf_3
+2026-03-14 20:58:19,157 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:19,157 - INFO - Next sample determined: lpf_4
+2026-03-14 20:58:19,157 - INFO - Moving to next sample: lpf_4
+2026-03-14 20:58:19,157 - INFO - Target position: {'x': 20, 'y': 2, 'z': 0}
+2026-03-14 20:58:19,767 - INFO - Current sample updated to: lpf_4
+2026-03-14 20:58:19,767 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 4/10 ready for capture', 'sample': 'lpf_4', 'sample_number': 4, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:19,768 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:19] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:19,771 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:19,773 - INFO - Current sample: lpf_4
+2026-03-14 20:58:19,774 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:19,774 - INFO - Next sample determined: lpf_5
+2026-03-14 20:58:19,775 - INFO - Moving to next sample: lpf_5
+2026-03-14 20:58:19,775 - INFO - Target position: {'x': 26, 'y': 2, 'z': 0}
+2026-03-14 20:58:20,394 - INFO - Current sample updated to: lpf_5
+2026-03-14 20:58:20,395 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 5/10 ready for capture', 'sample': 'lpf_5', 'sample_number': 5, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:20,395 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:20] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:20,400 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:20,400 - INFO - Current sample: lpf_5
+2026-03-14 20:58:20,400 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:20,400 - INFO - Next sample determined: lpf_6
+2026-03-14 20:58:20,402 - INFO - Moving to next sample: lpf_6
+2026-03-14 20:58:20,402 - INFO - Target position: {'x': 2, 'y': 8, 'z': 0}
+2026-03-14 20:58:21,009 - INFO - Current sample updated to: lpf_6
+2026-03-14 20:58:21,009 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 6/10 ready for capture', 'sample': 'lpf_6', 'sample_number': 6, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:21,009 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:21] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:21,015 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:21,015 - INFO - Current sample: lpf_6
+2026-03-14 20:58:21,015 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:21,015 - INFO - Next sample determined: lpf_7
+2026-03-14 20:58:21,016 - INFO - Moving to next sample: lpf_7
+2026-03-14 20:58:21,016 - INFO - Target position: {'x': 8, 'y': 8, 'z': 0}
+2026-03-14 20:58:21,620 - INFO - Current sample updated to: lpf_7
+2026-03-14 20:58:21,620 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 7/10 ready for capture', 'sample': 'lpf_7', 'sample_number': 7, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:21,621 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:21] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:21,621 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:21,621 - INFO - Current sample: lpf_7
+2026-03-14 20:58:21,621 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:21,621 - INFO - Next sample determined: lpf_8
+2026-03-14 20:58:21,621 - INFO - Moving to next sample: lpf_8
+2026-03-14 20:58:21,626 - INFO - Target position: {'x': 14, 'y': 8, 'z': 0}
+2026-03-14 20:58:22,231 - INFO - Current sample updated to: lpf_8
+2026-03-14 20:58:22,231 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 8/10 ready for capture', 'sample': 'lpf_8', 'sample_number': 8, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:22,231 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:22] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:22,235 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:22,235 - INFO - Current sample: lpf_8
+2026-03-14 20:58:22,236 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:22,236 - INFO - Next sample determined: lpf_9
+2026-03-14 20:58:22,236 - INFO - Moving to next sample: lpf_9
+2026-03-14 20:58:22,236 - INFO - Target position: {'x': 20, 'y': 8, 'z': 0}
+2026-03-14 20:58:22,843 - INFO - Current sample updated to: lpf_9
+2026-03-14 20:58:22,843 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 9/10 ready for capture', 'sample': 'lpf_9', 'sample_number': 9, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:22,843 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:22] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:22,847 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:22,848 - INFO - Current sample: lpf_9
+2026-03-14 20:58:22,848 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:22,848 - INFO - Next sample determined: lpf_10
+2026-03-14 20:58:22,848 - INFO - Moving to next sample: lpf_10
+2026-03-14 20:58:22,849 - INFO - Target position: {'x': 26, 'y': 8, 'z': 0}
+2026-03-14 20:58:23,463 - INFO - Current sample updated to: lpf_10
+2026-03-14 20:58:23,463 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 10/10 ready for capture', 'sample': 'lpf_10', 'sample_number': 10, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:23,463 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:23] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:23,468 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:23,468 - INFO - Current sample: lpf_10
+2026-03-14 20:58:23,468 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:23,468 - INFO - Next sample determined: hpf_1
+2026-03-14 20:58:23,468 - INFO - Moving to next sample: hpf_1
+2026-03-14 20:58:23,468 - INFO - Target position: {'x': 1, 'y': 1, 'z': 0}
+2026-03-14 20:58:24,098 - INFO - Current sample updated to: hpf_1
+2026-03-14 20:58:24,098 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 1/10 ready for capture', 'sample': 'hpf_1', 'sample_number': 1, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:24,098 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:24] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:24,103 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:24,103 - INFO - Current sample: hpf_1
+2026-03-14 20:58:24,103 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:24,103 - INFO - Next sample determined: hpf_2
+2026-03-14 20:58:24,104 - INFO - Moving to next sample: hpf_2
+2026-03-14 20:58:24,104 - INFO - Target position: {'x': 3, 'y': 1, 'z': 0}
+2026-03-14 20:58:24,716 - INFO - Current sample updated to: hpf_2
+2026-03-14 20:58:24,717 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 2/10 ready for capture', 'sample': 'hpf_2', 'sample_number': 2, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:24,717 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:24] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:24,718 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:24,718 - INFO - Current sample: hpf_2
+2026-03-14 20:58:24,721 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:24,721 - INFO - Next sample determined: hpf_3
+2026-03-14 20:58:24,721 - INFO - Moving to next sample: hpf_3
+2026-03-14 20:58:24,721 - INFO - Target position: {'x': 5, 'y': 1, 'z': 0}
+2026-03-14 20:58:25,330 - INFO - Current sample updated to: hpf_3
+2026-03-14 20:58:25,330 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 3/10 ready for capture', 'sample': 'hpf_3', 'sample_number': 3, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:25,330 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:25] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:25,335 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:25,335 - INFO - Current sample: hpf_3
+2026-03-14 20:58:25,336 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:25,336 - INFO - Next sample determined: hpf_4
+2026-03-14 20:58:25,337 - INFO - Moving to next sample: hpf_4
+2026-03-14 20:58:25,337 - INFO - Target position: {'x': 7, 'y': 1, 'z': 0}
+2026-03-14 20:58:25,944 - INFO - Current sample updated to: hpf_4
+2026-03-14 20:58:25,944 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 4/10 ready for capture', 'sample': 'hpf_4', 'sample_number': 4, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:25,945 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:25] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:25,949 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:25,949 - INFO - Current sample: hpf_4
+2026-03-14 20:58:25,949 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:25,950 - INFO - Next sample determined: hpf_5
+2026-03-14 20:58:25,950 - INFO - Moving to next sample: hpf_5
+2026-03-14 20:58:25,950 - INFO - Target position: {'x': 9, 'y': 1, 'z': 0}
+2026-03-14 20:58:26,562 - INFO - Current sample updated to: hpf_5
+2026-03-14 20:58:26,562 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 5/10 ready for capture', 'sample': 'hpf_5', 'sample_number': 5, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:26,563 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:26] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:26,565 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:26,565 - INFO - Current sample: hpf_5
+2026-03-14 20:58:26,567 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:26,567 - INFO - Next sample determined: hpf_6
+2026-03-14 20:58:26,567 - INFO - Moving to next sample: hpf_6
+2026-03-14 20:58:26,568 - INFO - Target position: {'x': 1, 'y': 3, 'z': 0}
+2026-03-14 20:58:27,187 - INFO - Current sample updated to: hpf_6
+2026-03-14 20:58:27,187 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 6/10 ready for capture', 'sample': 'hpf_6', 'sample_number': 6, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:27,187 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:27] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:27,191 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:27,191 - INFO - Current sample: hpf_6
+2026-03-14 20:58:27,192 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:27,192 - INFO - Next sample determined: hpf_7
+2026-03-14 20:58:27,193 - INFO - Moving to next sample: hpf_7
+2026-03-14 20:58:27,193 - INFO - Target position: {'x': 3, 'y': 3, 'z': 0}
+2026-03-14 20:58:27,798 - INFO - Current sample updated to: hpf_7
+2026-03-14 20:58:27,798 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 7/10 ready for capture', 'sample': 'hpf_7', 'sample_number': 7, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:27,799 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:27] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:27,803 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:27,803 - INFO - Current sample: hpf_7
+2026-03-14 20:58:27,803 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:27,803 - INFO - Next sample determined: hpf_8
+2026-03-14 20:58:27,803 - INFO - Moving to next sample: hpf_8
+2026-03-14 20:58:27,803 - INFO - Target position: {'x': 5, 'y': 3, 'z': 0}
+2026-03-14 20:58:28,415 - INFO - Current sample updated to: hpf_8
+2026-03-14 20:58:28,416 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 8/10 ready for capture', 'sample': 'hpf_8', 'sample_number': 8, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:28,416 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:28] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:28,418 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:28,418 - INFO - Current sample: hpf_8
+2026-03-14 20:58:28,418 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:28,418 - INFO - Next sample determined: hpf_9
+2026-03-14 20:58:28,418 - INFO - Moving to next sample: hpf_9
+2026-03-14 20:58:28,421 - INFO - Target position: {'x': 7, 'y': 3, 'z': 0}
+2026-03-14 20:58:29,029 - INFO - Current sample updated to: hpf_9
+2026-03-14 20:58:29,029 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 9/10 ready for capture', 'sample': 'hpf_9', 'sample_number': 9, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:29,029 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:29] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:29,033 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:29,033 - INFO - Current sample: hpf_9
+2026-03-14 20:58:29,033 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:29,034 - INFO - Next sample determined: hpf_10
+2026-03-14 20:58:29,034 - INFO - Moving to next sample: hpf_10
+2026-03-14 20:58:29,035 - INFO - Target position: {'x': 9, 'y': 3, 'z': 0}
+2026-03-14 20:58:29,644 - INFO - Current sample updated to: hpf_10
+2026-03-14 20:58:29,644 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 10/10 ready for capture', 'sample': 'hpf_10', 'sample_number': 10, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 20:58:29,644 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:29] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:58:29,649 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 20:58:29,649 - INFO - Current sample: hpf_10
+2026-03-14 20:58:29,649 - INFO - Determining next sample in sequence...
+2026-03-14 20:58:29,649 - INFO - Next sample determined: None
+2026-03-14 20:58:29,650 - INFO - All samples completed!
+2026-03-14 20:58:29,652 - INFO - 127.0.0.1 - - [14/Mar/2026 20:58:29] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 20:59:27,373 - INFO - Cleaning up...
+2026-03-14 20:59:27,373 - INFO - Arduino connection closed
+2026-03-14 20:59:27,373 - INFO - Server shutdown complete
+2026-03-14 20:59:29,871 - INFO - ==================================================
+2026-03-14 20:59:29,872 - INFO - Starting Motor Control Server...
+2026-03-14 20:59:29,872 - INFO - Platform: Windows
+2026-03-14 20:59:29,872 - INFO - ==================================================
+2026-03-14 20:59:29,872 - INFO - Using Arduino servo motors
+2026-03-14 20:59:29,872 - INFO - Attempting to auto-connect to Arduino...
+2026-03-14 20:59:29,874 - INFO - Scanning for available COM ports...
+2026-03-14 20:59:29,882 - INFO - Checking port: COM15 - Arduino Uno (COM15)
+2026-03-14 20:59:32,392 - INFO - Active verification failed. Falling back to descriptions...
+2026-03-14 20:59:32,392 - INFO - Fallback guess: Arduino is likely on COM15
+2026-03-14 20:59:32,392 - INFO - Re-connecting to Arduino on COM15 at 9600 baud...
+2026-03-14 20:59:34,398 - INFO - Arduino connected successfully
+2026-03-14 20:59:35,006 - INFO - Server starting on http://127.0.0.1:3001
+2026-03-14 20:59:35,006 - INFO - Available endpoints:
+2026-03-14 20:59:35,006 - INFO -   GET  /status - Get current status
+2026-03-14 20:59:35,006 - INFO -   POST /home - Home all motors
+2026-03-14 20:59:35,006 - INFO -   POST /get_samples - Start sample collection
+2026-03-14 20:59:35,008 - INFO -   POST /next_sample - Move to next sample
+2026-03-14 20:59:35,008 - INFO -   POST /sync_mode - Sync with frontend LPF/HPF mode
+2026-03-14 20:59:35,008 - INFO -   POST /configure_microscope - Configure microscope with motors
+2026-03-14 20:59:35,008 - INFO -   POST /emergency_stop - Emergency stop
+2026-03-14 20:59:35,008 - INFO - ==================================================
+2026-03-14 20:59:35,025 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3001
+2026-03-14 20:59:35,025 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-14 21:05:45,494 - INFO - Cleaning up...
+2026-03-14 21:05:45,494 - INFO - Arduino connection closed
+2026-03-14 21:05:45,494 - INFO - Server shutdown complete
+2026-03-14 21:05:49,406 - INFO - ==================================================
+2026-03-14 21:05:49,406 - INFO - Starting Motor Control Server...
+2026-03-14 21:05:49,406 - INFO - Platform: Windows
+2026-03-14 21:05:49,406 - INFO - ==================================================
+2026-03-14 21:05:49,406 - INFO - Using Arduino servo motors
+2026-03-14 21:05:49,406 - INFO - Attempting to auto-connect to Arduino...
+2026-03-14 21:05:49,406 - INFO - Scanning for available COM ports...
+2026-03-14 21:05:49,432 - INFO - Checking port: COM15 - Arduino Uno (COM15)
+2026-03-14 21:05:51,947 - INFO - Active verification failed. Falling back to descriptions...
+2026-03-14 21:05:51,947 - INFO - Fallback guess: Arduino is likely on COM15
+2026-03-14 21:05:51,947 - INFO - Re-connecting to Arduino on COM15 at 9600 baud...
+2026-03-14 21:05:53,953 - INFO - Arduino connected successfully
+2026-03-14 21:05:54,630 - INFO - Server starting on http://127.0.0.1:3001
+2026-03-14 21:05:54,630 - INFO - Available endpoints:
+2026-03-14 21:05:54,633 - INFO -   GET  /status - Get current status
+2026-03-14 21:05:54,634 - INFO -   POST /home - Home all motors
+2026-03-14 21:05:54,635 - INFO -   POST /get_samples - Start sample collection
+2026-03-14 21:05:54,635 - INFO -   POST /next_sample - Move to next sample
+2026-03-14 21:05:54,635 - INFO -   POST /sync_mode - Sync with frontend LPF/HPF mode
+2026-03-14 21:05:54,635 - INFO -   POST /configure_microscope - Configure microscope with motors
+2026-03-14 21:05:54,635 - INFO -   POST /emergency_stop - Emergency stop
+2026-03-14 21:05:54,635 - INFO - ==================================================
+2026-03-14 21:05:54,668 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3001
+2026-03-14 21:05:54,668 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-14 21:06:05,186 - INFO - === GET SAMPLES ROUTINE (STEP 1) STARTED ===
+2026-03-14 21:06:05,187 - INFO - Starting 'Get Samples' routine (home + first sample)...
+2026-03-14 21:06:05,187 - INFO - Step 1: Homing motors
+2026-03-14 21:06:05,187 - INFO - Starting motor homing sequence...
+2026-03-14 21:06:05,187 - INFO - Sending HOME command to Arduino
+2026-03-14 21:06:06,301 - INFO - Motor homing sequence completed successfully
+2026-03-14 21:06:06,311 - INFO - Motors homed. Position reset to: {'x': 0.0, 'y': 0.0, 'z': 0.0}
+2026-03-14 21:06:07,321 - INFO - Step 2: Moving to first LPF sample (lpf_1)
+2026-03-14 21:06:07,322 - INFO - Target position for lpf_1: {'x': 2, 'y': 2, 'z': 0}
+2026-03-14 21:06:07,322 - INFO - Sending SAMPLE command to Arduino: lpf_1
+2026-03-14 21:06:07,926 - INFO - Current sample updated to: lpf_1
+2026-03-14 21:06:08,079 - INFO - Get samples (step 1) completed successfully. Response: {'status': 'success', 'message': 'LPF sample 1/10 ready for capture', 'sample': 'lpf_1', 'sample_number': 1, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:08,079 - INFO - === GET SAMPLES ROUTINE (STEP 1) COMPLETED ===
+2026-03-14 21:06:08,082 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:08] "POST /get_samples HTTP/1.1" 200 -
+2026-03-14 21:06:08,089 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:08,089 - INFO - Current sample: lpf_1
+2026-03-14 21:06:08,090 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:08,090 - INFO - Next sample determined: lpf_2
+2026-03-14 21:06:08,091 - INFO - Moving to next sample: lpf_2
+2026-03-14 21:06:08,092 - INFO - Target position: {'x': 8, 'y': 2, 'z': 0}
+2026-03-14 21:06:08,710 - INFO - Current sample updated to: lpf_2
+2026-03-14 21:06:08,710 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 2/10 ready for capture', 'sample': 'lpf_2', 'sample_number': 2, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:08,710 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:08] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:08,713 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:08,713 - INFO - Current sample: lpf_2
+2026-03-14 21:06:08,713 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:08,713 - INFO - Next sample determined: lpf_3
+2026-03-14 21:06:08,713 - INFO - Moving to next sample: lpf_3
+2026-03-14 21:06:08,715 - INFO - Target position: {'x': 14, 'y': 2, 'z': 0}
+2026-03-14 21:06:09,328 - INFO - Current sample updated to: lpf_3
+2026-03-14 21:06:09,328 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 3/10 ready for capture', 'sample': 'lpf_3', 'sample_number': 3, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:09,328 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:09] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:09,332 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:09,332 - INFO - Current sample: lpf_3
+2026-03-14 21:06:09,332 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:09,334 - INFO - Next sample determined: lpf_4
+2026-03-14 21:06:09,335 - INFO - Moving to next sample: lpf_4
+2026-03-14 21:06:09,335 - INFO - Target position: {'x': 20, 'y': 2, 'z': 0}
+2026-03-14 21:06:09,940 - INFO - Current sample updated to: lpf_4
+2026-03-14 21:06:09,941 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 4/10 ready for capture', 'sample': 'lpf_4', 'sample_number': 4, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:09,943 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:09] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:09,958 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:09,959 - INFO - Current sample: lpf_4
+2026-03-14 21:06:09,960 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:09,961 - INFO - Next sample determined: lpf_5
+2026-03-14 21:06:09,962 - INFO - Moving to next sample: lpf_5
+2026-03-14 21:06:09,962 - INFO - Target position: {'x': 26, 'y': 2, 'z': 0}
+2026-03-14 21:06:10,570 - INFO - Current sample updated to: lpf_5
+2026-03-14 21:06:10,571 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 5/10 ready for capture', 'sample': 'lpf_5', 'sample_number': 5, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:10,571 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:10] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:10,571 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:10,571 - INFO - Current sample: lpf_5
+2026-03-14 21:06:10,571 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:10,571 - INFO - Next sample determined: lpf_6
+2026-03-14 21:06:10,571 - INFO - Moving to next sample: lpf_6
+2026-03-14 21:06:10,571 - INFO - Target position: {'x': 2, 'y': 8, 'z': 0}
+2026-03-14 21:06:11,181 - INFO - Current sample updated to: lpf_6
+2026-03-14 21:06:11,181 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 6/10 ready for capture', 'sample': 'lpf_6', 'sample_number': 6, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:11,182 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:11] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:11,186 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:11,186 - INFO - Current sample: lpf_6
+2026-03-14 21:06:11,186 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:11,186 - INFO - Next sample determined: lpf_7
+2026-03-14 21:06:11,187 - INFO - Moving to next sample: lpf_7
+2026-03-14 21:06:11,187 - INFO - Target position: {'x': 8, 'y': 8, 'z': 0}
+2026-03-14 21:06:11,806 - INFO - Current sample updated to: lpf_7
+2026-03-14 21:06:11,806 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 7/10 ready for capture', 'sample': 'lpf_7', 'sample_number': 7, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:11,806 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:11] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:11,806 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:11,806 - INFO - Current sample: lpf_7
+2026-03-14 21:06:11,806 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:11,806 - INFO - Next sample determined: lpf_8
+2026-03-14 21:06:11,806 - INFO - Moving to next sample: lpf_8
+2026-03-14 21:06:11,806 - INFO - Target position: {'x': 14, 'y': 8, 'z': 0}
+2026-03-14 21:06:12,417 - INFO - Current sample updated to: lpf_8
+2026-03-14 21:06:12,418 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 8/10 ready for capture', 'sample': 'lpf_8', 'sample_number': 8, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:12,418 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:12] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:12,424 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:12,425 - INFO - Current sample: lpf_8
+2026-03-14 21:06:12,425 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:12,425 - INFO - Next sample determined: lpf_9
+2026-03-14 21:06:12,425 - INFO - Moving to next sample: lpf_9
+2026-03-14 21:06:12,425 - INFO - Target position: {'x': 20, 'y': 8, 'z': 0}
+2026-03-14 21:06:13,034 - INFO - Current sample updated to: lpf_9
+2026-03-14 21:06:13,035 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 9/10 ready for capture', 'sample': 'lpf_9', 'sample_number': 9, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:13,035 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:13] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:13,036 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:13,036 - INFO - Current sample: lpf_9
+2026-03-14 21:06:13,039 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:13,039 - INFO - Next sample determined: lpf_10
+2026-03-14 21:06:13,039 - INFO - Moving to next sample: lpf_10
+2026-03-14 21:06:13,040 - INFO - Target position: {'x': 26, 'y': 8, 'z': 0}
+2026-03-14 21:06:13,652 - INFO - Current sample updated to: lpf_10
+2026-03-14 21:06:13,652 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'LPF sample 10/10 ready for capture', 'sample': 'lpf_10', 'sample_number': 10, 'total_samples': 10, 'field_type': 'lpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:13,653 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:13] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:13,655 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:13,655 - INFO - Current sample: lpf_10
+2026-03-14 21:06:13,655 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:13,655 - INFO - Next sample determined: hpf_1
+2026-03-14 21:06:13,655 - INFO - Moving to next sample: hpf_1
+2026-03-14 21:06:13,655 - INFO - Target position: {'x': 1, 'y': 1, 'z': 0}
+2026-03-14 21:06:14,263 - INFO - Current sample updated to: hpf_1
+2026-03-14 21:06:14,263 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 1/10 ready for capture', 'sample': 'hpf_1', 'sample_number': 1, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:14,264 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:14] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:14,267 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:14,267 - INFO - Current sample: hpf_1
+2026-03-14 21:06:14,268 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:14,268 - INFO - Next sample determined: hpf_2
+2026-03-14 21:06:14,268 - INFO - Moving to next sample: hpf_2
+2026-03-14 21:06:14,268 - INFO - Target position: {'x': 3, 'y': 1, 'z': 0}
+2026-03-14 21:06:14,881 - INFO - Current sample updated to: hpf_2
+2026-03-14 21:06:14,881 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 2/10 ready for capture', 'sample': 'hpf_2', 'sample_number': 2, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:14,882 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:14] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:14,886 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:14,886 - INFO - Current sample: hpf_2
+2026-03-14 21:06:14,887 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:14,887 - INFO - Next sample determined: hpf_3
+2026-03-14 21:06:14,887 - INFO - Moving to next sample: hpf_3
+2026-03-14 21:06:14,887 - INFO - Target position: {'x': 5, 'y': 1, 'z': 0}
+2026-03-14 21:06:15,505 - INFO - Current sample updated to: hpf_3
+2026-03-14 21:06:15,505 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 3/10 ready for capture', 'sample': 'hpf_3', 'sample_number': 3, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:15,505 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:15] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:15,505 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:15,505 - INFO - Current sample: hpf_3
+2026-03-14 21:06:15,505 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:15,505 - INFO - Next sample determined: hpf_4
+2026-03-14 21:06:15,505 - INFO - Moving to next sample: hpf_4
+2026-03-14 21:06:15,505 - INFO - Target position: {'x': 7, 'y': 1, 'z': 0}
+2026-03-14 21:06:16,124 - INFO - Current sample updated to: hpf_4
+2026-03-14 21:06:16,124 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 4/10 ready for capture', 'sample': 'hpf_4', 'sample_number': 4, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:16,124 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:16] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:16,130 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:16,130 - INFO - Current sample: hpf_4
+2026-03-14 21:06:16,130 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:16,131 - INFO - Next sample determined: hpf_5
+2026-03-14 21:06:16,131 - INFO - Moving to next sample: hpf_5
+2026-03-14 21:06:16,131 - INFO - Target position: {'x': 9, 'y': 1, 'z': 0}
+2026-03-14 21:06:16,748 - INFO - Current sample updated to: hpf_5
+2026-03-14 21:06:16,748 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 5/10 ready for capture', 'sample': 'hpf_5', 'sample_number': 5, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:16,748 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:16] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:16,750 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:16,750 - INFO - Current sample: hpf_5
+2026-03-14 21:06:16,750 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:16,750 - INFO - Next sample determined: hpf_6
+2026-03-14 21:06:16,750 - INFO - Moving to next sample: hpf_6
+2026-03-14 21:06:16,750 - INFO - Target position: {'x': 1, 'y': 3, 'z': 0}
+2026-03-14 21:06:17,365 - INFO - Current sample updated to: hpf_6
+2026-03-14 21:06:17,366 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 6/10 ready for capture', 'sample': 'hpf_6', 'sample_number': 6, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:17,367 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:17] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:17,368 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:17,368 - INFO - Current sample: hpf_6
+2026-03-14 21:06:17,368 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:17,368 - INFO - Next sample determined: hpf_7
+2026-03-14 21:06:17,368 - INFO - Moving to next sample: hpf_7
+2026-03-14 21:06:17,371 - INFO - Target position: {'x': 3, 'y': 3, 'z': 0}
+2026-03-14 21:06:17,983 - INFO - Current sample updated to: hpf_7
+2026-03-14 21:06:17,984 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 7/10 ready for capture', 'sample': 'hpf_7', 'sample_number': 7, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:17,984 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:17] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:17,986 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:17,986 - INFO - Current sample: hpf_7
+2026-03-14 21:06:17,986 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:17,986 - INFO - Next sample determined: hpf_8
+2026-03-14 21:06:17,986 - INFO - Moving to next sample: hpf_8
+2026-03-14 21:06:17,986 - INFO - Target position: {'x': 5, 'y': 3, 'z': 0}
+2026-03-14 21:06:18,594 - INFO - Current sample updated to: hpf_8
+2026-03-14 21:06:18,595 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 8/10 ready for capture', 'sample': 'hpf_8', 'sample_number': 8, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:18,595 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:18] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:18,599 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:18,599 - INFO - Current sample: hpf_8
+2026-03-14 21:06:18,599 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:18,599 - INFO - Next sample determined: hpf_9
+2026-03-14 21:06:18,599 - INFO - Moving to next sample: hpf_9
+2026-03-14 21:06:18,599 - INFO - Target position: {'x': 7, 'y': 3, 'z': 0}
+2026-03-14 21:06:19,206 - INFO - Current sample updated to: hpf_9
+2026-03-14 21:06:19,206 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 9/10 ready for capture', 'sample': 'hpf_9', 'sample_number': 9, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:19,206 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:19] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:19,217 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:19,218 - INFO - Current sample: hpf_9
+2026-03-14 21:06:19,218 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:19,219 - INFO - Next sample determined: hpf_10
+2026-03-14 21:06:19,220 - INFO - Moving to next sample: hpf_10
+2026-03-14 21:06:19,221 - INFO - Target position: {'x': 9, 'y': 3, 'z': 0}
+2026-03-14 21:06:19,836 - INFO - Current sample updated to: hpf_10
+2026-03-14 21:06:19,836 - INFO - Next sample positioned successfully. Response: {'status': 'success', 'message': 'HPF sample 10/10 ready for capture', 'sample': 'hpf_10', 'sample_number': 10, 'total_samples': 10, 'field_type': 'hpf', 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}, 'ready_for_capture': True}
+2026-03-14 21:06:19,837 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:19] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:06:19,840 - INFO - === NEXT SAMPLE REQUEST ===
+2026-03-14 21:06:19,840 - INFO - Current sample: hpf_10
+2026-03-14 21:06:19,841 - INFO - Determining next sample in sequence...
+2026-03-14 21:06:19,841 - INFO - Next sample determined: None
+2026-03-14 21:06:19,841 - INFO - All samples completed!
+2026-03-14 21:06:19,841 - INFO - 127.0.0.1 - - [14/Mar/2026 21:06:19] "POST /next_sample HTTP/1.1" 200 -
+2026-03-14 21:09:19,139 - INFO - ==================================================
+2026-03-14 21:09:19,139 - INFO - Starting Motor Control Server...
+2026-03-14 21:09:19,140 - INFO - Platform: Windows
+2026-03-14 21:09:19,140 - INFO - ==================================================
+2026-03-14 21:09:19,140 - INFO - Using Arduino servo motors
+2026-03-14 21:09:19,140 - INFO - Attempting to auto-connect to Arduino...
+2026-03-14 21:09:19,144 - INFO - Scanning for available COM ports...
+2026-03-14 21:09:19,150 - ERROR - No valid Arduino COM ports found! Is the Arduino plugged in via USB?
+2026-03-14 21:09:19,150 - ERROR - ==================================================
+2026-03-14 21:09:19,150 - ERROR - ARDUINO INITIALIZATION FAILED!
+2026-03-14 21:09:19,150 - ERROR - Possible reasons:
+2026-03-14 21:09:19,150 - ERROR -   1. Arduino not connected via USB
+2026-03-14 21:09:19,150 - ERROR -   2. Wrong COM port (check Device Manager)
+2026-03-14 21:09:19,150 - ERROR -   3. Arduino sketch not uploaded
+2026-03-14 21:09:19,150 - ERROR -   4. Another program using the COM port
+2026-03-14 21:09:19,150 - ERROR - ==================================================
+2026-03-14 21:09:19,150 - WARNING - Server will continue but motor control will be SIMULATED (no actual movement)
+2026-03-14 21:09:19,150 - INFO - Server starting on http://127.0.0.1:3001
+2026-03-14 21:09:19,150 - INFO - Available endpoints:
+2026-03-14 21:09:19,150 - INFO -   GET  /status - Get current status
+2026-03-14 21:09:19,151 - INFO -   POST /home - Home all motors
+2026-03-14 21:09:19,151 - INFO -   POST /get_samples - Start sample collection
+2026-03-14 21:09:19,151 - INFO -   POST /next_sample - Move to next sample
+2026-03-14 21:09:19,151 - INFO -   POST /sync_mode - Sync with frontend LPF/HPF mode
+2026-03-14 21:09:19,151 - INFO -   POST /configure_microscope - Configure microscope with motors
+2026-03-14 21:09:19,151 - INFO -   POST /emergency_stop - Emergency stop
+2026-03-14 21:09:19,151 - INFO - ==================================================
+2026-03-14 21:09:19,159 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3001
+2026-03-14 21:09:19,159 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-15 17:12:32,071 - INFO - 127.0.0.1 - - [15/Mar/2026 17:12:32] "[33mGET /_next/webpack-hmr?id=QID0D7SCh7om3T79KDiKn HTTP/1.1[0m" 404 -
+2026-03-15 17:12:33,973 - INFO - 127.0.0.1 - - [15/Mar/2026 17:12:33] "[33mGET /_next/webpack-hmr?id=QID0D7SCh7om3T79KDiKn HTTP/1.1[0m" 404 -
+2026-03-15 17:12:36,000 - INFO - 127.0.0.1 - - [15/Mar/2026 17:12:36] "[33mGET /_next/webpack-hmr?id=QID0D7SCh7om3T79KDiKn HTTP/1.1[0m" 404 -
+2026-03-15 17:12:37,979 - INFO - 127.0.0.1 - - [15/Mar/2026 17:12:37] "[33mGET /_next/webpack-hmr?id=QID0D7SCh7om3T79KDiKn HTTP/1.1[0m" 404 -
+2026-03-15 17:12:39,985 - INFO - 127.0.0.1 - - [15/Mar/2026 17:12:39] "[33mGET /_next/webpack-hmr?id=QID0D7SCh7om3T79KDiKn HTTP/1.1[0m" 404 -
+2026-03-15 17:12:45,988 - INFO - 127.0.0.1 - - [15/Mar/2026 17:12:45] "[33mGET /_next/webpack-hmr?id=QID0D7SCh7om3T79KDiKn HTTP/1.1[0m" 404 -
+2026-03-15 17:12:51,987 - INFO - 127.0.0.1 - - [15/Mar/2026 17:12:51] "[33mGET /_next/webpack-hmr?id=QID0D7SCh7om3T79KDiKn HTTP/1.1[0m" 404 -
+2026-03-15 17:12:57,981 - INFO - 127.0.0.1 - - [15/Mar/2026 17:12:57] "[33mGET /_next/webpack-hmr?id=QID0D7SCh7om3T79KDiKn HTTP/1.1[0m" 404 -
+2026-03-15 17:13:03,990 - INFO - 127.0.0.1 - - [15/Mar/2026 17:13:03] "[33mGET /_next/webpack-hmr?id=QID0D7SCh7om3T79KDiKn HTTP/1.1[0m" 404 -
+2026-03-15 17:13:09,986 - INFO - 127.0.0.1 - - [15/Mar/2026 17:13:09] "[33mGET /_next/webpack-hmr?id=QID0D7SCh7om3T79KDiKn HTTP/1.1[0m" 404 -
+2026-03-15 17:13:15,989 - INFO - 127.0.0.1 - - [15/Mar/2026 17:13:15] "[33mGET /_next/webpack-hmr?id=QID0D7SCh7om3T79KDiKn HTTP/1.1[0m" 404 -
+2026-03-15 17:13:21,993 - INFO - 127.0.0.1 - - [15/Mar/2026 17:13:21] "[33mGET /_next/webpack-hmr?id=QID0D7SCh7om3T79KDiKn HTTP/1.1[0m" 404 -
+2026-03-15 17:13:25,446 - INFO - 127.0.0.1 - - [15/Mar/2026 17:13:25] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 17:13:25,984 - INFO - 127.0.0.1 - - [15/Mar/2026 17:13:25] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-03-15 17:13:45,037 - INFO - Cleaning up...
+2026-03-15 17:13:45,047 - INFO - Arduino connection closed
+2026-03-15 17:13:45,047 - INFO - Server shutdown complete
+2026-03-15 18:03:50,411 - INFO - 127.0.0.1 - - [15/Mar/2026 18:03:50] "[33mGET /_next/webpack-hmr?id=mYUy1FdobZ5TF7Eih9dBy HTTP/1.1[0m" 404 -
+2026-03-15 18:03:51,998 - INFO - 127.0.0.1 - - [15/Mar/2026 18:03:51] "[33mGET /_next/webpack-hmr?id=mYUy1FdobZ5TF7Eih9dBy HTTP/1.1[0m" 404 -
+2026-03-15 18:03:54,066 - INFO - 127.0.0.1 - - [15/Mar/2026 18:03:54] "[33mGET /_next/webpack-hmr?id=mYUy1FdobZ5TF7Eih9dBy HTTP/1.1[0m" 404 -
+2026-03-15 18:03:56,008 - INFO - 127.0.0.1 - - [15/Mar/2026 18:03:56] "[33mGET /_next/webpack-hmr?id=mYUy1FdobZ5TF7Eih9dBy HTTP/1.1[0m" 404 -
+2026-03-15 18:03:58,018 - INFO - 127.0.0.1 - - [15/Mar/2026 18:03:58] "[33mGET /_next/webpack-hmr?id=mYUy1FdobZ5TF7Eih9dBy HTTP/1.1[0m" 404 -
+2026-03-15 18:04:04,176 - INFO - 127.0.0.1 - - [15/Mar/2026 18:04:04] "[33mGET /_next/webpack-hmr?id=mYUy1FdobZ5TF7Eih9dBy HTTP/1.1[0m" 404 -
+2026-03-15 18:05:54,150 - INFO - 127.0.0.1 - - [15/Mar/2026 18:05:54] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:05:54,390 - INFO - 127.0.0.1 - - [15/Mar/2026 18:05:54] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:25,732 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:25] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:25,799 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:25] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:26,115 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:26] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:26,282 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:26] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:26,486 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:26] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:26,668 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:26] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:26,852 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:26] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:27,045 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:27] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:27,213 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:27] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:27,410 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:27] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:27,579 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:27] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:27,768 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:27] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:27,997 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:27] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:28,176 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:28] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:28,356 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:28] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:28,531 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:28] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:28,726 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:28] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:28,909 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:28] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:29,096 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:29] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:31,617 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:31] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:31,926 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:31] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:32,110 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:32] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:32,960 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:32] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 18:06:33,274 - INFO - 127.0.0.1 - - [15/Mar/2026 18:06:33] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-15 20:39:21,097 - INFO - 127.0.0.1 - - [15/Mar/2026 20:39:21] "[33mGET /_next/webpack-hmr?id=b5vXRMpuaOFWH0oRELWFz HTTP/1.1[0m" 404 -
+2026-03-15 20:39:22,415 - INFO - 127.0.0.1 - - [15/Mar/2026 20:39:22] "[33mGET /_next/webpack-hmr?id=b5vXRMpuaOFWH0oRELWFz HTTP/1.1[0m" 404 -
+2026-03-15 20:39:23,746 - INFO - 127.0.0.1 - - [15/Mar/2026 20:39:23] "[33mGET /_next/webpack-hmr?id=b5vXRMpuaOFWH0oRELWFz HTTP/1.1[0m" 404 -
+2026-03-15 20:39:25,063 - INFO - 127.0.0.1 - - [15/Mar/2026 20:39:25] "[33mGET /_next/webpack-hmr?id=b5vXRMpuaOFWH0oRELWFz HTTP/1.1[0m" 404 -
+2026-03-15 20:39:26,384 - INFO - 127.0.0.1 - - [15/Mar/2026 20:39:26] "[33mGET /_next/webpack-hmr?id=b5vXRMpuaOFWH0oRELWFz HTTP/1.1[0m" 404 -
+2026-03-15 20:39:32,337 - INFO - 127.0.0.1 - - [15/Mar/2026 20:39:32] "[33mGET /_next/webpack-hmr?id=b5vXRMpuaOFWH0oRELWFz HTTP/1.1[0m" 404 -
+2026-03-15 20:39:37,689 - INFO - 127.0.0.1 - - [15/Mar/2026 20:39:37] "[33mGET /_next/webpack-hmr?id=b5vXRMpuaOFWH0oRELWFz HTTP/1.1[0m" 404 -
+2026-03-15 20:39:38,434 - INFO - 127.0.0.1 - - [15/Mar/2026 20:39:38] "[33mGET /end-user/recently-deleted HTTP/1.1[0m" 404 -
+2026-03-16 08:05:38,179 - INFO - 127.0.0.1 - - [16/Mar/2026 08:05:38] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-16 08:05:38,406 - INFO - 127.0.0.1 - - [16/Mar/2026 08:05:38] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-16 08:06:05,311 - INFO - 127.0.0.1 - - [16/Mar/2026 08:06:05] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-16 08:08:32,713 - INFO - 127.0.0.1 - - [16/Mar/2026 08:08:32] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-16 08:08:33,027 - INFO - 127.0.0.1 - - [16/Mar/2026 08:08:33] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-03-17 19:33:50,078 - INFO - Auto-detecting Arduino port...
+2026-03-17 19:33:50,111 - ERROR - No Arduino found.
+2026-03-17 19:33:50,140 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 19:33:50,140 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 19:39:33,090 - INFO - Auto-detecting Arduino port...
+2026-03-17 19:39:33,140 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 19:39:35,646 - ERROR - No Arduino found.
+2026-03-17 19:39:35,662 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 19:39:35,665 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 19:39:51,667 - INFO - Auto-detecting Arduino port...
+2026-03-17 19:39:51,674 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 19:39:54,190 - ERROR - No Arduino found.
+2026-03-17 19:39:54,238 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 19:39:54,240 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 19:41:20,102 - INFO - Auto-detecting Arduino port...
+2026-03-17 19:41:20,107 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 19:41:22,633 - ERROR - No Arduino found.
+2026-03-17 19:41:22,661 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 19:41:22,661 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 19:42:36,617 - INFO - Auto-detecting Arduino port...
+2026-03-17 19:42:36,627 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 19:42:39,135 - ERROR - No Arduino found.
+2026-03-17 19:42:39,213 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 19:42:39,213 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 19:42:53,757 - INFO - Auto-detecting Arduino port...
+2026-03-17 19:42:53,766 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 19:42:56,284 - ERROR - No Arduino found.
+2026-03-17 19:42:56,347 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 19:42:56,347 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 19:43:06,639 - INFO - Auto-detecting Arduino port...
+2026-03-17 19:43:06,642 - ERROR - No Arduino found.
+2026-03-17 19:43:06,660 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 19:43:06,660 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 19:43:24,988 - INFO - Auto-detecting Arduino port...
+2026-03-17 19:43:24,995 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 19:43:27,510 - ERROR - No Arduino found.
+2026-03-17 19:43:27,533 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 19:43:27,533 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 19:44:27,691 - INFO - Auto-detecting Arduino port...
+2026-03-17 19:44:27,702 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 19:44:30,205 - ERROR - No Arduino found.
+2026-03-17 19:44:30,238 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 19:44:30,241 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 19:45:06,218 - INFO - 127.0.0.1 - - [17/Mar/2026 19:45:06] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-17 19:45:06,218 - INFO - Auto-detecting Arduino port...
+2026-03-17 19:45:06,231 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 19:45:08,761 - ERROR - No Arduino found.
+2026-03-17 19:45:08,765 - INFO - 127.0.0.1 - - [17/Mar/2026 19:45:08] "POST /get_samples HTTP/1.1" 200 -
+2026-03-17 19:45:10,948 - INFO - 127.0.0.1 - - [17/Mar/2026 19:45:10] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:45:13,269 - INFO - 127.0.0.1 - - [17/Mar/2026 19:45:13] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:45:15,608 - INFO - 127.0.0.1 - - [17/Mar/2026 19:45:15] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:45:18,057 - INFO - 127.0.0.1 - - [17/Mar/2026 19:45:18] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:45:20,269 - INFO - 127.0.0.1 - - [17/Mar/2026 19:45:20] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:45:22,561 - INFO - 127.0.0.1 - - [17/Mar/2026 19:45:22] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:45:25,540 - INFO - 127.0.0.1 - - [17/Mar/2026 19:45:25] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:45:27,818 - INFO - 127.0.0.1 - - [17/Mar/2026 19:45:27] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:45:30,148 - INFO - 127.0.0.1 - - [17/Mar/2026 19:45:30] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:45:33,148 - INFO - 127.0.0.1 - - [17/Mar/2026 19:45:33] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:45:41,997 - INFO - Auto-detecting Arduino port...
+2026-03-17 19:45:42,004 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 19:45:45,102 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 19:45:45,102 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 19:46:09,760 - INFO - Auto-detecting Arduino port...
+2026-03-17 19:46:09,768 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 19:46:12,790 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 19:46:12,790 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 19:47:05,052 - INFO - 127.0.0.1 - - [17/Mar/2026 19:47:05] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-17 19:47:15,640 - INFO - Hardware confirms: HOME
+2026-03-17 19:47:25,998 - INFO - Hardware confirms: MOVE 2.0,2.0
+2026-03-17 19:47:25,998 - INFO - 127.0.0.1 - - [17/Mar/2026 19:47:25] "POST /get_samples HTTP/1.1" 200 -
+2026-03-17 19:47:28,536 - INFO - Hardware confirms: MOVE 8.0,2.0
+2026-03-17 19:47:28,538 - INFO - 127.0.0.1 - - [17/Mar/2026 19:47:28] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:47:31,046 - INFO - Hardware confirms: MOVE 14.0,2.0
+2026-03-17 19:47:31,047 - INFO - 127.0.0.1 - - [17/Mar/2026 19:47:31] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:47:33,627 - INFO - Hardware confirms: MOVE 20.0,2.0
+2026-03-17 19:47:33,627 - INFO - 127.0.0.1 - - [17/Mar/2026 19:47:33] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:47:36,607 - INFO - Hardware confirms: MOVE 26.0,2.0
+2026-03-17 19:47:36,609 - INFO - 127.0.0.1 - - [17/Mar/2026 19:47:36] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:47:39,436 - INFO - Hardware confirms: MOVE 26.0,8.0
+2026-03-17 19:47:39,438 - INFO - 127.0.0.1 - - [17/Mar/2026 19:47:39] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:47:42,446 - INFO - Hardware confirms: MOVE 20.0,8.0
+2026-03-17 19:47:42,448 - INFO - 127.0.0.1 - - [17/Mar/2026 19:47:42] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:47:45,098 - INFO - Hardware confirms: MOVE 14.0,8.0
+2026-03-17 19:47:45,098 - INFO - 127.0.0.1 - - [17/Mar/2026 19:47:45] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:47:48,108 - INFO - Hardware confirms: MOVE 8.0,8.0
+2026-03-17 19:47:48,110 - INFO - 127.0.0.1 - - [17/Mar/2026 19:47:48] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:47:50,998 - INFO - Hardware confirms: MOVE 2.0,8.0
+2026-03-17 19:47:50,998 - INFO - 127.0.0.1 - - [17/Mar/2026 19:47:50] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:47:53,105 - INFO - 127.0.0.1 - - [17/Mar/2026 19:47:53] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 19:54:54,500 - INFO - Auto-detecting Arduino port...
+2026-03-17 19:54:54,507 - ERROR - No Arduino found.
+2026-03-17 19:54:54,523 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 19:54:54,523 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 19:55:27,706 - INFO - Auto-detecting Arduino port...
+2026-03-17 19:55:27,713 - ERROR - No Arduino found.
+2026-03-17 19:55:27,727 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 19:55:27,728 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 19:56:21,589 - INFO - Auto-detecting Arduino port...
+2026-03-17 19:56:21,595 - ERROR - No Arduino found.
+2026-03-17 19:56:21,609 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 19:56:21,609 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 20:01:59,092 - INFO - 127.0.0.1 - - [17/Mar/2026 20:01:59] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-17 20:01:59,094 - INFO - Auto-detecting Arduino port...
+2026-03-17 20:01:59,101 - ERROR - No Arduino found.
+2026-03-17 20:01:59,102 - INFO - 127.0.0.1 - - [17/Mar/2026 20:01:59] "[35m[1mPOST /get_samples HTTP/1.1[0m" 503 -
+2026-03-17 20:03:07,118 - INFO - Auto-detecting Arduino port...
+2026-03-17 20:03:07,127 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 20:03:10,201 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 20:03:10,202 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 20:03:16,404 - INFO - 127.0.0.1 - - [17/Mar/2026 20:03:16] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-17 20:03:16,412 - INFO - Auto-detecting Arduino port...
+2026-03-17 20:03:16,428 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 20:03:16,450 - ERROR - No Arduino found.
+2026-03-17 20:03:16,451 - INFO - 127.0.0.1 - - [17/Mar/2026 20:03:16] "[35m[1mPOST /get_samples HTTP/1.1[0m" 503 -
+2026-03-17 20:03:23,220 - INFO - 127.0.0.1 - - [17/Mar/2026 20:03:23] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-17 20:03:23,225 - INFO - Auto-detecting Arduino port...
+2026-03-17 20:03:23,242 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 20:03:23,243 - ERROR - No Arduino found.
+2026-03-17 20:03:23,245 - INFO - 127.0.0.1 - - [17/Mar/2026 20:03:23] "[35m[1mPOST /get_samples HTTP/1.1[0m" 503 -
+2026-03-17 20:03:44,886 - INFO - 127.0.0.1 - - [17/Mar/2026 20:03:44] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-17 20:03:44,890 - INFO - Auto-detecting Arduino port...
+2026-03-17 20:03:44,910 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 20:03:44,911 - ERROR - No Arduino found.
+2026-03-17 20:03:44,913 - INFO - 127.0.0.1 - - [17/Mar/2026 20:03:44] "[35m[1mPOST /get_samples HTTP/1.1[0m" 503 -
+2026-03-17 20:04:18,570 - INFO - 127.0.0.1 - - [17/Mar/2026 20:04:18] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-17 20:04:18,573 - INFO - Auto-detecting Arduino port...
+2026-03-17 20:04:18,584 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 20:04:18,584 - ERROR - No Arduino found.
+2026-03-17 20:04:18,585 - INFO - 127.0.0.1 - - [17/Mar/2026 20:04:18] "[35m[1mPOST /get_samples HTTP/1.1[0m" 503 -
+2026-03-17 20:04:28,512 - INFO - 127.0.0.1 - - [17/Mar/2026 20:04:28] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-17 20:04:28,842 - INFO - 127.0.0.1 - - [17/Mar/2026 20:04:28] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-03-17 20:04:45,170 - INFO - 192.168.1.11 - - [17/Mar/2026 20:04:45] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-17 20:04:45,501 - INFO - 192.168.1.11 - - [17/Mar/2026 20:04:45] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-03-17 20:05:03,583 - INFO - Auto-detecting Arduino port...
+2026-03-17 20:05:03,590 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 20:05:06,613 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 20:05:06,614 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 20:05:11,747 - INFO - 192.168.1.11 - - [17/Mar/2026 20:05:11] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-17 20:05:14,054 - INFO - 127.0.0.1 - - [17/Mar/2026 20:05:14] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-17 20:05:14,206 - INFO - 127.0.0.1 - - [17/Mar/2026 20:05:14] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-17 20:05:14,567 - INFO - 127.0.0.1 - - [17/Mar/2026 20:05:14] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-17 20:05:14,734 - INFO - 127.0.0.1 - - [17/Mar/2026 20:05:14] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-17 20:05:14,946 - INFO - 127.0.0.1 - - [17/Mar/2026 20:05:14] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-17 20:05:15,114 - INFO - 127.0.0.1 - - [17/Mar/2026 20:05:15] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-17 20:05:15,307 - INFO - 127.0.0.1 - - [17/Mar/2026 20:05:15] "[33mGET / HTTP/1.1[0m" 404 -
+2026-03-17 20:05:45,175 - INFO - Auto-detecting Arduino port...
+2026-03-17 20:05:45,183 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 20:05:48,276 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 20:05:48,277 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 20:06:21,725 - INFO - 127.0.0.1 - - [17/Mar/2026 20:06:21] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-17 20:06:32,325 - INFO - Hardware confirms: HOME
+2026-03-17 20:06:42,679 - INFO - Hardware confirms: MOVE 2.0,2.0
+2026-03-17 20:06:42,681 - INFO - 127.0.0.1 - - [17/Mar/2026 20:06:42] "POST /get_samples HTTP/1.1" 200 -
+2026-03-17 20:06:45,411 - INFO - Hardware confirms: MOVE 8.0,2.0
+2026-03-17 20:06:45,414 - INFO - 127.0.0.1 - - [17/Mar/2026 20:06:45] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:06:48,094 - INFO - Hardware confirms: MOVE 14.0,2.0
+2026-03-17 20:06:48,096 - INFO - 127.0.0.1 - - [17/Mar/2026 20:06:48] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:06:50,804 - INFO - Hardware confirms: MOVE 20.0,2.0
+2026-03-17 20:06:50,805 - INFO - 127.0.0.1 - - [17/Mar/2026 20:06:50] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:06:53,836 - INFO - Hardware confirms: MOVE 26.0,2.0
+2026-03-17 20:06:53,837 - INFO - 127.0.0.1 - - [17/Mar/2026 20:06:53] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:06:56,382 - INFO - Hardware confirms: MOVE 26.0,8.0
+2026-03-17 20:06:56,383 - INFO - 127.0.0.1 - - [17/Mar/2026 20:06:56] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:06:59,205 - INFO - Hardware confirms: MOVE 20.0,8.0
+2026-03-17 20:06:59,208 - INFO - 127.0.0.1 - - [17/Mar/2026 20:06:59] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:07:01,686 - INFO - Hardware confirms: MOVE 14.0,8.0
+2026-03-17 20:07:01,688 - INFO - 127.0.0.1 - - [17/Mar/2026 20:07:01] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:07:04,456 - INFO - Hardware confirms: MOVE 8.0,8.0
+2026-03-17 20:07:04,457 - INFO - 127.0.0.1 - - [17/Mar/2026 20:07:04] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:07:07,137 - INFO - Hardware confirms: MOVE 2.0,8.0
+2026-03-17 20:07:07,138 - INFO - 127.0.0.1 - - [17/Mar/2026 20:07:07] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:07:09,132 - INFO - 127.0.0.1 - - [17/Mar/2026 20:07:09] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:08:08,503 - INFO - 127.0.0.1 - - [17/Mar/2026 20:08:08] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-17 20:08:18,502 - INFO - Hardware confirms: HOME
+2026-03-17 20:08:28,861 - INFO - Hardware confirms: MOVE 2.0,2.0
+2026-03-17 20:08:28,862 - INFO - 127.0.0.1 - - [17/Mar/2026 20:08:28] "POST /get_samples HTTP/1.1" 200 -
+2026-03-17 20:08:30,754 - INFO - Hardware confirms: MOVE 8.0,2.0
+2026-03-17 20:08:30,756 - INFO - 127.0.0.1 - - [17/Mar/2026 20:08:30] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:08:32,646 - INFO - Hardware confirms: MOVE 14.0,2.0
+2026-03-17 20:08:32,647 - INFO - 127.0.0.1 - - [17/Mar/2026 20:08:32] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:08:34,527 - INFO - Hardware confirms: MOVE 20.0,2.0
+2026-03-17 20:08:34,530 - INFO - 127.0.0.1 - - [17/Mar/2026 20:08:34] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:08:36,430 - INFO - Hardware confirms: MOVE 26.0,2.0
+2026-03-17 20:08:36,433 - INFO - 127.0.0.1 - - [17/Mar/2026 20:08:36] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:08:38,325 - INFO - Hardware confirms: MOVE 26.0,8.0
+2026-03-17 20:08:38,333 - INFO - 127.0.0.1 - - [17/Mar/2026 20:08:38] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:08:40,230 - INFO - Hardware confirms: MOVE 20.0,8.0
+2026-03-17 20:08:40,232 - INFO - 127.0.0.1 - - [17/Mar/2026 20:08:40] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:08:42,118 - INFO - Hardware confirms: MOVE 14.0,8.0
+2026-03-17 20:08:42,121 - INFO - 127.0.0.1 - - [17/Mar/2026 20:08:42] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:08:44,011 - INFO - Hardware confirms: MOVE 8.0,8.0
+2026-03-17 20:08:44,014 - INFO - 127.0.0.1 - - [17/Mar/2026 20:08:44] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:08:45,901 - INFO - Hardware confirms: MOVE 2.0,8.0
+2026-03-17 20:08:45,903 - INFO - 127.0.0.1 - - [17/Mar/2026 20:08:45] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:08:47,415 - INFO - 127.0.0.1 - - [17/Mar/2026 20:08:47] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:10:39,196 - INFO - 127.0.0.1 - - [17/Mar/2026 20:10:39] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-17 20:10:49,193 - INFO - Hardware confirms: HOME
+2026-03-17 20:10:59,556 - INFO - Hardware confirms: MOVE 2.0,2.0
+2026-03-17 20:10:59,559 - INFO - 127.0.0.1 - - [17/Mar/2026 20:10:59] "POST /get_samples HTTP/1.1" 200 -
+2026-03-17 20:11:01,446 - INFO - Hardware confirms: MOVE 8.0,2.0
+2026-03-17 20:11:01,448 - INFO - 127.0.0.1 - - [17/Mar/2026 20:11:01] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:11:03,339 - INFO - Hardware confirms: MOVE 14.0,2.0
+2026-03-17 20:11:03,341 - INFO - 127.0.0.1 - - [17/Mar/2026 20:11:03] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:11:05,228 - INFO - Hardware confirms: MOVE 20.0,2.0
+2026-03-17 20:11:05,230 - INFO - 127.0.0.1 - - [17/Mar/2026 20:11:05] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:11:07,120 - INFO - Hardware confirms: MOVE 26.0,2.0
+2026-03-17 20:11:07,126 - INFO - 127.0.0.1 - - [17/Mar/2026 20:11:07] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:11:09,016 - INFO - Hardware confirms: MOVE 26.0,8.0
+2026-03-17 20:11:09,018 - INFO - 127.0.0.1 - - [17/Mar/2026 20:11:09] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:11:10,904 - INFO - Hardware confirms: MOVE 20.0,8.0
+2026-03-17 20:11:10,907 - INFO - 127.0.0.1 - - [17/Mar/2026 20:11:10] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:11:12,796 - INFO - Hardware confirms: MOVE 14.0,8.0
+2026-03-17 20:11:12,799 - INFO - 127.0.0.1 - - [17/Mar/2026 20:11:12] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:11:14,689 - INFO - Hardware confirms: MOVE 8.0,8.0
+2026-03-17 20:11:14,690 - INFO - 127.0.0.1 - - [17/Mar/2026 20:11:14] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:11:16,576 - INFO - Hardware confirms: MOVE 2.0,8.0
+2026-03-17 20:11:16,581 - INFO - 127.0.0.1 - - [17/Mar/2026 20:11:16] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:11:18,098 - INFO - 127.0.0.1 - - [17/Mar/2026 20:11:18] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:12:16,327 - INFO - 127.0.0.1 - - [17/Mar/2026 20:12:16] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-17 20:12:26,330 - INFO - Hardware confirms: HOME
+2026-03-17 20:12:36,684 - INFO - Hardware confirms: MOVE 2.0,2.0
+2026-03-17 20:12:36,688 - INFO - 127.0.0.1 - - [17/Mar/2026 20:12:36] "POST /get_samples HTTP/1.1" 200 -
+2026-03-17 20:12:38,581 - INFO - Hardware confirms: MOVE 8.0,2.0
+2026-03-17 20:12:38,584 - INFO - 127.0.0.1 - - [17/Mar/2026 20:12:38] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:12:40,469 - INFO - Hardware confirms: MOVE 14.0,2.0
+2026-03-17 20:12:40,472 - INFO - 127.0.0.1 - - [17/Mar/2026 20:12:40] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:12:42,359 - INFO - Hardware confirms: MOVE 20.0,2.0
+2026-03-17 20:12:42,360 - INFO - 127.0.0.1 - - [17/Mar/2026 20:12:42] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:12:44,249 - INFO - Hardware confirms: MOVE 26.0,2.0
+2026-03-17 20:12:44,251 - INFO - 127.0.0.1 - - [17/Mar/2026 20:12:44] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:12:46,135 - INFO - Hardware confirms: MOVE 26.0,8.0
+2026-03-17 20:12:46,135 - INFO - 127.0.0.1 - - [17/Mar/2026 20:12:46] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:12:48,027 - INFO - Hardware confirms: MOVE 20.0,8.0
+2026-03-17 20:12:48,028 - INFO - 127.0.0.1 - - [17/Mar/2026 20:12:48] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:12:49,910 - INFO - Hardware confirms: MOVE 14.0,8.0
+2026-03-17 20:12:49,911 - INFO - 127.0.0.1 - - [17/Mar/2026 20:12:49] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:12:51,830 - INFO - Hardware confirms: MOVE 8.0,8.0
+2026-03-17 20:12:51,832 - INFO - 127.0.0.1 - - [17/Mar/2026 20:12:51] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:12:53,725 - INFO - Hardware confirms: MOVE 2.0,8.0
+2026-03-17 20:12:53,727 - INFO - 127.0.0.1 - - [17/Mar/2026 20:12:53] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:12:55,240 - INFO - 127.0.0.1 - - [17/Mar/2026 20:12:55] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:15:36,433 - INFO - 127.0.0.1 - - [17/Mar/2026 20:15:36] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-17 20:15:46,436 - INFO - Hardware confirms: HOME
+2026-03-17 20:15:56,792 - INFO - Hardware confirms: MOVE 2.0,2.0
+2026-03-17 20:15:56,795 - INFO - 127.0.0.1 - - [17/Mar/2026 20:15:56] "POST /get_samples HTTP/1.1" 200 -
+2026-03-17 20:15:58,688 - INFO - Hardware confirms: MOVE 8.0,2.0
+2026-03-17 20:15:58,690 - INFO - 127.0.0.1 - - [17/Mar/2026 20:15:58] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:16:00,590 - INFO - Hardware confirms: MOVE 14.0,2.0
+2026-03-17 20:16:00,592 - INFO - 127.0.0.1 - - [17/Mar/2026 20:16:00] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:16:02,476 - INFO - Hardware confirms: MOVE 20.0,2.0
+2026-03-17 20:16:02,479 - INFO - 127.0.0.1 - - [17/Mar/2026 20:16:02] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:16:04,376 - INFO - Hardware confirms: MOVE 26.0,2.0
+2026-03-17 20:16:04,382 - INFO - 127.0.0.1 - - [17/Mar/2026 20:16:04] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:16:06,283 - INFO - Hardware confirms: MOVE 26.0,8.0
+2026-03-17 20:16:06,286 - INFO - 127.0.0.1 - - [17/Mar/2026 20:16:06] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:16:08,172 - INFO - Hardware confirms: MOVE 20.0,8.0
+2026-03-17 20:16:08,175 - INFO - 127.0.0.1 - - [17/Mar/2026 20:16:08] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:16:10,062 - INFO - Hardware confirms: MOVE 14.0,8.0
+2026-03-17 20:16:10,066 - INFO - 127.0.0.1 - - [17/Mar/2026 20:16:10] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:16:11,989 - INFO - Hardware confirms: MOVE 8.0,8.0
+2026-03-17 20:16:12,000 - INFO - 127.0.0.1 - - [17/Mar/2026 20:16:12] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:16:13,880 - INFO - Hardware confirms: MOVE 2.0,8.0
+2026-03-17 20:16:13,884 - INFO - 127.0.0.1 - - [17/Mar/2026 20:16:13] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:16:15,398 - INFO - 127.0.0.1 - - [17/Mar/2026 20:16:15] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:21:54,668 - INFO - Auto-detecting Arduino port...
+2026-03-17 20:21:54,676 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 20:21:54,676 - DEBUG - Port COM6 failed: could not open port 'COM6': PermissionError(13, 'Access is denied.', None, 5)
+2026-03-17 20:21:54,676 - ERROR - No Arduino found.
+2026-03-17 20:21:54,691 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 20:21:54,692 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 20:22:33,580 - INFO - Auto-detecting Arduino port...
+2026-03-17 20:22:33,589 - INFO - Probing COM6 (Arduino Uno (COM6))...
+2026-03-17 20:22:36,660 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.11:3001
+2026-03-17 20:22:36,660 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-17 20:22:54,907 - INFO - 127.0.0.1 - - [17/Mar/2026 20:22:54] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-17 20:23:05,498 - INFO - Hardware confirms: HOME
+2026-03-17 20:23:15,860 - INFO - Hardware confirms: MOVE 2.0,2.0
+2026-03-17 20:23:15,861 - INFO - 127.0.0.1 - - [17/Mar/2026 20:23:15] "POST /get_samples HTTP/1.1" 200 -
+2026-03-17 20:23:17,754 - INFO - Hardware confirms: MOVE 8.0,2.0
+2026-03-17 20:23:17,763 - INFO - 127.0.0.1 - - [17/Mar/2026 20:23:17] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:23:19,682 - INFO - Hardware confirms: MOVE 14.0,2.0
+2026-03-17 20:23:19,683 - INFO - 127.0.0.1 - - [17/Mar/2026 20:23:19] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:23:21,568 - INFO - Hardware confirms: MOVE 20.0,2.0
+2026-03-17 20:23:21,569 - INFO - 127.0.0.1 - - [17/Mar/2026 20:23:21] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:23:23,446 - INFO - Hardware confirms: MOVE 26.0,2.0
+2026-03-17 20:23:23,448 - INFO - 127.0.0.1 - - [17/Mar/2026 20:23:23] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:23:25,333 - INFO - Hardware confirms: MOVE 26.0,8.0
+2026-03-17 20:23:25,335 - INFO - 127.0.0.1 - - [17/Mar/2026 20:23:25] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:23:27,229 - INFO - Hardware confirms: MOVE 20.0,8.0
+2026-03-17 20:23:27,231 - INFO - 127.0.0.1 - - [17/Mar/2026 20:23:27] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:23:29,119 - INFO - Hardware confirms: MOVE 14.0,8.0
+2026-03-17 20:23:29,120 - INFO - 127.0.0.1 - - [17/Mar/2026 20:23:29] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:23:30,999 - INFO - Hardware confirms: MOVE 8.0,8.0
+2026-03-17 20:23:31,003 - INFO - 127.0.0.1 - - [17/Mar/2026 20:23:31] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:23:32,904 - INFO - Hardware confirms: MOVE 2.0,8.0
+2026-03-17 20:23:32,906 - INFO - 127.0.0.1 - - [17/Mar/2026 20:23:32] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:23:34,414 - INFO - 127.0.0.1 - - [17/Mar/2026 20:23:34] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:28:52,898 - INFO - 127.0.0.1 - - [17/Mar/2026 20:28:52] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-17 20:29:02,908 - INFO - Hardware confirms: HOME
+2026-03-17 20:29:13,260 - INFO - Hardware confirms: MOVE 2.0,2.0
+2026-03-17 20:29:13,262 - INFO - 127.0.0.1 - - [17/Mar/2026 20:29:13] "POST /get_samples HTTP/1.1" 200 -
+2026-03-17 20:29:13,264 - INFO - Hardware confirms: MOVE 2.0,2.0
+2026-03-17 20:29:13,266 - INFO - 127.0.0.1 - - [17/Mar/2026 20:29:13] "POST /get_samples HTTP/1.1" 200 -
+2026-03-17 20:29:15,492 - INFO - Hardware confirms: MOVE 14.0,2.0
+2026-03-17 20:29:15,494 - INFO - 127.0.0.1 - - [17/Mar/2026 20:29:15] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:29:17,383 - INFO - Hardware confirms: MOVE 8.0,2.0
+2026-03-17 20:29:17,389 - INFO - 127.0.0.1 - - [17/Mar/2026 20:29:17] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:29:19,277 - INFO - Hardware confirms: MOVE 20.0,2.0
+2026-03-17 20:29:19,279 - INFO - 127.0.0.1 - - [17/Mar/2026 20:29:19] "POST /next_sample HTTP/1.1" 200 -
+2026-03-17 20:29:33,914 - ERROR - Failed to move to 26.0, 2.0. Response: None
+2026-03-17 20:29:33,917 - INFO - 127.0.0.1 - - [17/Mar/2026 20:29:33] "[35m[1mPOST /next_sample HTTP/1.1[0m" 500 -
+2026-03-17 20:29:35,797 - ERROR - Failed to move to 26.0, 8.0. Response: None
+2026-03-17 20:29:35,798 - INFO - 127.0.0.1 - - [17/Mar/2026 20:29:35] "[35m[1mPOST /next_sample HTTP/1.1[0m" 500 -

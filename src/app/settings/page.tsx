@@ -3,11 +3,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, Plus, Trash2, ArrowLeft } from "lucide-react";
 import {
   GEMINI_KEYS_STORAGE_KEY,
   getGeminiKeysFromLocalStorage,
 } from "@/lib/client-gemini-keys";
+import {
+  MOTOR_SERVER_URL_STORAGE_KEY,
+  getMotorServerUrl,
+  setMotorServerUrl,
+} from "@/lib/motor-config";
+import {
+  SCAN_METHOD_STORAGE_KEY,
+  getScanMethodFromLocalStorage,
+  type ScanMethod,
+} from "@/lib/scan-method";
+import { Cpu, Eye, EyeOff, Plus, Trash2, ArrowLeft, Microscope, RefreshCw, CheckCircle } from "lucide-react";
 
 function maskKey(key: string) {
   const clean = key.trim();
@@ -21,9 +31,13 @@ export default function SettingsPage() {
   const [newKey, setNewKey] = useState("");
   const [visibleKeyIndex, setVisibleKeyIndex] = useState<number | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [scanMethod, setScanMethod] = useState<ScanMethod>("longitudinal");
+  const [motorUrl, setMotorUrl] = useState("http://127.0.0.1:3001");
 
   useEffect(() => {
     setKeys(getGeminiKeysFromLocalStorage());
+    setScanMethod(getScanMethodFromLocalStorage());
+    setMotorUrl(getMotorServerUrl());
   }, []);
 
   const cleanedKeys = useMemo(
@@ -172,12 +186,233 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="mt-4 text-xs text-gray-600">
-          Note: these keys are stored in your browser storage on this device.
-          If you clear browser data, you’ll need to add them again.
+        {/* Scanning Method Configuration */}
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
+          <div className="flex items-start gap-3">
+            <Microscope className="h-5 w-5 text-gray-700 mt-0.5" />
+            <div>
+              <div className="text-sm font-semibold text-gray-900">
+                Scanning Method
+              </div>
+              <div className="text-xs text-gray-600 mt-1 leading-relaxed">
+                Choose how the motorized stage moves across the slide to collect
+                samples. This affects X/Y motor movement patterns.
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Longitudinal */}
+            <button
+              onClick={() => {
+                setScanMethod("longitudinal");
+                localStorage.setItem(SCAN_METHOD_STORAGE_KEY, "longitudinal");
+                setSavedAt(Date.now());
+              }}
+              className={`relative flex flex-col items-start gap-3 rounded-2xl border-2 p-5 text-left transition-all duration-300 shadow-sm hover:shadow-md ${
+                scanMethod === "longitudinal"
+                  ? "border-blue-600 bg-blue-50/30"
+                  : "border-gray-200 bg-white hover:border-gray-300"
+              }`}
+            >
+              <div className="flex w-full items-center justify-between">
+                <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                  <div className={`p-1.5 rounded-lg ${scanMethod === 'longitudinal' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  </div>
+                  Longitudinal Strip
+                </div>
+                {scanMethod === "longitudinal" && (
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-100 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
+                    <CheckCircle className="h-2.5 w-2.5" /> Active
+                  </div>
+                )}
+              </div>
+              <div className="text-xs text-gray-600 leading-relaxed min-h-[40px]">
+                Stage scans side-to-side in a <strong>serpentine meander</strong> pattern. 
+                Optimized for fast coverage of the entire smear.
+              </div>
+              
+              {/* SVG Illustration: Longitudinal */}
+              <div className="relative mt-2 w-full rounded-xl bg-white border border-gray-100 p-4 overflow-hidden h-32 flex items-center justify-center">
+                <svg width="100%" height="100%" viewBox="0 0 200 80" className="drop-shadow-sm">
+                  {/* Path */}
+                  <path 
+                    d="M 20 25 L 180 25 C 185 25 185 55 180 55 L 20 55" 
+                    fill="none" 
+                    stroke={scanMethod === 'longitudinal' ? '#2563eb' : '#cbd5e1'} 
+                    strokeWidth="3" 
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeDasharray="0.1 8"
+                  />
+                  <path 
+                    d="M 20 25 L 180 25 C 185 25 185 55 180 55 L 20 55" 
+                    fill="none" 
+                    stroke={scanMethod === 'longitudinal' ? '#3b82f6' : '#94a3b8'} 
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity="0.3"
+                  />
+                  
+                  {/* Nodes Row 1 */}
+                  {[20, 60, 100, 140, 180].map((x, i) => (
+                    <g key={`L1-${i}`}>
+                      <circle cx={x} cy="25" r="5" fill="white" stroke={scanMethod === 'longitudinal' ? '#2563eb' : '#94a3b8'} strokeWidth="1.5" />
+                      <text x={x} y="28.5" textAnchor="middle" fontSize="6" fontWeight="bold" fill={scanMethod === 'longitudinal' ? '#2563eb' : '#64748b'}>{i + 1}</text>
+                    </g>
+                  ))}
+                  
+                  {/* Nodes Row 2 */}
+                  {[180, 140, 100, 60, 20].map((x, i) => (
+                    <g key={`L2-${i}`}>
+                      <circle cx={x} cy="55" r="5" fill="white" stroke={scanMethod === 'longitudinal' ? '#2563eb' : '#94a3b8'} strokeWidth="1.5" />
+                      <text x={x} y="58.5" textAnchor="middle" fontSize="6" fontWeight="bold" fill={scanMethod === 'longitudinal' ? '#2563eb' : '#64748b'}>{i + 6}</text>
+                    </g>
+                  ))}
+                  
+                  {/* Directional Arrows */}
+                  <path d="M 90 25 L 94 25 M 92 23 L 94 25 L 92 27" stroke="#3b82f6" strokeWidth="1" fill="none" />
+                  <path d="M 110 55 L 106 55 M 108 53 L 106 55 L 108 57" stroke="#3b82f6" strokeWidth="1" fill="none" />
+                </svg>
+              </div>
+            </button>
+
+            {/* Battlement */}
+            <button
+              onClick={() => {
+                setScanMethod("battlement");
+                localStorage.setItem(SCAN_METHOD_STORAGE_KEY, "battlement");
+                setSavedAt(Date.now());
+              }}
+              className={`relative flex flex-col items-start gap-3 rounded-2xl border-2 p-5 text-left transition-all duration-300 shadow-sm hover:shadow-md ${
+                scanMethod === "battlement"
+                  ? "border-blue-600 bg-blue-50/30"
+                  : "border-gray-200 bg-white hover:border-gray-300"
+              }`}
+            >
+              <div className="flex w-full items-center justify-between">
+                <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                  <div className={`p-1.5 rounded-lg ${scanMethod === 'battlement' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    <Microscope className="h-3.5 w-3.5" />
+                  </div>
+                  Battlement Pattern
+                </div>
+                {scanMethod === "battlement" && (
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-100 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
+                    <CheckCircle className="h-2.5 w-2.5" /> Active
+                  </div>
+                )}
+              </div>
+              <div className="text-xs text-gray-600 leading-relaxed min-h-[40px]">
+                Stage moves in a <strong>square-wave</strong> (castle-top) pattern. 
+                Ideal for scanning edges where crystals often settle.
+              </div>
+              
+              {/* SVG Illustration: Battlement */}
+              <div className="relative mt-2 w-full rounded-xl bg-white border border-gray-100 p-4 overflow-hidden h-32 flex items-center justify-center">
+                <svg width="100%" height="100%" viewBox="0 0 200 80" className="drop-shadow-sm">
+                  {/* Path */}
+                  <path 
+                    d="M 20 60 L 20 20 L 60 20 L 60 60 L 100 60 L 100 20 L 140 20 L 140 60 L 180 60 L 180 20" 
+                    fill="none" 
+                    stroke={scanMethod === 'battlement' ? '#2563eb' : '#cbd5e1'} 
+                    strokeWidth="3" 
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeDasharray="0.1 8"
+                  />
+                  <path 
+                    d="M 20 60 L 20 20 L 60 20 L 60 60 L 100 60 L 100 20 L 140 20 L 140 60 L 180 60 L 180 20" 
+                    fill="none" 
+                    stroke={scanMethod === 'battlement' ? '#3b82f6' : '#94a3b8'} 
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity="0.3"
+                  />
+                  
+                  {/* Nodes */}
+                  {[
+                    {x: 20, y: 60, id: 1}, {x: 20, y: 20, id: 2}, 
+                    {x: 60, y: 20, id: 3}, {x: 60, y: 60, id: 4}, 
+                    {x: 100, y: 60, id: 5}, {x: 100, y: 20, id: 6}, 
+                    {x: 140, y: 20, id: 7}, {x: 140, y: 60, id: 8}, 
+                    {x: 180, y: 60, id: 9}, {x: 180, y: 20, id: 10}
+                  ].map((pt, i) => (
+                    <g key={`B-${i}`}>
+                      <circle cx={pt.x} cy={pt.y} r="5" fill="white" stroke={scanMethod === 'battlement' ? '#2563eb' : '#94a3b8'} strokeWidth="1.5" />
+                      <text x={pt.x} y={pt.y + 3.5} textAnchor="middle" fontSize="6" fontWeight="bold" fill={scanMethod === 'battlement' ? '#2563eb' : '#64748b'}>{pt.id}</text>
+                    </g>
+                  ))}
+                  
+                  {/* Directional Arrows */}
+                  <path d="M 20 40 L 20 36 M 18 38 L 20 36 L 22 38" stroke="#3b82f6" strokeWidth="1" fill="none" />
+                  <path d="M 40 20 L 44 20 M 42 18 L 44 20 L 42 22" stroke="#3b82f6" strokeWidth="1" fill="none" />
+                </svg>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Motor Server Configuration */}
+        <div className="mt-4 rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-purple-50 text-purple-600">
+                <Cpu className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-gray-900">
+                  Motor Server URL
+                </div>
+                <div className="text-xs text-gray-600 mt-1 leading-relaxed">
+                  The address of the Flask motor backend. Use 127.0.0.1 for local or the Raspberry Pi&apos;s IP.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col sm:flex-row gap-2">
+            <input
+              value={motorUrl}
+              onChange={(e) => setMotorUrl(e.target.value)}
+              placeholder="http://127.0.0.1:3001"
+              className="flex-1 h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-purple-900/10 focus:border-purple-400 font-mono"
+            />
+            <Button
+              className="h-10 px-4 rounded-lg bg-gray-900 text-white hover:bg-gray-800"
+              onClick={() => {
+                localStorage.setItem(MOTOR_SERVER_URL_STORAGE_KEY, motorUrl);
+                setSavedAt(Date.now());
+              }}
+            >
+              Update URL
+            </Button>
+          </div>
+          {savedAt && (
+            <div className="mt-2 text-[10px] text-green-600 font-medium">
+              Changes saved successfully!
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 p-4 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-3">
+          <div className="text-amber-600 mt-0.5">
+            <CheckCircle className="h-4 w-4" />
+          </div>
+          <div className="text-xs text-amber-800 leading-relaxed">
+            <strong>Deployment Tip:</strong> If your microscope is connected to a <strong>Raspberry Pi</strong>, 
+            enter the Pi&apos;s network address (e.g., <code>http://192.168.1.5:3001</code>) above so the browser 
+            can send commands to the hardware.
+          </div>
+        </div>
+
+        <div className="mt-6 text-[11px] text-gray-500 text-center pb-8">
+          Note: these settings are stored in this browser session. Clearing cache will reset these values.
         </div>
       </div>
     </div>
   );
 }
-
