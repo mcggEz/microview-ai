@@ -105,6 +105,8 @@ void loop() {
 void processCommand(String cmd) {
   if (cmd.startsWith("HOME")) {
     homeServos();
+    delay(200); // Mechanical settle time
+    Serial.println("STABLE_READY");
     sendResponse("SUCCESS", "Servos homed to center position");
   }
   else if (cmd.startsWith("MOVE")) {
@@ -114,6 +116,8 @@ void processCommand(String cmd) {
       float x = cmd.substring(5, commaIndex).toFloat();
       float y = cmd.substring(commaIndex + 1).toFloat();
       moveToPosition(x, y);
+      delay(200); // Mechanical settle time
+      Serial.println("STABLE_READY");
       sendResponse("SUCCESS", "Moved to position");
     } else {
       sendResponse("ERROR", "Invalid MOVE command. Use: MOVE x,y");
@@ -270,6 +274,8 @@ void moveToSample(String sampleName) {
     
     // Move to position
     moveToPosition(target.x, target.y);
+    delay(200); // Mechanical settle time
+    Serial.println("STABLE_READY");
     currentSample = sampleName;
     
     // Log completion

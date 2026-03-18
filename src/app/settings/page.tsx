@@ -17,7 +17,7 @@ import {
   getScanMethodFromLocalStorage,
   type ScanMethod,
 } from "@/lib/scan-method";
-import { Cpu, Eye, EyeOff, Plus, Trash2, ArrowLeft, Microscope, RefreshCw, CheckCircle } from "lucide-react";
+import { Cpu, Eye, EyeOff, Plus, Trash2, ArrowLeft, Microscope, RefreshCw, CheckCircle, ArrowUp, ArrowDown, ArrowLeft as LeftIcon, ArrowRight, Home, Gauge, Save } from "lucide-react";
 
 function maskKey(key: string) {
   const clean = key.trim();
@@ -34,11 +34,58 @@ export default function SettingsPage() {
   const [scanMethod, setScanMethod] = useState<ScanMethod>("longitudinal");
   const [motorUrl, setMotorUrl] = useState("http://127.0.0.1:3001");
 
+  const [gridParams, setGridParams] = useState<any>(null);
+  const [sensitivity, setSensitivity] = useState<number>(1.0);
+  const [motorStatus, setMotorStatus] = useState<any>(null);
+
   useEffect(() => {
     setKeys(getGeminiKeysFromLocalStorage());
     setScanMethod(getScanMethodFromLocalStorage());
     setMotorUrl(getMotorServerUrl());
+    fetchMotorConfig();
   }, []);
+
+  const fetchMotorConfig = async () => {
+    try {
+      const res = await fetch(`${getMotorServerUrl()}/get_config`);
+      if (res.ok) {
+        const data = await res.json();
+        setGridParams(data.grid_params);
+        setSensitivity(data.sensitivity || 1.0);
+      }
+    } catch (e) {
+      console.warn("Failed to fetch motor config", e);
+    }
+  };
+
+  const updateGridParam = (field: 'lpf' | 'hpf', key: string, value: number) => {
+    setGridParams((prev: any) => ({
+      ...prev,
+      [field]: {
+        ...prev[field],
+        [key]: value
+      }
+    }));
+  };
+
+  const saveCalibration = async () => {
+    try {
+      const res = await fetch(`${getMotorServerUrl()}/update_config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          grid_params: gridParams,
+          sensitivity: sensitivity
+        })
+      });
+      if (res.ok) {
+        setSavedAt(Date.now());
+      }
+    } catch (e) {
+      alert("Failed to save calibration. Check motor server connection.");
+    }
+  };
+
 
   const cleanedKeys = useMemo(
     () =>
@@ -407,6 +454,129 @@ export default function SettingsPage() {
             enter the Pi&apos;s network address (e.g., <code>http://192.168.1.5:3001</code>) above so the browser 
             can send commands to the hardware.
           </div>
+        </div>
+
+        {/* Motor Calibration */}
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
+          <div className="flex items-start gap-3 mb-4">
+            <Gauge className="h-5 w-5 text-gray-700 mt-0.5" />
+            <div>
+              <div className="text-sm font-semibold text-gray-900">
+                Motor & Stage Calibration
+              </div>
+              <div className="text-xs text-gray-600 mt-1 leading-relaxed">
+                Fine-tune the scan area and movement sensitivity. These settings are saved to the motor server.
+              </div>
+            </div>
+          </div>
+
+          {!gridParams ? (
+            <div className="p-4 bg-gray-50 rounded-xl text-center text-xs text-gray-500 italic">
+              Connect to motor server to edit calibration range...
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Sensitivity Calibration */}
+              <div className="p-4 rounded-xl border-2 border-blue-100 bg-blue-50/20 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-blue-600">Travel Sensitivity (Multiplier)</div>
+                  <div className="px-3 py-1 rounded-md bg-blue-600 text-white font-mono text-xs font-bold leading-none">
+                    {sensitivity?.toFixed(2) || "1.00"}x
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <input 
+                    type="range" min="0.1" max="5.0" step="0.05"
+                    value={sensitivity || 1.0}
+                    onChange={(e) => setSensitivity(parseFloat(e.target.value))}
+                    className="flex-1 h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                  <input 
+                    type="number" step="0.01"
+                    value={sensitivity || 1.0}
+                    onChange={(e) => setSensitivity(parseFloat(e.target.value))}
+                    className="w-20 h-9 text-center rounded-lg border-2 border-blue-100 text-xs font-bold focus:ring-1 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div className="mt-2 text-[10px] text-gray-500 italic">
+                  * Adjust this if the motor travels more or less than the expected distance (e.g., set to 2.0 to double the travel).
+                </div>
+              </div>
+
+              {(['lpf', 'hpf'] as const).map((field) => (
+                <div key={field} className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                  <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3 flex items-center justify-between">
+                    {field === 'lpf' ? 'Low Power Field (LPF)' : 'High Power Field (HPF)'}
+                    <span className="text-[10px] lowercase font-normal opacity-70">Grid units in mm</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-6">
+                    <div>
+                      <label className="text-[10px] text-gray-500 mb-1 block">Start X</label>
+                      <input
+                        type="number" step="0.1"
+                        value={gridParams[field].start_x}
+                        onChange={(e) => updateGridParam(field, 'start_x', parseFloat(e.target.value))}
+                        className="w-full h-8 px-2 rounded-lg border border-gray-200 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 mb-1 block">End X</label>
+                      <input
+                        type="number" step="0.1"
+                        value={gridParams[field].end_x}
+                        onChange={(e) => updateGridParam(field, 'end_x', parseFloat(e.target.value))}
+                        className="w-full h-8 px-2 rounded-lg border border-gray-200 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 mb-1 block">Cols</label>
+                      <input
+                        type="number"
+                        value={gridParams[field].cols}
+                        onChange={(e) => updateGridParam(field, 'cols', parseInt(e.target.value))}
+                        className="w-full h-8 px-2 rounded-lg border border-gray-200 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 mb-1 block">Start Y</label>
+                      <input
+                        type="number" step="0.1"
+                        value={gridParams[field].start_y}
+                        onChange={(e) => updateGridParam(field, 'start_y', parseFloat(e.target.value))}
+                        className="w-full h-8 px-2 rounded-lg border border-gray-200 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 mb-1 block">End Y</label>
+                      <input
+                        type="number" step="0.1"
+                        value={gridParams[field].end_y}
+                        onChange={(e) => updateGridParam(field, 'end_y', parseFloat(e.target.value))}
+                        className="w-full h-8 px-2 rounded-lg border border-gray-200 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 mb-1 block">Rows</label>
+                      <input
+                        type="number"
+                        value={gridParams[field].rows}
+                        onChange={(e) => updateGridParam(field, 'rows', parseInt(e.target.value))}
+                        className="w-full h-8 px-2 rounded-lg border border-gray-200 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <Button
+                onClick={saveCalibration}
+                className="w-full h-10 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Apply & Save Calibration
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 text-[11px] text-gray-500 text-center pb-8">

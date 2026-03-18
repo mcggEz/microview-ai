@@ -78,7 +78,8 @@ void loop() {
     
     if (command.startsWith("HOME")) {
       moveToPosition(CENTER_X, CENTER_Y);
-      Serial.println("OK");
+      delay(200); // Mechanical settle time
+      Serial.println("STABLE_READY");
     } 
     else if (command.startsWith("MOVE ")) {
       int commaIndex = command.indexOf(',');
@@ -86,7 +87,8 @@ void loop() {
         float tx = command.substring(5, commaIndex).toFloat();
         float ty = command.substring(commaIndex + 1).toFloat();
         moveToPosition(tx, ty);
-        Serial.println("OK");
+        delay(200); // Mechanical settle time
+        Serial.println("STABLE_READY");
       }
     } 
     else if (command.startsWith("STATUS")) {
@@ -152,7 +154,8 @@ void processSample(String name) {
   
   if (idx != -1) {
     moveToPosition(samplePositions[idx].x, samplePositions[idx].y);
-    Serial.println("OK");
+    delay(200); // Mechanical settle time
+    Serial.println("STABLE_READY");
   } else {
     Serial.println("ERROR: Invalid Sample");
   }

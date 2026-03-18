@@ -2527,7 +2527,7 @@ export default function Report() {
 
                     // Sync UI state and capture
                     setPowerMode(firstMode);
-                    await new Promise(r => setTimeout(r, 1500)); // Wait for settle
+                    await new Promise(r => setTimeout(r, 100)); // Brief network/UI settle
                     await captureImage(firstMode);
 
                     // Step 2: Loop through remaining samples via /next_sample
@@ -2580,7 +2580,7 @@ export default function Report() {
 
                         // Sync UI state and capture
                         setPowerMode(nextMode);
-                        await new Promise(r => setTimeout(r, 1500)); // Wait for settle
+                        await new Promise(r => setTimeout(r, 100)); // Brief network/UI settle
                         await captureImage(nextMode);
 
                       } else if (nextData.status === "switch_objective") {
@@ -2647,7 +2647,7 @@ export default function Report() {
                             // or we can take the first one here. 
                             // The backend's continue_after_switch moves to hpf_1.
                             setPowerMode(switchMode);
-                            await new Promise(r => setTimeout(r, 1500));
+                            await new Promise(r => setTimeout(r, 100));
                             await captureImage(switchMode);
                         }
                       } else if (nextData.status === "complete") {

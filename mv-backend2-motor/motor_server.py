@@ -39,40 +39,85 @@ CORS(app, resources={r"/*": {"origins": ["*"]}})
 # Conversion settings
 STEPS_PER_MM = {'x': 100, 'y': 100, 'z': 200}
 
-# Grids
-GRID_PARAMS = {
-    'lpf': {'start_x': 2, 'end_x': 26, 'start_y': 2, 'end_y': 8, 'cols': 5, 'rows': 2},
-    'hpf': {'start_x': 1, 'end_x': 9, 'start_y': 1, 'end_y': 3, 'cols': 5, 'rows': 2}
+# Default Configuration
+DEFAULT_CONFIG = {
+    'grid_params': {
+        'lpf': {'start_x': 2.0, 'end_x': 26.0, 'start_y': 2.0, 'end_y': 8.0, 'cols': 5, 'rows': 2},
+        'hpf': {'start_x': 1.0, 'end_x': 9.0, 'start_y': 1.0, 'end_y': 3.0, 'cols': 5, 'rows': 2}
+    },
+    'sensitivity': 1.0
 }
+
+CONFIG_FILE = 'motor_config.json'
+CURRENT_CONFIG = DEFAULT_CONFIG.copy()
+
+def load_config():
+    global CURRENT_CONFIG
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+                loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    if 'grid_params' in loaded and isinstance(loaded['grid_params'], dict):
+                        CURRENT_CONFIG['grid_params'] = loaded['grid_params']
+                    if 'sensitivity' in loaded:
+                        CURRENT_CONFIG['sensitivity'] = float(loaded['sensitivity'])
+            logger.info("Configuration loaded.")
+        except Exception as e:
+            logger.error(f"Failed to load config: {e}")
+
+def save_config():
+    try:
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(CURRENT_CONFIG, f, indent=4)
+        logger.info("Configuration saved.")
+    except Exception as e:
+        logger.error(f"Failed to save config: {e}")
+
+load_config()
+
+# Global reference
+GRID_PARAMS = CURRENT_CONFIG.get('grid_params', {})
 
 def generate_sample_positions(method='longitudinal'):
     positions = {}
-    for field_type, params in GRID_PARAMS.items():
-        cols, rows = params['cols'], params['rows']
+    gp = CURRENT_CONFIG.get('grid_params')
+    if not isinstance(gp, dict): 
+        return positions
+    
+    for field_type, params in gp.items():
+        if not isinstance(params, dict): continue
+        cols = int(params.get('cols', 1))
+        rows = int(params.get('rows', 1))
+        start_x = float(params.get('start_x', 0.0))
+        end_x = float(params.get('end_x', 0.0))
+        start_y = float(params.get('start_y', 0.0))
+        end_y = float(params.get('end_y', 0.0))
+
         total_samples = cols * rows
-        x_spacing = (params['end_x'] - params['start_x']) / max(cols - 1, 1)
-        y_spacing = (params['end_y'] - params['start_y']) / max(rows - 1, 1)
+        x_spacing = (end_x - start_x) / max(cols - 1, 1)
+        y_spacing = (end_y - start_y) / max(rows - 1, 1)
 
         if method == 'battlement':
             sample_num = 1
             for i in range(total_samples // 2):
-                x = params['start_x'] + i * x_spacing
+                x = start_x + i * x_spacing
                 if i % 2 == 0:
-                    positions[f'{field_type}_{sample_num}'] = {'x': x, 'y': params['start_y'], 'z': 0}
+                    positions[f'{field_type}_{sample_num}'] = {'x': x, 'y': start_y, 'z': 0}
                     sample_num += 1
-                    positions[f'{field_type}_{sample_num}'] = {'x': x, 'y': params['end_y'], 'z': 0}
+                    positions[f'{field_type}_{sample_num}'] = {'x': x, 'y': end_y, 'z': 0}
                 else:
-                    positions[f'{field_type}_{sample_num}'] = {'x': x, 'y': params['end_y'], 'z': 0}
+                    positions[f'{field_type}_{sample_num}'] = {'x': x, 'y': end_y, 'z': 0}
                     sample_num += 1
-                    positions[f'{field_type}_{sample_num}'] = {'x': x, 'y': params['start_y'], 'z': 0}
+                    positions[f'{field_type}_{sample_num}'] = {'x': x, 'y': start_y, 'z': 0}
                 sample_num += 1
         else: # longitudinal
             sample_num = 1
             for row in range(rows):
-                y = params['start_y'] + row * y_spacing
+                y = start_y + row * y_spacing
                 col_range = range(cols - 1, -1, -1) if row % 2 == 1 else range(cols)
                 for col in col_range:
-                    x = params['start_x'] + col * x_spacing
+                    x = start_x + col * x_spacing
                     positions[f'{field_type}_{sample_num}'] = {'x': x, 'y': y, 'z': 0}
                     sample_num += 1
     return positions
@@ -86,8 +131,6 @@ is_initialized = False
 def find_arduino_port():
     logger.info("Auto-detecting Arduino port...")
     ports = list(serial.tools.list_ports.comports())
-    
-    # Sort: put Arduino/USB ports first
     ports.sort(key=lambda p: (
         not ('USB' in p.description.upper() or 'ARDUINO' in p.description.upper() or 'CH340' in p.description.upper()),
         p.device
@@ -96,39 +139,23 @@ def find_arduino_port():
     for port in ports:
         if 'bluetooth' in port.description.lower() or 'bth' in port.description.lower():
             continue
-            
-        logger.info(f"Probing {port.device} ({port.description})...")
+        logger.info(f"Probing {port.device}...")
         try:
-            # Open port with a fresh connection
             ser = serial.Serial(port.device, ARDUINO_BAUD, timeout=2)
-            
-            # Most Arduinos reset on connection. Give it plenty of time to boot.
             time.sleep(3) 
-            
-            # 1. First, check if it already sent a "Ready" message on boot
             if ser.in_waiting > 0:
                 boot_msg = ser.read(ser.in_waiting).decode('utf-8', errors='ignore').lower()
                 if any(x in boot_msg for x in ["ready", "ok", "system"]):
-                    logger.info(f"✓ Arduino detected via boot message on {port.device}")
                     return ser
-            
-            # 2. If no boot message, try sending a STATUS command
             ser.write(b"STATUS\n")
             ser.flush()
-            time.sleep(1.0) # Wait for response
-            
+            time.sleep(1.0)
             if ser.in_waiting > 0:
                 resp = ser.readline().decode('utf-8', errors='ignore').strip().lower()
-                logger.info(f"Received from {port.device}: '{resp}'")
                 if any(x in resp for x in ["ok", "status", "ready", "pos", "x:", "y:"]):
-                    logger.info(f"✓ Arduino confirmed on {port.device}")
                     return ser
-            
             ser.close()
-        except Exception as e:
-            logger.debug(f"Port {port.device} failed: {e}")
-            continue
-            
+        except: continue
     return None
 
 def initialize_arduino():
@@ -138,7 +165,6 @@ def initialize_arduino():
     if arduino_serial:
         is_initialized = True
         return True
-    logger.error("No Arduino found.")
     is_initialized = False
     return False
 
@@ -152,39 +178,29 @@ def send_arduino_command(command, timeout=15):
         while (time.time() - start) < timeout:
             if arduino_serial.in_waiting > 0:
                 line = arduino_serial.readline().decode('utf-8', errors='ignore').strip()
-                if any(x in line.upper() for x in ["OK", "DONE", "SUCCESS", "ARRIVED"]):
-                    logger.info(f"Hardware confirms: {command}")
+                if any(x in line.upper() for x in ["OK", "DONE", "SUCCESS", "ARRIVED", "STABLE_READY"]):
                     return line
             time.sleep(0.01)
-        return None # Explicitly return None on timeout
-    except Exception as e:
-        logger.error(f"Hardware error: {e}")
         return None
+    except: return None
 
 def move_to_position(x, y, z):
-    if is_initialized:
-        res = send_arduino_command(f"MOVE {x},{y}")
-        if res and res != "timeout": # Only True if we got a real response
-            current_position['x'], current_position['y'] = x, y
-            current_position['z'] = z
-            return True
-        else:
-            logger.error(f"Failed to move to {x}, {y}. Response: {res}")
-    return False
-
-def continue_after_switch():
-    global current_sample
-    current_sample = 'hpf_1'
-    target = SAMPLE_POSITIONS[current_sample]
-    move_to_position(target['x'], target['y'], target['z'])
-    return True
-
-def home_motors():
-    if is_initialized:
-        send_arduino_command("HOME")
-        current_position['x'] = current_position['y'] = current_position['z'] = 0.0
+    if not is_initialized: return False
+    cal_x = x * CURRENT_CONFIG['sensitivity']
+    cal_y = y * CURRENT_CONFIG['sensitivity']
+    
+    res = send_arduino_command(f"MOVE {cal_x},{cal_y}")
+    if res and res != "timeout":
+        current_position['x'], current_position['y'] = x, y
+        current_position['z'] = z
         return True
     return False
+
+def home_motors():
+    if not is_initialized: return False
+    send_arduino_command("HOME")
+    current_position['x'] = current_position['y'] = current_position['z'] = 0.0
+    return True
 
 @app.route('/status', methods=['GET'])
 def get_status():
@@ -195,17 +211,35 @@ def get_status():
         'scan_method': scan_config['method']
     })
 
-@app.route('/configure_scan', methods=['POST'])
-def configure_scan():
-    global SAMPLE_POSITIONS, scan_config
-    method = request.json.get('method', 'longitudinal').lower()
-    scan_config['method'] = method
-    SAMPLE_POSITIONS = generate_sample_positions(method)
-    return jsonify({'status': 'success', 'method': method})
+@app.route('/get_config', methods=['GET'])
+def get_config():
+    return jsonify({
+        'grid_params': CURRENT_CONFIG['grid_params'],
+        'sensitivity': CURRENT_CONFIG['sensitivity'],
+        'scan_method': scan_config['method']
+    })
+
+@app.route('/update_config', methods=['POST'])
+def update_config():
+    global GRID_PARAMS, SAMPLE_POSITIONS
+    data = request.json
+    if not data: return jsonify({'status': 'error'}), 400
+    if 'grid_params' in data:
+        CURRENT_CONFIG['grid_params'].update(data['grid_params'])
+    if 'sensitivity' in data:
+        try: CURRENT_CONFIG['sensitivity'] = float(data['sensitivity'])
+        except: pass
+    save_config()
+    GRID_PARAMS = CURRENT_CONFIG['grid_params']
+    SAMPLE_POSITIONS = generate_sample_positions(scan_config['method'])
+    return jsonify({'status': 'success'})
 
 @app.route('/continue_after_switch', methods=['POST'])
 def handle_continue():
-    if continue_after_switch():
+    global current_sample
+    current_sample = 'hpf_1'
+    target = SAMPLE_POSITIONS[current_sample]
+    if move_to_position(target['x'], target['y'], target['z']):
         parts = current_sample.split('_')
         return jsonify({
             'status': 'success',
@@ -222,64 +256,62 @@ def get_samples():
     global current_sample
     if not is_initialized: 
         if not initialize_arduino():
-            return jsonify({'status': 'error', 'message': 'Hardware not connected. Check Arduino connection.'}), 503
-            
-    if not home_motors():
-        return jsonify({'status': 'error', 'message': 'Communication failure during homing.'}), 500
-        
+            return jsonify({'status': 'error', 'message': 'Hardware not connected.'}), 503
+    home_motors()
     current_sample = 'lpf_1'
     target = SAMPLE_POSITIONS[current_sample]
-    if not move_to_position(target['x'], target['y'], target['z']):
-        return jsonify({'status': 'error', 'message': 'Hardware failed to move.'}), 500
-        
-    parts = current_sample.split('_')
-    return jsonify({
-        'status': 'success',
-        'sample': current_sample,
-        'sample_number': int(parts[1]),
-        'field_type': parts[0],
-        'total_samples': 10,
-        'position': current_position,
-        'ready_for_capture': True
-    })
+    if move_to_position(target['x'], target['y'], target['z']):
+        parts = current_sample.split('_')
+        return jsonify({
+            'status': 'success',
+            'sample': current_sample,
+            'sample_number': int(parts[1]),
+            'field_type': parts[0],
+            'total_samples': 10,
+            'position': current_position,
+            'ready_for_capture': True
+        })
+    return jsonify({'status': 'error'}), 500
 
 @app.route('/next_sample', methods=['POST'])
 def next_sample():
     global current_sample
-    if not current_sample: return jsonify({'status': 'error', 'message': 'Run get_samples first'}), 400
-    
+    if not current_sample: return jsonify({'status': 'error'}), 400
     if current_sample == 'lpf_10':
-        # Don't update current_sample yet, wait for continue_after_switch
         return jsonify({
             'status': 'switch_objective', 
             'next_sample': 'hpf_1',
-            'message': 'LPF complete. Please switch to HPF objective.'
+            'message': 'LPF complete. Switch to HPF.'
         })
-    
     parts = current_sample.split('_')
     num = int(parts[1])
     if num >= 10:
-        if parts[0] == 'lpf': 
-            current_sample = 'hpf_1'
-        else: 
-            return jsonify({'status': 'complete'})
+        if parts[0] == 'lpf': current_sample = 'hpf_1'
+        else: return jsonify({'status': 'complete'})
     else:
         current_sample = f"{parts[0]}_{num + 1}"
     
     target = SAMPLE_POSITIONS[current_sample]
-    if not move_to_position(target['x'], target['y'], target['z']):
-        return jsonify({'status': 'error', 'message': 'Motor movement failed. Check hardware.'}), 500
-        
-    current_parts = current_sample.split('_')
-    return jsonify({
-        'status': 'success',
-        'sample': current_sample,
-        'sample_number': int(current_parts[1]),
-        'field_type': current_parts[0],
-        'total_samples': 10,
-        'position': current_position,
-        'ready_for_capture': True
-    })
+    if move_to_position(target['x'], target['y'], target['z']):
+        current_parts = current_sample.split('_')
+        return jsonify({
+            'status': 'success',
+            'sample': current_sample,
+            'sample_number': int(current_parts[1]),
+            'field_type': current_parts[0],
+            'total_samples': 10,
+            'position': current_position,
+            'ready_for_capture': True
+        })
+    return jsonify({'status': 'error'}), 500
+
+@app.route('/configure_scan', methods=['POST'])
+def configure_scan():
+    global SAMPLE_POSITIONS, scan_config
+    method = request.json.get('method', 'longitudinal').lower()
+    scan_config['method'] = method
+    SAMPLE_POSITIONS = generate_sample_positions(method)
+    return jsonify({'status': 'success', 'method': method})
 
 if __name__ == '__main__':
     initialize_arduino()
