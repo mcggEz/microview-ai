@@ -19,13 +19,15 @@ export default function Notification({
   const [isVisible, setIsVisible] = useState(true)
 
   useEffect(() => {
+    if (!message || message.trim() === '') return;
+
     const timer = setTimeout(() => {
       setIsVisible(false)
       setTimeout(onClose, 300) // Wait for fade out animation
     }, duration)
 
     return () => clearTimeout(timer)
-  }, [duration, onClose])
+  }, [message, duration, onClose])
 
 
   const getBackgroundColor = () => {
@@ -49,7 +51,6 @@ export default function Notification({
         return 'text-gray-800'
       case 'success':
         return 'text-gray-900'
-      case 'warning':
       default:
         return 'text-gray-800'
     }
@@ -67,6 +68,8 @@ export default function Notification({
         return 'text-gray-600 hover:bg-gray-200 focus:ring-gray-300'
     }
   }
+
+  if (!message || message.trim() === '') return null;
 
   return (
     <div

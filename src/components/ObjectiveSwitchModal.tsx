@@ -29,7 +29,7 @@ export default function ObjectiveSwitchModal({
 }: ObjectiveSwitchModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onCancel()}>
-      <DialogContent className="sm:max-w-md bg-white rounded-2xl border-none shadow-2xl p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-md bg-white rounded-2xl border-none shadow-2xl p-0 overflow-hidden [&>button]:hidden">
         <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 text-white flex flex-col items-center text-center">
           <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-6 animate-pulse">
             <RotateCw className="h-10 w-10 text-white" />

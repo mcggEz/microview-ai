@@ -49,6 +49,7 @@ import {
   LogOut,
   Eye,
   EyeOff,
+  Square,
 } from "lucide-react";
 import { getMotorServerUrl } from "@/lib/motor-config";
 import ImageModal from "@/components/ImageModal";
@@ -59,7 +60,7 @@ import BoundingBoxOverlay from "@/components/BoundingBoxOverlay";
 import MotorEventsLog from "@/components/MotorEventsLog";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { getGeminiKeysFromLocalStorage } from "@/lib/client-gemini-keys";
+import { getGeminiKeysFromLocalStorage, getGeminiModelFromLocalStorage } from "@/lib/client-gemini-keys";
 import { getScanMethodFromLocalStorage } from "@/lib/scan-method";
 import ObjectiveSwitchModal from "@/components/ObjectiveSwitchModal";
 
@@ -94,6 +95,7 @@ export default function Report() {
     { timestamp: string; message: string; type: "info" | "success" | "error" }[]
   >([]);
   const [motorRunning, setMotorRunning] = useState(false);
+  const motorStopRef = useRef(false);
 
   // Derived motor state for UI
   const hasMotorEvents = motorEvents.length > 0;
@@ -649,6 +651,10 @@ export default function Report() {
     setLpfAbortController(abortController);
 
     setIsAnalyzingLPF((prev) => ({ ...prev, [imageIndex]: true }));
+    // Clear previous results for this image view immediately
+    setLpfSedimentDetection(null);
+    setLpfYoloDetections(null);
+    setLpfCroppedImages({});
     try {
       // Convert image URL to File object
       const response = await fetch(imageUrl);
@@ -742,9 +748,9 @@ export default function Report() {
       setLpfSedimentDetection(detection);
       
       // Crop images from YOLO detections
+      const croppedImages: Record<string, string> = {}
       if (yoloDetections.predictions.length > 0) {
         console.log(`🖼️ Starting to crop ${yoloDetections.predictions.length} images from LPF detections`)
-        const croppedImages: Record<string, string> = {}
         for (const pred of yoloDetections.predictions) {
           try {
             console.log(`📸 Cropping image for ${pred.class} (${pred.detection_id}) at (${pred.x}, ${pred.y}, ${pred.width}, ${pred.height})`)
@@ -765,12 +771,12 @@ export default function Report() {
             console.error(`❌ Failed to crop image for detection ${pred.detection_id} (${pred.class}):`, error)
           }
         }
-        setLpfCroppedImages(croppedImages)
         console.log(`✅ Cropped ${Object.keys(croppedImages).length}/${yoloDetections.predictions.length} images from LPF detections`)
         console.log(`📊 Cropped images by class:`, Object.entries(yoloDetections.summary.by_class || {}).map(([cls, count]) => `${cls}: ${count}`).join(', '))
       } else {
         console.warn('⚠️ No YOLO predictions to crop for LPF image')
       }
+      setLpfCroppedImages(croppedImages)
 
       // Save to individual image analysis table
       try {
@@ -870,6 +876,10 @@ export default function Report() {
     setHpfAbortController(abortController);
 
     setIsAnalyzingHPF((prev) => ({ ...prev, [imageIndex]: true }));
+    // Clear previous results for this image view immediately
+    setHpfSedimentDetection(null);
+    setHpfYoloDetections(null);
+    setHpfCroppedImages({});
     try {
       // Convert image URL to File object
       const response = await fetch(imageUrl);
@@ -948,9 +958,9 @@ export default function Report() {
       setHpfSedimentDetection(detection);
       
       // Crop images from YOLO detections
+      const croppedImagesHPF: Record<string, string> = {}
       if (yoloDetections.predictions.length > 0) {
         console.log(`🖼️ Starting to crop ${yoloDetections.predictions.length} images from HPF detections`)
-        const croppedImages: Record<string, string> = {}
         for (const pred of yoloDetections.predictions) {
           try {
             console.log(`📸 Cropping image for ${pred.class} (${pred.detection_id}) at (${pred.x}, ${pred.y}, ${pred.width}, ${pred.height})`)
@@ -962,7 +972,7 @@ export default function Report() {
               pred.height
             )
             if (cropped && cropped.length > 0) {
-              croppedImages[pred.detection_id] = cropped
+              croppedImagesHPF[pred.detection_id] = cropped
               console.log(`✅ Successfully cropped image for ${pred.class} (${pred.detection_id})`)
             } else {
               console.warn(`⚠️ Empty cropped image for ${pred.class} (${pred.detection_id})`)
@@ -971,12 +981,12 @@ export default function Report() {
             console.error(`❌ Failed to crop image for detection ${pred.detection_id} (${pred.class}):`, error)
           }
         }
-        setHpfCroppedImages(croppedImages)
-        console.log(`✅ Cropped ${Object.keys(croppedImages).length}/${yoloDetections.predictions.length} images from HPF detections`)
+        console.log(`✅ Cropped ${Object.keys(croppedImagesHPF).length}/${yoloDetections.predictions.length} images from HPF detections`)
         console.log(`📊 Cropped images by class:`, Object.entries(yoloDetections.summary.by_class || {}).map(([cls, count]) => `${cls}: ${count}`).join(', '))
       } else {
         console.warn('⚠️ No YOLO predictions to crop for HPF image')
       }
+      setHpfCroppedImages(croppedImagesHPF)
 
       // Save to individual image analysis table
       try {
@@ -2462,6 +2472,7 @@ export default function Report() {
                 onClick={async () => {
                   try {
                     const startTime = new Date().toLocaleTimeString();
+                    motorStopRef.current = false;
                     setShowMotorLog(true);
                     setMotorRunning(true);
                     setMotorEvents((prev) => [
@@ -2533,6 +2544,40 @@ export default function Report() {
                     // Step 2: Loop through remaining samples via /next_sample
                     let continueLoop = true;
                     while (continueLoop) {
+                      // Check if user clicked Stop
+                      if (motorStopRef.current) {
+                        setMotorEvents((prev) => [
+                          ...prev,
+                          {
+                            timestamp: new Date().toLocaleTimeString(),
+                            message: "Scan stopped by user. Returning motors to home...",
+                            type: "error",
+                          },
+                        ]);
+                        try {
+                          const stopRes = await fetch(`${base}/stop`, { method: "POST" });
+                          const stopData = await stopRes.json().catch(() => null);
+                          setMotorEvents((prev) => [
+                            ...prev,
+                            {
+                              timestamp: new Date().toLocaleTimeString(),
+                              message: stopData?.message || "Motors stopped.",
+                              type: stopData?.homed ? "success" : "error",
+                            },
+                          ]);
+                        } catch {
+                          setMotorEvents((prev) => [
+                            ...prev,
+                            {
+                              timestamp: new Date().toLocaleTimeString(),
+                              message: "Could not reach motor server to stop.",
+                              type: "error",
+                            },
+                          ]);
+                        }
+                        break;
+                      }
+
                       const nextRes = await fetch(`${base}/next_sample`, {
                         method: "POST",
                       });
@@ -2711,6 +2756,29 @@ export default function Report() {
                 <Microscope className="h-3 w-3" />
                 <span className="tracking-tight">Get Samples</span>
               </Button>
+
+              {/* Stop Scan button — only visible when motor is running */}
+              {motorRunning && (
+                <Button
+                  onClick={async () => {
+                    motorStopRef.current = true;
+                    setMotorEvents((prev) => [
+                      ...prev,
+                      {
+                        timestamp: new Date().toLocaleTimeString(),
+                        message: "Stop requested — waiting for current move to finish...",
+                        type: "error",
+                      },
+                    ]);
+                  }}
+                  variant="default"
+                  className="h-7 px-2.5 rounded-md bg-red-600 text-white hover:bg-red-700 flex items-center gap-1.5 text-xs font-semibold tracking-tight shadow-lg border border-red-700 animate-in fade-in duration-200"
+                  title="Stop scan and return motors to home"
+                >
+                  <Square className="h-3 w-3 fill-current" />
+                  <span className="tracking-tight">Stop</span>
+                </Button>
+              )}
 
               {/* Motor log toggle */}
               <Button
@@ -5330,7 +5398,6 @@ export default function Report() {
 
         {/* Notification */}
         <Notification
-          isOpen={showNotification}
           message={notificationMessage}
           type={notificationType}
           onClose={() => setShowNotification(false)}
@@ -5359,8 +5426,14 @@ export default function Report() {
 
       if (isLPF) {
         setIsAnalyzingLPF((prev) => ({ ...prev, [imageIndex]: true }));
+        setLpfSedimentDetection(null);
+        setLpfYoloDetections(null);
+        setLpfCroppedImages({});
       } else {
         setIsAnalyzingHPF((prev) => ({ ...prev, [imageIndex]: true }));
+        setHpfSedimentDetection(null);
+        setHpfYoloDetections(null);
+        setHpfCroppedImages({});
       }
 
       // Convert image URL to File object
@@ -5382,6 +5455,7 @@ export default function Report() {
         credentials: "include",
         headers: {
           "x-gemini-api-keys": JSON.stringify(getGeminiKeysFromLocalStorage()),
+          "x-gemini-model": getGeminiModelFromLocalStorage(),
         },
       });
 
@@ -5440,9 +5514,9 @@ export default function Report() {
         setLpfYoloDetections(result.yolo_detections);
 
         // Crop images from YOLO detections returned by Gemini pipeline
+        const croppedImagesLPFGemini: Record<string, string> = {};
         if (result.yolo_detections.predictions.length > 0) {
           console.log(`🖼️ [Gemini] Starting to crop ${result.yolo_detections.predictions.length} images from LPF detections`);
-          const croppedImages: Record<string, string> = {};
           for (const pred of result.yolo_detections.predictions) {
             try {
               const cropped = await cropImageFromBoundingBox(
@@ -5453,15 +5527,15 @@ export default function Report() {
                 pred.height
               );
               if (cropped) {
-                croppedImages[pred.detection_id] = cropped;
+                croppedImagesLPFGemini[pred.detection_id] = cropped;
               }
             } catch (error) {
               console.error(`❌ Failed to crop image for Gemini-YOLO detection ${pred.detection_id}:`, error);
             }
           }
-          setLpfCroppedImages(croppedImages);
-          console.log(`✅ [Gemini] Cropped ${Object.keys(croppedImages).length} images from LPF detections`);
+          console.log(`✅ [Gemini] Cropped ${Object.keys(croppedImagesLPFGemini).length} images from LPF detections`);
         }
+        setLpfCroppedImages(croppedImagesLPFGemini);
 
         await upsertImageAnalysis({
           test_id: selectedTest.id,
@@ -5501,9 +5575,9 @@ export default function Report() {
         setHpfYoloDetections(result.yolo_detections);
 
         // Crop images from YOLO detections returned by Gemini pipeline
+        const croppedImagesHPFGemini: Record<string, string> = {};
         if (result.yolo_detections.predictions.length > 0) {
           console.log(`🖼️ [Gemini] Starting to crop ${result.yolo_detections.predictions.length} images from HPF detections`);
-          const croppedImages: Record<string, string> = {};
           for (const pred of result.yolo_detections.predictions) {
             try {
               const cropped = await cropImageFromBoundingBox(
@@ -5514,15 +5588,15 @@ export default function Report() {
                 pred.height
               );
               if (cropped) {
-                croppedImages[pred.detection_id] = cropped;
+                croppedImagesHPFGemini[pred.detection_id] = cropped;
               }
             } catch (error) {
               console.error(`❌ Failed to crop image for Gemini-YOLO detection ${pred.detection_id}:`, error);
             }
           }
-          setHpfCroppedImages(croppedImages);
-          console.log(`✅ [Gemini] Cropped ${Object.keys(croppedImages).length} images from HPF detections`);
+          console.log(`✅ [Gemini] Cropped ${Object.keys(croppedImagesHPFGemini).length} images from HPF detections`);
         }
+        setHpfCroppedImages(croppedImagesHPFGemini);
 
         await upsertImageAnalysis({
           test_id: selectedTest.id,

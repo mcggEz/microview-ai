@@ -5,24 +5,43 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   GEMINI_KEYS_STORAGE_KEY,
+  GEMINI_MODEL_STORAGE_KEY,
   getGeminiKeysFromLocalStorage,
+  getGeminiModelFromLocalStorage,
 } from "@/lib/client-gemini-keys";
 import {
   MOTOR_SERVER_URL_STORAGE_KEY,
   getMotorServerUrl,
-  setMotorServerUrl,
 } from "@/lib/motor-config";
 import {
-  SCAN_METHOD_STORAGE_KEY,
   getScanMethodFromLocalStorage,
-  type ScanMethod,
 } from "@/lib/scan-method";
-import { Cpu, Eye, EyeOff, Plus, Trash2, ArrowLeft, Microscope, RefreshCw, CheckCircle, ArrowUp, ArrowDown, ArrowLeft as LeftIcon, ArrowRight, Home, Gauge, Save } from "lucide-react";
+import { Cpu, Eye, EyeOff, Plus, Trash2, ArrowLeft, Microscope, RefreshCw, CheckCircle, Gauge, Save } from "lucide-react";
 
 function maskKey(key: string) {
   const clean = key.trim();
   if (clean.length <= 10) return "•".repeat(Math.max(6, clean.length));
   return `${clean.slice(0, 6)}…${clean.slice(-4)}`;
+}
+
+function ScanningIllustration() {
+  return (
+    <div className="relative w-full h-12 mt-2 rounded-lg bg-gray-50/50 border border-gray-100 overflow-hidden">
+      <svg viewBox="0 0 100 40" className="w-full h-full p-2 opacity-60">
+        <path
+          d="M 90,10 H 10 V 20 H 90 V 30 H 10"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          className="text-blue-400 stroke-dasharray-[4_2]"
+        />
+        <circle r="3" className="fill-blue-600 shadow-sm">
+          <animateMotion dur="6s" repeatCount="indefinite" path="M 90,10 H 10 V 20 H 90 V 30 H 10" />
+        </circle>
+      </svg>
+    </div>
+  );
 }
 
 export default function SettingsPage() {
@@ -31,16 +50,19 @@ export default function SettingsPage() {
   const [newKey, setNewKey] = useState("");
   const [visibleKeyIndex, setVisibleKeyIndex] = useState<number | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
-  const [scanMethod, setScanMethod] = useState<ScanMethod>("longitudinal");
+  const [scanMethod] = useState("longitudinal");
   const [motorUrl, setMotorUrl] = useState("http://127.0.0.1:3001");
 
-  const [gridParams, setGridParams] = useState<any>(null);
   const [sensitivity, setSensitivity] = useState<number>(1.0);
-  const [motorStatus, setMotorStatus] = useState<any>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "local">("idle");
+  const [geminiModel, setGeminiModel] = useState("gemini-1.5-flash");
 
   useEffect(() => {
     setKeys(getGeminiKeysFromLocalStorage());
-    setScanMethod(getScanMethodFromLocalStorage());
+    setGeminiModel(getGeminiModelFromLocalStorage());
+    // Scan method is always longitudinal
     setMotorUrl(getMotorServerUrl());
     fetchMotorConfig();
   }, []);
@@ -50,42 +72,50 @@ export default function SettingsPage() {
       const res = await fetch(`${getMotorServerUrl()}/get_config`);
       if (res.ok) {
         const data = await res.json();
-        setGridParams(data.grid_params);
         setSensitivity(data.sensitivity || 1.0);
+        setIsConnected(true);
+      } else {
+        setIsConnected(false);
       }
     } catch (e) {
       console.warn("Failed to fetch motor config", e);
+      setIsConnected(false);
+      // Load from localStorage as fallback when server is offline
+      const stored = localStorage.getItem("MICROVIEW_MOTOR_SENSITIVITY");
+      if (stored) setSensitivity(parseFloat(stored));
     }
   };
 
-  const updateGridParam = (field: 'lpf' | 'hpf', key: string, value: number) => {
-    setGridParams((prev: any) => ({
-      ...prev,
-      [field]: {
-        ...prev[field],
-        [key]: value
-      }
-    }));
-  };
-
   const saveCalibration = async () => {
+    setIsSaving(true);
+    setSaveStatus("idle");
+    // Always save locally so the value persists even without server
+    localStorage.setItem("MICROVIEW_MOTOR_SENSITIVITY", String(sensitivity));
     try {
       const res = await fetch(`${getMotorServerUrl()}/update_config`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          grid_params: gridParams,
-          sensitivity: sensitivity
-        })
+        body: JSON.stringify({ sensitivity })
       });
       if (res.ok) {
+        setIsConnected(true);
+        setSaveStatus("success");
+        setSavedAt(Date.now());
+      } else {
+        setSaveStatus("local");
         setSavedAt(Date.now());
       }
     } catch (e) {
-      alert("Failed to save calibration. Check motor server connection.");
+      // Server offline — still saved locally
+      setSaveStatus("local");
+      setSavedAt(Date.now());
+      setIsConnected(false);
+    } finally {
+      setIsSaving(false);
+      // Auto-clear the status after 3 seconds
+      setTimeout(() => setSaveStatus("idle"), 3000);
     }
   };
-
 
   const cleanedKeys = useMemo(
     () =>
@@ -122,11 +152,12 @@ export default function SettingsPage() {
           <div>
             <div className="text-xl font-semibold text-gray-900">Settings</div>
             <div className="text-sm text-gray-600">
-              Add fallback Gemini API keys for this device.
+              Manage system configuration and motor calibration.
             </div>
           </div>
         </div>
 
+        {/* Gemini Keys Section */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -160,6 +191,41 @@ export default function SettingsPage() {
               <Plus className="h-4 w-4 mr-2" />
               Add
             </Button>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wider">
+              Selected AI Model
+            </div>
+            <select
+              value={geminiModel}
+              onChange={(e) => {
+                const val = e.target.value;
+                setGeminiModel(val);
+                localStorage.setItem(GEMINI_MODEL_STORAGE_KEY, val);
+                setSavedAt(Date.now());
+              }}
+              className="w-full h-10 px-3 rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 cursor-pointer"
+            >
+              <optgroup label="Gemini 3 Series (Next-Gen Agentic & Coding)">
+                <option value="gemini-3.1-pro">Gemini 3.1 Pro (Flagship Preview)</option>
+                <option value="gemini-3.0-flash">Gemini 3.0 Flash (Preview)</option>
+                <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite</option>
+              </optgroup>
+              <optgroup label="Gemini 2.5 Series (Advanced Reasoning)">
+                <option value="gemini-2.5-pro">Gemini 2.5 Pro (State-of-the-Art)</option>
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash (Balanced)</option>
+                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (Scalable)</option>
+              </optgroup>
+              <optgroup label="Gemini 2.0 & Legacy">
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+              </optgroup>
+            </select>
+            <div className="text-[10px] text-gray-500 mt-2 italic">
+              * The 3.1 and 2.5 series provide the best "Final Arbiter" reasoning for sediment validation. Gemini 3.1 Pro is recommended for the highest precision.
+            </div>
           </div>
 
           <div className="mt-4 divide-y divide-gray-100 rounded-xl border border-gray-200 overflow-hidden">
@@ -223,17 +289,9 @@ export default function SettingsPage() {
               })
             )}
           </div>
-
-          <div className="mt-3 text-xs text-gray-500">
-            {savedAt ? (
-              <>Saved.</>
-            ) : (
-              <>Changes save automatically on this device.</>
-            )}
-          </div>
         </div>
 
-        {/* Scanning Method Configuration */}
+        {/* Scanning Method Info */}
         <div className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
           <div className="flex items-start gap-3">
             <Microscope className="h-5 w-5 text-gray-700 mt-0.5" />
@@ -242,164 +300,29 @@ export default function SettingsPage() {
                 Scanning Method
               </div>
               <div className="text-xs text-gray-600 mt-1 leading-relaxed">
-                Choose how the motorized stage moves across the slide to collect
-                samples. This affects X/Y motor movement patterns.
+                The motorized stage scans the slide using a <strong>longitudinal strip</strong> (serpentine) pattern.
               </div>
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Longitudinal */}
-            <button
-              onClick={() => {
-                setScanMethod("longitudinal");
-                localStorage.setItem(SCAN_METHOD_STORAGE_KEY, "longitudinal");
-                setSavedAt(Date.now());
-              }}
-              className={`relative flex flex-col items-start gap-3 rounded-2xl border-2 p-5 text-left transition-all duration-300 shadow-sm hover:shadow-md ${
-                scanMethod === "longitudinal"
-                  ? "border-blue-600 bg-blue-50/30"
-                  : "border-gray-200 bg-white hover:border-gray-300"
-              }`}
-            >
+          <div className="mt-4">
+            <div className="relative flex flex-col items-start gap-3 rounded-2xl border-2 border-blue-600 bg-blue-50/30 p-5 text-left">
               <div className="flex w-full items-center justify-between">
                 <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                  <div className={`p-1.5 rounded-lg ${scanMethod === 'longitudinal' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                  <div className="p-1.5 rounded-lg bg-blue-600 text-white">
                     <RefreshCw className="h-3.5 w-3.5" />
                   </div>
                   Longitudinal Strip
                 </div>
-                {scanMethod === "longitudinal" && (
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-100 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
-                    <CheckCircle className="h-2.5 w-2.5" /> Active
-                  </div>
-                )}
-              </div>
-              <div className="text-xs text-gray-600 leading-relaxed min-h-[40px]">
-                Stage scans side-to-side in a <strong>serpentine meander</strong> pattern. 
-                Optimized for fast coverage of the entire smear.
-              </div>
-              
-              {/* SVG Illustration: Longitudinal */}
-              <div className="relative mt-2 w-full rounded-xl bg-white border border-gray-100 p-4 overflow-hidden h-32 flex items-center justify-center">
-                <svg width="100%" height="100%" viewBox="0 0 200 80" className="drop-shadow-sm">
-                  {/* Path */}
-                  <path 
-                    d="M 20 25 L 180 25 C 185 25 185 55 180 55 L 20 55" 
-                    fill="none" 
-                    stroke={scanMethod === 'longitudinal' ? '#2563eb' : '#cbd5e1'} 
-                    strokeWidth="3" 
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeDasharray="0.1 8"
-                  />
-                  <path 
-                    d="M 20 25 L 180 25 C 185 25 185 55 180 55 L 20 55" 
-                    fill="none" 
-                    stroke={scanMethod === 'longitudinal' ? '#3b82f6' : '#94a3b8'} 
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    opacity="0.3"
-                  />
-                  
-                  {/* Nodes Row 1 */}
-                  {[20, 60, 100, 140, 180].map((x, i) => (
-                    <g key={`L1-${i}`}>
-                      <circle cx={x} cy="25" r="5" fill="white" stroke={scanMethod === 'longitudinal' ? '#2563eb' : '#94a3b8'} strokeWidth="1.5" />
-                      <text x={x} y="28.5" textAnchor="middle" fontSize="6" fontWeight="bold" fill={scanMethod === 'longitudinal' ? '#2563eb' : '#64748b'}>{i + 1}</text>
-                    </g>
-                  ))}
-                  
-                  {/* Nodes Row 2 */}
-                  {[180, 140, 100, 60, 20].map((x, i) => (
-                    <g key={`L2-${i}`}>
-                      <circle cx={x} cy="55" r="5" fill="white" stroke={scanMethod === 'longitudinal' ? '#2563eb' : '#94a3b8'} strokeWidth="1.5" />
-                      <text x={x} y="58.5" textAnchor="middle" fontSize="6" fontWeight="bold" fill={scanMethod === 'longitudinal' ? '#2563eb' : '#64748b'}>{i + 6}</text>
-                    </g>
-                  ))}
-                  
-                  {/* Directional Arrows */}
-                  <path d="M 90 25 L 94 25 M 92 23 L 94 25 L 92 27" stroke="#3b82f6" strokeWidth="1" fill="none" />
-                  <path d="M 110 55 L 106 55 M 108 53 L 106 55 L 108 57" stroke="#3b82f6" strokeWidth="1" fill="none" />
-                </svg>
-              </div>
-            </button>
-
-            {/* Battlement */}
-            <button
-              onClick={() => {
-                setScanMethod("battlement");
-                localStorage.setItem(SCAN_METHOD_STORAGE_KEY, "battlement");
-                setSavedAt(Date.now());
-              }}
-              className={`relative flex flex-col items-start gap-3 rounded-2xl border-2 p-5 text-left transition-all duration-300 shadow-sm hover:shadow-md ${
-                scanMethod === "battlement"
-                  ? "border-blue-600 bg-blue-50/30"
-                  : "border-gray-200 bg-white hover:border-gray-300"
-              }`}
-            >
-              <div className="flex w-full items-center justify-between">
-                <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                  <div className={`p-1.5 rounded-lg ${scanMethod === 'battlement' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                    <Microscope className="h-3.5 w-3.5" />
-                  </div>
-                  Battlement Pattern
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-100 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
+                  <CheckCircle className="h-2.5 w-2.5" /> Active
                 </div>
-                {scanMethod === "battlement" && (
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-100 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
-                    <CheckCircle className="h-2.5 w-2.5" /> Active
-                  </div>
-                )}
               </div>
-              <div className="text-xs text-gray-600 leading-relaxed min-h-[40px]">
-                Stage moves in a <strong>square-wave</strong> (castle-top) pattern. 
-                Ideal for scanning edges where crystals often settle.
+              <div className="text-xs text-gray-600 leading-relaxed">
+                Stage scans side-to-side in a <strong>serpentine meander</strong> pattern.
               </div>
-              
-              {/* SVG Illustration: Battlement */}
-              <div className="relative mt-2 w-full rounded-xl bg-white border border-gray-100 p-4 overflow-hidden h-32 flex items-center justify-center">
-                <svg width="100%" height="100%" viewBox="0 0 200 80" className="drop-shadow-sm">
-                  {/* Path */}
-                  <path 
-                    d="M 20 60 L 20 20 L 60 20 L 60 60 L 100 60 L 100 20 L 140 20 L 140 60 L 180 60 L 180 20" 
-                    fill="none" 
-                    stroke={scanMethod === 'battlement' ? '#2563eb' : '#cbd5e1'} 
-                    strokeWidth="3" 
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeDasharray="0.1 8"
-                  />
-                  <path 
-                    d="M 20 60 L 20 20 L 60 20 L 60 60 L 100 60 L 100 20 L 140 20 L 140 60 L 180 60 L 180 20" 
-                    fill="none" 
-                    stroke={scanMethod === 'battlement' ? '#3b82f6' : '#94a3b8'} 
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    opacity="0.3"
-                  />
-                  
-                  {/* Nodes */}
-                  {[
-                    {x: 20, y: 60, id: 1}, {x: 20, y: 20, id: 2}, 
-                    {x: 60, y: 20, id: 3}, {x: 60, y: 60, id: 4}, 
-                    {x: 100, y: 60, id: 5}, {x: 100, y: 20, id: 6}, 
-                    {x: 140, y: 20, id: 7}, {x: 140, y: 60, id: 8}, 
-                    {x: 180, y: 60, id: 9}, {x: 180, y: 20, id: 10}
-                  ].map((pt, i) => (
-                    <g key={`B-${i}`}>
-                      <circle cx={pt.x} cy={pt.y} r="5" fill="white" stroke={scanMethod === 'battlement' ? '#2563eb' : '#94a3b8'} strokeWidth="1.5" />
-                      <text x={pt.x} y={pt.y + 3.5} textAnchor="middle" fontSize="6" fontWeight="bold" fill={scanMethod === 'battlement' ? '#2563eb' : '#64748b'}>{pt.id}</text>
-                    </g>
-                  ))}
-                  
-                  {/* Directional Arrows */}
-                  <path d="M 20 40 L 20 36 M 18 38 L 20 36 L 22 38" stroke="#3b82f6" strokeWidth="1" fill="none" />
-                  <path d="M 40 20 L 44 20 M 42 18 L 44 20 L 42 22" stroke="#3b82f6" strokeWidth="1" fill="none" />
-                </svg>
-              </div>
-            </button>
+              <ScanningIllustration />
+            </div>
           </div>
         </div>
 
@@ -415,7 +338,7 @@ export default function SettingsPage() {
                   Motor Server URL
                 </div>
                 <div className="text-xs text-gray-600 mt-1 leading-relaxed">
-                  The address of the Flask motor backend. Use 127.0.0.1 for local or the Raspberry Pi&apos;s IP.
+                  The address of the Flask motor backend.
                 </div>
               </div>
             </div>
@@ -426,161 +349,117 @@ export default function SettingsPage() {
               value={motorUrl}
               onChange={(e) => setMotorUrl(e.target.value)}
               placeholder="http://127.0.0.1:3001"
-              className="flex-1 h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-purple-900/10 focus:border-purple-400 font-mono"
+              className="flex-1 h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-900/10 focus:border-purple-400 font-mono"
             />
             <Button
               className="h-10 px-4 rounded-lg bg-gray-900 text-white hover:bg-gray-800"
               onClick={() => {
                 localStorage.setItem(MOTOR_SERVER_URL_STORAGE_KEY, motorUrl);
                 setSavedAt(Date.now());
+                fetchMotorConfig();
               }}
             >
               Update URL
             </Button>
           </div>
-          {savedAt && (
-            <div className="mt-2 text-[10px] text-green-600 font-medium">
-              Changes saved successfully!
-            </div>
-          )}
         </div>
 
-        <div className="mt-6 p-4 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-3">
-          <div className="text-amber-600 mt-0.5">
-            <CheckCircle className="h-4 w-4" />
-          </div>
-          <div className="text-xs text-amber-800 leading-relaxed">
-            <strong>Deployment Tip:</strong> If your microscope is connected to a <strong>Raspberry Pi</strong>, 
-            enter the Pi&apos;s network address (e.g., <code>http://192.168.1.5:3001</code>) above so the browser 
-            can send commands to the hardware.
-          </div>
-        </div>
-
-        {/* Motor Calibration */}
+        {/* Motor Calibration Section */}
         <div className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
           <div className="flex items-start gap-3 mb-4">
             <Gauge className="h-5 w-5 text-gray-700 mt-0.5" />
             <div>
               <div className="text-sm font-semibold text-gray-900">
-                Motor & Stage Calibration
+                Motor Movement Calibration
               </div>
               <div className="text-xs text-gray-600 mt-1 leading-relaxed">
-                Fine-tune the scan area and movement sensitivity. These settings are saved to the motor server.
+                Fine-tune the movement sensitivity multiplier. This setting is saved to the motor server.
               </div>
             </div>
           </div>
 
-          {!gridParams ? (
-            <div className="p-4 bg-gray-50 rounded-xl text-center text-xs text-gray-500 italic">
-              Connect to motor server to edit calibration range...
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Sensitivity Calibration */}
-              <div className="p-4 rounded-xl border-2 border-blue-100 bg-blue-50/20 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-blue-600">Travel Sensitivity (Multiplier)</div>
-                  <div className="px-3 py-1 rounded-md bg-blue-600 text-white font-mono text-xs font-bold leading-none">
-                    {sensitivity?.toFixed(2) || "1.00"}x
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <input 
-                    type="range" min="0.1" max="5.0" step="0.05"
-                    value={sensitivity || 1.0}
-                    onChange={(e) => setSensitivity(parseFloat(e.target.value))}
-                    className="flex-1 h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                  />
-                  <input 
-                    type="number" step="0.01"
-                    value={sensitivity || 1.0}
-                    onChange={(e) => setSensitivity(parseFloat(e.target.value))}
-                    className="w-20 h-9 text-center rounded-lg border-2 border-blue-100 text-xs font-bold focus:ring-1 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div className="mt-2 text-[10px] text-gray-500 italic">
-                  * Adjust this if the motor travels more or less than the expected distance (e.g., set to 2.0 to double the travel).
-                </div>
-              </div>
-
-              {(['lpf', 'hpf'] as const).map((field) => (
-                <div key={field} className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
-                  <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3 flex items-center justify-between">
-                    {field === 'lpf' ? 'Low Power Field (LPF)' : 'High Power Field (HPF)'}
-                    <span className="text-[10px] lowercase font-normal opacity-70">Grid units in mm</span>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-6">
-                    <div>
-                      <label className="text-[10px] text-gray-500 mb-1 block">Start X</label>
-                      <input
-                        type="number" step="0.1"
-                        value={gridParams[field].start_x}
-                        onChange={(e) => updateGridParam(field, 'start_x', parseFloat(e.target.value))}
-                        className="w-full h-8 px-2 rounded-lg border border-gray-200 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-gray-500 mb-1 block">End X</label>
-                      <input
-                        type="number" step="0.1"
-                        value={gridParams[field].end_x}
-                        onChange={(e) => updateGridParam(field, 'end_x', parseFloat(e.target.value))}
-                        className="w-full h-8 px-2 rounded-lg border border-gray-200 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-gray-500 mb-1 block">Cols</label>
-                      <input
-                        type="number"
-                        value={gridParams[field].cols}
-                        onChange={(e) => updateGridParam(field, 'cols', parseInt(e.target.value))}
-                        className="w-full h-8 px-2 rounded-lg border border-gray-200 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-gray-500 mb-1 block">Start Y</label>
-                      <input
-                        type="number" step="0.1"
-                        value={gridParams[field].start_y}
-                        onChange={(e) => updateGridParam(field, 'start_y', parseFloat(e.target.value))}
-                        className="w-full h-8 px-2 rounded-lg border border-gray-200 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-gray-500 mb-1 block">End Y</label>
-                      <input
-                        type="number" step="0.1"
-                        value={gridParams[field].end_y}
-                        onChange={(e) => updateGridParam(field, 'end_y', parseFloat(e.target.value))}
-                        className="w-full h-8 px-2 rounded-lg border border-gray-200 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-gray-500 mb-1 block">Rows</label>
-                      <input
-                        type="number"
-                        value={gridParams[field].rows}
-                        onChange={(e) => updateGridParam(field, 'rows', parseInt(e.target.value))}
-                        className="w-full h-8 px-2 rounded-lg border border-gray-200 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-
+          {!isConnected && (
+            <div className="mb-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
+              <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+              <span className="text-xs text-amber-700">
+                Motor server offline — changes saved locally and will sync when connected.
+              </span>
               <Button
-                onClick={saveCalibration}
-                className="w-full h-10 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+                variant="outline"
+                className="ml-auto h-7 px-2 text-[10px] rounded-md border-amber-300 text-amber-700 hover:bg-amber-100"
+                onClick={fetchMotorConfig}
               >
-                <Save className="h-4 w-4 mr-2" />
-                Apply & Save Calibration
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Retry
               </Button>
             </div>
           )}
+          {isConnected && (
+            <div className="mb-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
+              <div className="h-2 w-2 rounded-full bg-green-500" />
+              <span className="text-xs text-green-700">
+                Motor server connected
+              </span>
+            </div>
+          )}
+
+          <div className="space-y-6">
+            <div className="p-5 rounded-xl border-2 border-blue-100 bg-blue-50/20 shadow-sm text-center">
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-blue-600 text-left">Travel Sensitivity (Multiplier)</div>
+                <div className="px-3 py-1 rounded-md bg-blue-600 text-white font-mono text-xs font-bold leading-none">
+                  {sensitivity.toFixed(2)}x
+                </div>
+              </div>
+              <div className="flex items-center gap-6">
+                <input
+                  type="range" min="0.1" max="5.0" step="0.05"
+                  value={sensitivity}
+                  onChange={(e) => setSensitivity(parseFloat(e.target.value))}
+                  className="flex-1 h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+                <input
+                  type="number" step="0.01"
+                  value={sensitivity}
+                  onChange={(e) => setSensitivity(parseFloat(e.target.value))}
+                  className="w-24 h-10 text-center rounded-lg border-2 border-blue-100 text-sm font-bold focus:ring-1 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <div className="mt-3 text-[10px] text-gray-500 italic text-left">
+                * Adjust this if the motor travels more or less than the expected distance (e.g., set to 2.0 to double the travel).
+              </div>
+            </div>
+
+            <Button
+              onClick={saveCalibration}
+              disabled={isSaving}
+              className="w-full h-11 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow-md font-semibold disabled:opacity-50"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {isSaving ? "Saving..." : isConnected ? "Apply & Save Calibration" : "Save Locally"}
+            </Button>
+
+            {saveStatus === "success" && (
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 border border-green-200 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                <span className="text-sm text-green-700 font-medium">
+                  Sensitivity saved to motor server ({sensitivity.toFixed(2)}x)
+                </span>
+              </div>
+            )}
+            {saveStatus === "local" && (
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <Save className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                <span className="text-sm text-amber-700 font-medium">
+                  Saved locally ({sensitivity.toFixed(2)}x) — will sync to server when connected
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="mt-6 text-[11px] text-gray-500 text-center pb-8">
-          Note: these settings are stored in this browser session. Clearing cache will reset these values.
+        <div className="mt-8 text-[11px] text-gray-400 text-center pb-8 flex items-center justify-center gap-1">
+          <CheckCircle className="h-3 w-3" /> System ready for scanning
         </div>
       </div>
     </div>

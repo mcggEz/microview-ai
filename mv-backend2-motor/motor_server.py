@@ -1,317 +1,459 @@
 #!/usr/bin/env python3
 """
 Motor Control Server (Laptop Edition)
-Handles motor movements for automated sample positioning
-Works with Arduino stepper motors via Serial (Auto-detection)
+Handles motor movements for automated sample positioning.
+
+The Flask server is the "brain" — it knows the scan method, sensitivity,
+and calculates the exact relative moves to send to the Arduino.
+
+The Arduino is "dumb muscle" — it just executes MOVE dx,dy commands.
+
+Scan Method: Longitudinal strip (serpentine) — left×4, down×1, right×4.
+
+Each move distance = sensitivity value (in motor units).
 """
 
-from flask import Flask, request, jsonify 
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import time
 import os
 import json
 import logging
-import platform
 import serial
 import serial.tools.list_ports
-from datetime import datetime
 
 # Configure logging
-log_path = 'motor_server.log'
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_path),
-        logging.StreamHandler()
-    ]
+    handlers=[logging.FileHandler('motor_server.log'), logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
-# Arduino configuration
 ARDUINO_BAUD = 9600
 arduino_serial = None
-USE_ARDUINO = True
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": ["*"]}})
 
-# Conversion settings
-STEPS_PER_MM = {'x': 100, 'y': 100, 'z': 200}
-
-# Default Configuration
-DEFAULT_CONFIG = {
-    'grid_params': {
-        'lpf': {'start_x': 2.0, 'end_x': 26.0, 'start_y': 2.0, 'end_y': 8.0, 'cols': 5, 'rows': 2},
-        'hpf': {'start_x': 1.0, 'end_x': 9.0, 'start_y': 1.0, 'end_y': 3.0, 'cols': 5, 'rows': 2}
-    },
-    'sensitivity': 1.0
-}
-
+# Persistent State
 CONFIG_FILE = 'motor_config.json'
-CURRENT_CONFIG = DEFAULT_CONFIG.copy()
+state = {'sensitivity': 1.0}
+
+# Command timeout (seconds)
+COMMAND_TIMEOUT = 60
+
+# ---------------------------------------------------------------------------
+# Config persistence
+# ---------------------------------------------------------------------------
 
 def load_config():
-    global CURRENT_CONFIG
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, 'r') as f:
                 loaded = json.load(f)
-                if isinstance(loaded, dict):
-                    if 'grid_params' in loaded and isinstance(loaded['grid_params'], dict):
-                        CURRENT_CONFIG['grid_params'] = loaded['grid_params']
-                    if 'sensitivity' in loaded:
-                        CURRENT_CONFIG['sensitivity'] = float(loaded['sensitivity'])
-            logger.info("Configuration loaded.")
+                if 'sensitivity' in loaded:
+                    state['sensitivity'] = float(loaded['sensitivity'])
+            logger.info(f"Loaded sensitivity: {state['sensitivity']}")
         except Exception as e:
-            logger.error(f"Failed to load config: {e}")
+            logger.error(f"Error loading config: {e}")
 
 def save_config():
+    """Save config while preserving any existing keys."""
     try:
+        existing = {}
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, 'r') as f:
+                existing = json.load(f)
+        existing['sensitivity'] = state['sensitivity']
         with open(CONFIG_FILE, 'w') as f:
-            json.dump(CURRENT_CONFIG, f, indent=4)
-        logger.info("Configuration saved.")
+            json.dump(existing, f, indent=4)
     except Exception as e:
-        logger.error(f"Failed to save config: {e}")
+        logger.error(f"Error saving config: {e}")
 
 load_config()
 
-# Global reference
-GRID_PARAMS = CURRENT_CONFIG.get('grid_params', {})
+# ---------------------------------------------------------------------------
+# Scan pattern generation
+# ---------------------------------------------------------------------------
 
-def generate_sample_positions(method='longitudinal'):
-    positions = {}
-    gp = CURRENT_CONFIG.get('grid_params')
-    if not isinstance(gp, dict): 
-        return positions
-    
-    for field_type, params in gp.items():
-        if not isinstance(params, dict): continue
-        cols = int(params.get('cols', 1))
-        rows = int(params.get('rows', 1))
-        start_x = float(params.get('start_x', 0.0))
-        end_x = float(params.get('end_x', 0.0))
-        start_y = float(params.get('start_y', 0.0))
-        end_y = float(params.get('end_y', 0.0))
+def generate_scan_moves(sensitivity):
+    """Generate the list of relative (dx, dy) moves for samples 2-10.
 
-        total_samples = cols * rows
-        x_spacing = (end_x - start_x) / max(cols - 1, 1)
-        y_spacing = (end_y - start_y) / max(rows - 1, 1)
+    Sample 1 is captured at the origin (no move needed), so we return 9 moves.
+    Each move distance = sensitivity.
 
-        if method == 'battlement':
-            sample_num = 1
-            for i in range(total_samples // 2):
-                x = start_x + i * x_spacing
-                if i % 2 == 0:
-                    positions[f'{field_type}_{sample_num}'] = {'x': x, 'y': start_y, 'z': 0}
-                    sample_num += 1
-                    positions[f'{field_type}_{sample_num}'] = {'x': x, 'y': end_y, 'z': 0}
-                else:
-                    positions[f'{field_type}_{sample_num}'] = {'x': x, 'y': end_y, 'z': 0}
-                    sample_num += 1
-                    positions[f'{field_type}_{sample_num}'] = {'x': x, 'y': start_y, 'z': 0}
-                sample_num += 1
-        else: # longitudinal
-            sample_num = 1
-            for row in range(rows):
-                y = start_y + row * y_spacing
-                col_range = range(cols - 1, -1, -1) if row % 2 == 1 else range(cols)
-                for col in col_range:
-                    x = start_x + col * x_spacing
-                    positions[f'{field_type}_{sample_num}'] = {'x': x, 'y': y, 'z': 0}
-                    sample_num += 1
-    return positions
+    Longitudinal strip (serpentine, 5 cols x 2 rows):
+        Start at top-right.
+        Row 1 (R->L): <-  <-  <-  <-       (samples 1-5, moving left)
+        Row 2 (L->R): v   ->  ->  ->  ->   (samples 6-10, serpentine back right)
 
-scan_config = {'method': 'longitudinal'}
-SAMPLE_POSITIONS = generate_sample_positions('longitudinal')
-current_position = {'x': 0.0, 'y': 0.0, 'z': 0.0}
-current_sample = None
+         5 << 4 << 3 << 2 << 1(start)
+         v
+         6 >> 7 >> 8 >> 9 >> 10
+    """
+    S = sensitivity
+    moves = []
+    # Row 1: left 4 times (samples 2-5)
+    for _ in range(4):
+        moves.append((-S, 0))
+    # Down to row 2 (sample 6)
+    moves.append((0, S))
+    # Row 2: right 4 times, serpentine (samples 7-10)
+    for _ in range(4):
+        moves.append((S, 0))
+    return moves
+
+# ---------------------------------------------------------------------------
+# Scan state
+# ---------------------------------------------------------------------------
+
+scan = {
+    'active': False,
+    'field_type': 'lpf',       # 'lpf' or 'hpf'
+    'index': 0,                # current sample index (1-based)
+    'moves': [],               # remaining (dx, dy) moves
+}
 is_initialized = False
 
+def current_sample_name():
+    """Return the sample name like 'lpf_3' from scan state."""
+    if not scan['active']:
+        return None
+    return f"{scan['field_type']}_{scan['index']}"
+
+# ---------------------------------------------------------------------------
+# Arduino communication
+# ---------------------------------------------------------------------------
+
 def find_arduino_port():
-    logger.info("Auto-detecting Arduino port...")
+    """Scan serial ports to find an Arduino. Skips Bluetooth ports."""
     ports = list(serial.tools.list_ports.comports())
-    ports.sort(key=lambda p: (
-        not ('USB' in p.description.upper() or 'ARDUINO' in p.description.upper() or 'CH340' in p.description.upper()),
-        p.device
-    ))
-    
+    ports = [p for p in ports if 'BLUETOOTH' not in (p.device + ' ' + p.description).upper()
+             and 'BTHENUM' not in (p.hwid or '').upper()]
+    ports.sort(key=lambda p: not any(name in (p.device + ' ' + p.description).upper()
+                                     for name in ['USB', 'ARDUINO', 'CH340', 'ACM']))
+    logger.info(f"Scanning {len(ports)} serial ports (Bluetooth excluded)...")
     for port in ports:
-        if 'bluetooth' in port.description.lower() or 'bth' in port.description.lower():
-            continue
-        logger.info(f"Probing {port.device}...")
         try:
-            ser = serial.Serial(port.device, ARDUINO_BAUD, timeout=2)
-            time.sleep(3) 
-            if ser.in_waiting > 0:
-                boot_msg = ser.read(ser.in_waiting).decode('utf-8', errors='ignore').lower()
-                if any(x in boot_msg for x in ["ready", "ok", "system"]):
-                    return ser
+            logger.info(f"Trying port {port.device} ({port.description})...")
+            ser = serial.Serial(port.device, ARDUINO_BAUD, timeout=3)
+            time.sleep(3)
+            # Drain boot messages
+            boot_lines = []
+            while ser.in_waiting > 0:
+                line = ser.readline().decode('utf-8', errors='ignore').strip()
+                boot_lines.append(line)
+            if boot_lines:
+                logger.info(f"  Boot messages: {boot_lines}")
+            if any("OK" in line.upper() for line in boot_lines):
+                logger.info(f"Arduino identified on {port.device} (via boot message)")
+                return ser
+            # Fallback: send STATUS
+            ser.reset_input_buffer()
             ser.write(b"STATUS\n")
             ser.flush()
-            time.sleep(1.0)
-            if ser.in_waiting > 0:
-                resp = ser.readline().decode('utf-8', errors='ignore').strip().lower()
-                if any(x in resp for x in ["ok", "status", "ready", "pos", "x:", "y:"]):
-                    return ser
+            line = ser.readline().decode('utf-8', errors='ignore').strip()
+            logger.info(f"  STATUS response: '{line}'")
+            if line and "OK" in line.upper():
+                logger.info(f"Arduino identified on {port.device} (via STATUS)")
+                return ser
             ser.close()
-        except: continue
+        except Exception as e:
+            logger.warning(f"  Port {port.device} failed: {e}")
+            continue
     return None
 
 def initialize_arduino():
     global arduino_serial, is_initialized
-    if arduino_serial and arduino_serial.is_open: return True
-    arduino_serial = find_arduino_port()
-    if arduino_serial:
-        is_initialized = True
+    if arduino_serial and arduino_serial.is_open:
         return True
-    is_initialized = False
-    return False
+    arduino_serial = find_arduino_port()
+    is_initialized = arduino_serial is not None
+    if is_initialized:
+        logger.info("Arduino initialized successfully")
+    else:
+        logger.warning("Arduino initialization failed — no device found")
+    return is_initialized
 
-def send_arduino_command(command, timeout=15):
-    if not arduino_serial or not arduino_serial.is_open: return None
+def send_command(command, timeout=None):
+    """Send a command to Arduino and wait for STABLE_READY or OK."""
+    if timeout is None:
+        timeout = COMMAND_TIMEOUT
+    if not arduino_serial or not arduino_serial.is_open:
+        logger.warning(f"Cannot send '{command}': Arduino not connected")
+        return None
     try:
         arduino_serial.reset_input_buffer()
         arduino_serial.write(f"{command}\n".encode())
         arduino_serial.flush()
+        logger.info(f"Sent: {command}")
         start = time.time()
         while (time.time() - start) < timeout:
             if arduino_serial.in_waiting > 0:
                 line = arduino_serial.readline().decode('utf-8', errors='ignore').strip()
-                if any(x in line.upper() for x in ["OK", "DONE", "SUCCESS", "ARRIVED", "STABLE_READY"]):
-                    return line
-            time.sleep(0.01)
-        return None
-    except: return None
+                if line:
+                    logger.info(f"Arduino: {line}")
+                    upper = line.upper()
+                    if "STABLE_READY" in upper or "OK" in upper:
+                        return line
+                    if "ERROR" in upper:
+                        logger.error(f"Arduino error: {line}")
+                        return None
+            time.sleep(0.05)
+        logger.warning(f"'{command}' timed out after {timeout}s")
+    except Exception as e:
+        logger.error(f"Command error for '{command}': {e}")
+    return None
 
-def move_to_position(x, y, z):
-    if not is_initialized: return False
-    cal_x = x * CURRENT_CONFIG['sensitivity']
-    cal_y = y * CURRENT_CONFIG['sensitivity']
-    
-    res = send_arduino_command(f"MOVE {cal_x},{cal_y}")
-    if res and res != "timeout":
-        current_position['x'], current_position['y'] = x, y
-        current_position['z'] = z
-        return True
-    return False
+def move_relative(dx, dy):
+    """Send a relative MOVE command to the Arduino."""
+    result = send_command(f"MOVE {dx},{dy}")
+    return result is not None
 
-def home_motors():
-    if not is_initialized: return False
-    send_arduino_command("HOME")
-    current_position['x'] = current_position['y'] = current_position['z'] = 0.0
-    return True
+# ---------------------------------------------------------------------------
+# Flask routes
+# ---------------------------------------------------------------------------
 
-@app.route('/status', methods=['GET'])
+@app.route('/status')
 def get_status():
     return jsonify({
         'status': 'ready' if is_initialized else 'not_initialized',
-        'position': current_position,
-        'current_sample': current_sample,
-        'scan_method': scan_config['method']
+        'current_sample': current_sample_name(),
+        'sensitivity': state['sensitivity'],
+        'scan_active': scan['active'],
     })
 
-@app.route('/get_config', methods=['GET'])
-def get_config():
+@app.route('/initialize', methods=['POST'])
+def init_endpoint():
+    success = initialize_arduino()
     return jsonify({
-        'grid_params': CURRENT_CONFIG['grid_params'],
-        'sensitivity': CURRENT_CONFIG['sensitivity'],
-        'scan_method': scan_config['method']
+        'status': 'success' if success else 'error',
+        'message': 'Arduino connected' if success else 'No Arduino found'
+    }), 200 if success else 503
+
+@app.route('/ports')
+def list_ports():
+    ports = list(serial.tools.list_ports.comports())
+    port_info = []
+    for p in ports:
+        is_bt = 'BLUETOOTH' in (p.description or '').upper() or 'BTHENUM' in (p.hwid or '').upper()
+        port_info.append({
+            'device': p.device,
+            'description': p.description,
+            'manufacturer': p.manufacturer,
+            'is_bluetooth': is_bt
+        })
+    return jsonify({
+        'ports': port_info,
+        'arduino_connected': is_initialized,
+        'arduino_port': arduino_serial.port if arduino_serial and arduino_serial.is_open else None
     })
+
+@app.route('/get_config')
+def get_config():
+    return jsonify({'sensitivity': state['sensitivity']})
 
 @app.route('/update_config', methods=['POST'])
 def update_config():
-    global GRID_PARAMS, SAMPLE_POSITIONS
     data = request.json
-    if not data: return jsonify({'status': 'error'}), 400
-    if 'grid_params' in data:
-        CURRENT_CONFIG['grid_params'].update(data['grid_params'])
-    if 'sensitivity' in data:
-        try: CURRENT_CONFIG['sensitivity'] = float(data['sensitivity'])
-        except: pass
-    save_config()
-    GRID_PARAMS = CURRENT_CONFIG['grid_params']
-    SAMPLE_POSITIONS = generate_sample_positions(scan_config['method'])
-    return jsonify({'status': 'success'})
-
-@app.route('/continue_after_switch', methods=['POST'])
-def handle_continue():
-    global current_sample
-    current_sample = 'hpf_1'
-    target = SAMPLE_POSITIONS[current_sample]
-    if move_to_position(target['x'], target['y'], target['z']):
-        parts = current_sample.split('_')
-        return jsonify({
-            'status': 'success',
-            'sample': current_sample,
-            'sample_number': int(parts[1]),
-            'field_type': parts[0],
-            'total_samples': 10,
-            'position': current_position
-        })
-    return jsonify({'status': 'error'}), 500
+    if data and 'sensitivity' in data:
+        state['sensitivity'] = float(data['sensitivity'])
+        save_config()
+        return jsonify({'status': 'success'})
+    return jsonify({'status': 'error'}), 400
 
 @app.route('/get_samples', methods=['POST'])
 def get_samples():
-    global current_sample
-    if not is_initialized: 
-        if not initialize_arduino():
-            return jsonify({'status': 'error', 'message': 'Hardware not connected.'}), 503
-    home_motors()
-    current_sample = 'lpf_1'
-    target = SAMPLE_POSITIONS[current_sample]
-    if move_to_position(target['x'], target['y'], target['z']):
-        parts = current_sample.split('_')
-        return jsonify({
-            'status': 'success',
-            'sample': current_sample,
-            'sample_number': int(parts[1]),
-            'field_type': parts[0],
-            'total_samples': 10,
-            'position': current_position,
-            'ready_for_capture': True
-        })
-    return jsonify({'status': 'error'}), 500
+    """Start a scan. The user has already positioned the stage at top-left.
+
+    1. ZERO the Arduino (mark current position as origin — no movement)
+    2. Generate the move sequence based on scan method + sensitivity
+    3. Return success for sample 1 (captured at current position)
+    """
+    if not is_initialized and not initialize_arduino():
+        return jsonify({'status': 'error', 'message': 'Hardware not connected. Is the Arduino plugged in?'}), 503
+
+    # Tell Arduino: "wherever you are now = origin". No motor movement.
+    zero_result = send_command("ZERO", timeout=5)
+    if not zero_result:
+        logger.warning("ZERO command failed — attempting to continue anyway")
+
+    # Generate the 9 relative moves for samples 2-10 (longitudinal strip)
+    moves = generate_scan_moves(state['sensitivity'])
+
+    # Initialize scan state
+    scan['active'] = True
+    scan['field_type'] = 'lpf'
+    scan['index'] = 1
+    scan['moves'] = list(moves)  # copy
+
+    logger.info(f"Scan started: longitudinal, sensitivity={state['sensitivity']}, field=lpf")
+    logger.info(f"Move sequence ({len(moves)} moves): {moves}")
+
+    return jsonify({
+        'status': 'success',
+        'sample': current_sample_name(),
+        'sample_number': 1,
+        'field_type': 'lpf',
+        'total_samples': 10,
+        'position': {'x': 0, 'y': 0, 'z': 0},
+        'ready_for_capture': True
+    })
 
 @app.route('/next_sample', methods=['POST'])
 def next_sample():
-    global current_sample
-    if not current_sample: return jsonify({'status': 'error'}), 400
-    if current_sample == 'lpf_10':
-        return jsonify({
-            'status': 'switch_objective', 
-            'next_sample': 'hpf_1',
-            'message': 'LPF complete. Switch to HPF.'
-        })
-    parts = current_sample.split('_')
-    num = int(parts[1])
-    if num >= 10:
-        if parts[0] == 'lpf': current_sample = 'hpf_1'
-        else: return jsonify({'status': 'complete'})
-    else:
-        current_sample = f"{parts[0]}_{num + 1}"
-    
-    target = SAMPLE_POSITIONS[current_sample]
-    if move_to_position(target['x'], target['y'], target['z']):
-        current_parts = current_sample.split('_')
+    """Move to the next sample position.
+
+    Pops the next (dx, dy) from the move list and sends it to Arduino.
+    """
+    if not scan['active']:
+        return jsonify({'status': 'error', 'message': 'No active scan. Call /get_samples first.'}), 400
+
+    field_type = scan['field_type']
+    index = scan['index']
+
+    # After capturing the last sample of LPF, signal objective switch
+    if field_type == 'lpf' and index >= 10:
+        return jsonify({'status': 'switch_objective', 'message': 'Please switch to 40x (HPF)'})
+
+    # After capturing the last sample of HPF, scan is complete
+    if field_type == 'hpf' and index >= 10:
+        scan['active'] = False
+        return jsonify({'status': 'complete', 'message': 'All samples completed.'})
+
+    # Pop next move
+    if not scan['moves']:
+        scan['active'] = False
+        return jsonify({'status': 'complete', 'message': 'All samples completed.'})
+
+    dx, dy = scan['moves'].pop(0)
+    scan['index'] += 1
+
+    logger.info(f"Moving to {scan['field_type']}_{scan['index']}: dx={dx}, dy={dy}")
+
+    if move_relative(dx, dy):
         return jsonify({
             'status': 'success',
-            'sample': current_sample,
-            'sample_number': int(current_parts[1]),
-            'field_type': current_parts[0],
+            'sample': current_sample_name(),
+            'sample_number': scan['index'],
+            'field_type': scan['field_type'],
             'total_samples': 10,
-            'position': current_position,
+            'position': {'x': dx, 'y': dy, 'z': 0},
             'ready_for_capture': True
         })
-    return jsonify({'status': 'error'}), 500
 
-@app.route('/configure_scan', methods=['POST'])
-def configure_scan():
-    global SAMPLE_POSITIONS, scan_config
-    method = request.json.get('method', 'longitudinal').lower()
-    scan_config['method'] = method
-    SAMPLE_POSITIONS = generate_sample_positions(method)
-    return jsonify({'status': 'success', 'method': method})
+    return jsonify({'status': 'error', 'message': f"Failed to move to {current_sample_name()}"}), 500
+
+@app.route('/continue_after_switch', methods=['POST'])
+def handle_continue():
+    """After user switches objective (LPF → HPF), return to origin and start HPF scan."""
+    if not is_initialized:
+        return jsonify({'status': 'error', 'message': 'Hardware not connected'}), 503
+
+    # Return to origin (top-left of slide)
+    home_result = send_command("HOME", timeout=120)
+    if not home_result:
+        logger.warning("HOME failed before HPF scan — attempting to continue")
+
+    # Mark this position as new origin for HPF
+    send_command("ZERO", timeout=5)
+
+    # Generate HPF moves (same pattern, same sensitivity)
+    moves = generate_scan_moves(state['sensitivity'])
+
+    scan['field_type'] = 'hpf'
+    scan['index'] = 1
+    scan['moves'] = list(moves)
+
+    logger.info(f"HPF scan started: longitudinal, sensitivity={state['sensitivity']}")
+
+    return jsonify({
+        'status': 'success',
+        'sample': current_sample_name(),
+        'sample_number': 1,
+        'field_type': 'hpf',
+        'total_samples': 10,
+        'position': {'x': 0, 'y': 0, 'z': 0}
+    })
+
+@app.route('/stop', methods=['POST'])
+def stop_scan():
+    """Emergency stop: abort scan and return motors to home position."""
+    scan['active'] = False
+    scan['moves'] = []
+    scan['index'] = 0
+
+    homed = False
+    if is_initialized:
+        home_result = send_command("HOME", timeout=120)
+        if home_result:
+            send_command("ZERO", timeout=5)
+            homed = True
+            logger.info("Stop: motors returned to home position")
+        else:
+            logger.warning("Stop: HOME command failed")
+
+    logger.info("Scan stopped by user")
+    return jsonify({
+        'status': 'success',
+        'message': 'Scan stopped. Motors returned to home.' if homed else 'Scan stopped. Could not home motors.',
+        'homed': homed
+    })
+
+@app.route('/test_motors', methods=['POST'])
+def test_motors():
+    """Test each motor independently. Moves X then Y, then returns HOME.
+
+    Use this to verify both motors are wired and working correctly.
+    Optional body: {"steps": 500} to control how many steps each motor takes.
+    """
+    if not is_initialized and not initialize_arduino():
+        return jsonify({'status': 'error', 'message': 'Hardware not connected'}), 503
+
+    data = request.json or {}
+    units = float(data.get('units', 2.0))  # default 2.0 units = very visible movement
+
+    results = []
+
+    # Mark current position
+    send_command("ZERO", timeout=5)
+
+    # Test X motor: move right then back
+    logger.info(f"Testing X motor: {units} units")
+    x_result = send_command(f"MOVE {units},0")
+    results.append({'axis': 'X', 'direction': 'positive', 'ok': x_result is not None})
+
+    time.sleep(0.5)
+
+    x_back = send_command(f"MOVE {-units},0")
+    results.append({'axis': 'X', 'direction': 'return', 'ok': x_back is not None})
+
+    time.sleep(0.5)
+
+    # Test Y motor: move down then back
+    logger.info(f"Testing Y motor: {units} units")
+    y_result = send_command(f"MOVE 0,{units}")
+    results.append({'axis': 'Y', 'direction': 'positive', 'ok': y_result is not None})
+
+    time.sleep(0.5)
+
+    y_back = send_command(f"MOVE 0,{-units}")
+    results.append({'axis': 'Y', 'direction': 'return', 'ok': y_back is not None})
+
+    # Reset
+    send_command("ZERO", timeout=5)
+
+    x_ok = all(r['ok'] for r in results if r['axis'] == 'X')
+    y_ok = all(r['ok'] for r in results if r['axis'] == 'Y')
+
+    return jsonify({
+        'status': 'success',
+        'x_motor': 'working' if x_ok else 'FAILED',
+        'y_motor': 'working' if y_ok else 'FAILED',
+        'units_tested': units,
+        'details': results
+    })
 
 if __name__ == '__main__':
     initialize_arduino()

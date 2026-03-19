@@ -1,162 +1,136 @@
 /*
  * Stepper Motor Control for X and Y Axis
  * MicroView AI - Urinalysis System
- * 
- * Controls two stepper motors (e.g. ULN2003 + 28BYJ-48)
+ *
+ * Controls two stepper motors (ULN2003 + 28BYJ-48)
  * Y-axis: Pins 4, 5, 6, 7
  * X-axis: Pins 8, 9, 10, 11
+ *
+ * The Arduino is "dumb muscle" — it only moves motors.
+ * The Flask server is the "brain" — it calculates WHERE to move
+ * based on scan method and sensitivity.
+ *
+ * Serial Commands (9600 baud):
+ *   STATUS      → responds "OK"
+ *   HOME        → returns to origin (0,0), responds "STABLE_READY"
+ *   ZERO        → marks current position as origin (no movement), responds "STABLE_READY"
+ *   MOVE dx,dy  → relative move by dx,dy units, responds "STABLE_READY"
+ *
+ * All MOVE values are in "units". Converted to steps via UNITS_TO_STEPS.
+ * After every move, waits SETTLE_TIME_MS before responding — this
+ * prevents the camera from capturing while the stage is still vibrating.
  */
 
 #include <Stepper.h>
 
-// Motor configuration
-const int STEPS_PER_REVOLUTION = 2048; // Adjust based on your motor (2048 for 28BYJ-48)
+// === HARDWARE CONFIG ===
+// Different steps-per-revolution to compensate for hardware differences
+const int X_STEPS_PER_REV = 1024;  // X motor
+const int Y_STEPS_PER_REV = 512;  // Y motor (needs more steps for same travel)
+const int MOTOR_SPEED = 12;        // RPM (higher = faster, but may skip steps)
 
-// Speed in RPM
-const int MOTOR_SPEED = 10; 
+// Pin order for ULN2003 driver
+// X-axis: reversed (4-2-3-1) so first scan direction is counter-clockwise
+Stepper stepperX(X_STEPS_PER_REV, 11, 9, 10, 8);
+Stepper stepperY(Y_STEPS_PER_REV, 4, 6, 5, 7);
 
-// Stepper instances
-// Note: Sequence 1-3-2-4 (8, 10, 9, 11) is often required for ULN2003/28BYJ-48
-Stepper stepperX(STEPS_PER_REVOLUTION, 8, 10, 9, 11);
-Stepper stepperY(STEPS_PER_REVOLUTION, 4, 6, 5, 7);
+// === TUNING ===
+// How many motor steps per 1.0 "unit" from Flask (per axis).
+// These scale with each motor's steps-per-revolution so both axes
+// travel the same physical distance for the same unit value.
+const float X_UNITS_TO_STEPS = 200.0;  // 1 unit = 200 steps on X (1024 SPR)
+const float Y_UNITS_TO_STEPS = 400.0;  // 1 unit = 400 steps on Y (2048 SPR)
 
-// Position Tracking (in steps)
-long currentXSteps = 0;
-long currentYSteps = 0;
+// Settle time (ms) after each move completes.
+// This lets vibrations die down before the camera captures.
+const int SETTLE_TIME_MS = 600;
 
-// Conversion factor: Units (degrees/mm) to Steps
-// Adjust this based on your mechanical gear ratio
-const float UNITS_TO_STEPS = 400.0; 
-
-// Sample positions (in "units" matching motor_server.py logic)
-struct Position {
-  float x;
-  float y;
-};
-
-const float CENTER_X = 90.0;
-const float CENTER_Y = 90.0;
-
-Position samplePositions[] = {
-  {CENTER_X, CENTER_Y},            // Home (0)
-  {CENTER_X + 5, CENTER_Y + 5},    // lpf_1 (1)
-  {CENTER_X + 15, CENTER_Y + 5},   // lpf_2 (2)
-  {CENTER_X + 25, CENTER_Y + 5},   // lpf_3 (3)
-  {CENTER_X + 35, CENTER_Y + 5},   // lpf_4 (4)
-  {CENTER_X + 45, CENTER_Y + 5},   // lpf_5 (5)
-  {CENTER_X + 45, CENTER_Y + 15},  // lpf_6 (6) - Serpentine START (Right)
-  {CENTER_X + 35, CENTER_Y + 15},  // lpf_7 (7)
-  {CENTER_X + 25, CENTER_Y + 15},  // lpf_8 (8)
-  {CENTER_X + 15, CENTER_Y + 15},  // lpf_9 (9)
-  {CENTER_X + 5, CENTER_Y + 15},   // lpf_10 (10) - Serpentine END (Left)
-  {CENTER_X + 2, CENTER_Y + 2},    // hpf_1 (11)
-  {CENTER_X + 6, CENTER_Y + 2},    // hpf_2 (12)
-  {CENTER_X + 10, CENTER_Y + 2},   // hpf_3 (13)
-  {CENTER_X + 14, CENTER_Y + 2},   // hpf_4 (14)
-  {CENTER_X + 18, CENTER_Y + 2},   // hpf_5 (15)
-  {CENTER_X + 18, CENTER_Y + 6},   // hpf_6 (16) - Serpentine START (Right)
-  {CENTER_X + 14, CENTER_Y + 6},   // hpf_7 (17)
-  {CENTER_X + 10, CENTER_Y + 6},   // hpf_8 (18)
-  {CENTER_X + 6, CENTER_Y + 6},    // hpf_9 (19)
-  {CENTER_X + 2, CENTER_Y + 6}     // hpf_10 (20) - Serpentine END (Left)
-};
+// === STATE ===
+// Tracks accumulated steps from origin so HOME can return.
+long totalXSteps = 0;
+long totalYSteps = 0;
 
 void setup() {
   Serial.begin(9600);
-  
   stepperX.setSpeed(MOTOR_SPEED);
   stepperY.setSpeed(MOTOR_SPEED);
-  
+
   Serial.println("=== Stepper Control System Ready ===");
-  Serial.println("OK"); // Initial ready signal
+  Serial.println("OK");
 }
 
 void loop() {
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
     command.trim();
-    
-    if (command.startsWith("HOME")) {
-      moveToPosition(CENTER_X, CENTER_Y);
-      delay(200); // Mechanical settle time
+
+    if (command.startsWith("STATUS")) {
+      Serial.println("OK");
+    }
+    else if (command.startsWith("ZERO")) {
+      // Mark current physical position as origin — NO motor movement.
+      // Used when user manually positions stage at top-left before scanning.
+      totalXSteps = 0;
+      totalYSteps = 0;
       Serial.println("STABLE_READY");
-    } 
+    }
+    else if (command.startsWith("HOME")) {
+      // Physically return to origin by reversing all accumulated steps.
+      Serial.print("Returning to origin: X=");
+      Serial.print(-totalXSteps);
+      Serial.print(" Y=");
+      Serial.println(-totalYSteps);
+
+      doMove(-totalXSteps, -totalYSteps);
+      totalXSteps = 0;
+      totalYSteps = 0;
+
+      delay(SETTLE_TIME_MS);
+      Serial.println("STABLE_READY");
+    }
     else if (command.startsWith("MOVE ")) {
+      // Relative move: MOVE dx,dy (in units, converted to steps)
       int commaIndex = command.indexOf(',');
       if (commaIndex > 0) {
-        float tx = command.substring(5, commaIndex).toFloat();
-        float ty = command.substring(commaIndex + 1).toFloat();
-        moveToPosition(tx, ty);
-        delay(200); // Mechanical settle time
+        float dx = command.substring(5, commaIndex).toFloat();
+        float dy = command.substring(commaIndex + 1).toFloat();
+
+        long stepsX = (long)(dx * X_UNITS_TO_STEPS);
+        long stepsY = (long)(dy * Y_UNITS_TO_STEPS);
+
+        Serial.print("Move: dx=");
+        Serial.print(dx);
+        Serial.print(" dy=");
+        Serial.print(dy);
+        Serial.print(" (steps X=");
+        Serial.print(stepsX);
+        Serial.print(" Y=");
+        Serial.print(stepsY);
+        Serial.println(")");
+
+        doMove(stepsX, stepsY);
+        totalXSteps += stepsX;
+        totalYSteps += stepsY;
+
+        delay(SETTLE_TIME_MS);
         Serial.println("STABLE_READY");
       }
-    } 
-    else if (command.startsWith("STATUS")) {
-      Serial.println("OK"); // Respond to auto-detection
-    }
-    else if (command.startsWith("SAMPLE ")) {
-      String sampleName = command.substring(7);
-      sampleName.trim();
-      processSample(sampleName);
     }
   }
 }
 
-void moveToPosition(float targetXUnits, float targetYUnits) {
-  Serial.print("Target:"); Serial.print(targetXUnits); Serial.print(","); Serial.println(targetYUnits);
-  
-  long targetXSteps = (long)(targetXUnits * UNITS_TO_STEPS);
-  long targetYSteps = (long)(targetYUnits * UNITS_TO_STEPS);
-  
-  long diffX = targetXSteps - currentXSteps;
-  long diffY = targetYSteps - currentYSteps;
-  
-  if (diffX != 0) {
-    stepperX.step(diffX);
-    currentXSteps = targetXSteps;
+void doMove(long stepsX, long stepsY) {
+  if (stepsX != 0) {
+    stepperX.step(stepsX);
   }
-  
-  if (diffY != 0) {
-    stepperY.step(diffY);
-    currentYSteps = targetYSteps;
+  if (stepsY != 0) {
+    stepperY.step(stepsY);
   }
-  
-  // Power down pins after move to prevent overheating
-  digitalWrite(4, LOW); digitalWrite(5, LOW); digitalWrite(6, LOW); digitalWrite(7, LOW);
-  digitalWrite(8, LOW); digitalWrite(9, LOW); digitalWrite(10, LOW); digitalWrite(11, LOW);
-}
 
-void processSample(String name) {
-  name.toLowerCase();
-  int idx = -1;
-  
-  if (name == "lpf_1") idx = 1;
-  else if (name == "lpf_2") idx = 2;
-  else if (name == "lpf_3") idx = 3;
-  else if (name == "lpf_4") idx = 4;
-  else if (name == "lpf_5") idx = 5;
-  else if (name == "lpf_6") idx = 6;
-  else if (name == "lpf_7") idx = 7;
-  else if (name == "lpf_8") idx = 8;
-  else if (name == "lpf_9") idx = 9;
-  else if (name == "lpf_10") idx = 10;
-  else if (name == "hpf_1") idx = 11;
-  else if (name == "hpf_2") idx = 12;
-  else if (name == "hpf_3") idx = 13;
-  else if (name == "hpf_4") idx = 14;
-  else if (name == "hpf_5") idx = 15;
-  else if (name == "hpf_6") idx = 16;
-  else if (name == "hpf_7") idx = 17;
-  else if (name == "hpf_8") idx = 18;
-  else if (name == "hpf_9") idx = 19;
-  else if (name == "hpf_10") idx = 20;
-  else if (name == "home") idx = 0;
-  
-  if (idx != -1) {
-    moveToPosition(samplePositions[idx].x, samplePositions[idx].y);
-    delay(200); // Mechanical settle time
-    Serial.println("STABLE_READY");
-  } else {
-    Serial.println("ERROR: Invalid Sample");
-  }
+
+  // Power down all motor pins to prevent overheating
+  digitalWrite(4, LOW); digitalWrite(5, LOW);
+  digitalWrite(6, LOW); digitalWrite(7, LOW);
+  digitalWrite(8, LOW); digitalWrite(9, LOW);
+  digitalWrite(10, LOW); digitalWrite(11, LOW);
 }

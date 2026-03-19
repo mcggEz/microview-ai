@@ -24,6 +24,11 @@ function getFallbackGeminiKeys(request: NextRequest): string[] {
   return all.filter((k, i) => all.indexOf(k) === i)
 }
 
+function getGeminiModel(request: NextRequest): string {
+  const modelHeader = request.headers.get('x-gemini-model') || ''
+  return modelHeader.trim() || 'gemini-2.0-flash'
+}
+
 function isInvalidKeyError(error: unknown): boolean {
   const anyErr = error as any
   const status = anyErr?.status
@@ -167,18 +172,26 @@ ${Object.entries(yoloSummary.by_class)
 `
 
     // Create the enhanced prompt that incorporates YOLO results
-    const prompt = `You are acting as a board-certified medical laboratory technologist. Examine the supplied urine microscopy image thoroughly before responding.
+    const prompt = `You are acting as a board-certified Senior Medical Laboratory Scientist. Your task is to perform an ADVANCED CLASSIFICATION and VALIDATION of a urine microscopy image.
 
+### ANALYTICAL CONTEXT
+The YOLO detection model has provided a preliminary baseline (Stage 1). You are the Stage 2 "Final Arbiter."
 ${yoloDetectionsText}
 
-INSTRUCTIONS:
-1. The YOLO model has already detected and located specific sediment types in the image. Use these detections as a starting point for your analysis.
-2. Verify each YOLO detection by examining the corresponding region in the image. Confirm or correct the YOLO model's findings.
-3. Perform a systematic scan of the entire field of view: start in the upper left quadrant and inspect each area sequentially, moving left-to-right and top-to-bottom to ensure no region is skipped.
-4. Count every discrete structure that matches the sediment types listed below. Treat overlapping or clustered elements as separate counts when their borders are distinguishable.
-5. If the YOLO model detected items that you cannot confirm in the image, you may adjust the counts accordingly. However, if you see items the YOLO model missed, include them in your counts.
-6. Evaluate morphology, provide concise clinical notes, and classify status as "normal", "abnormal", or "critical" based strictly on laboratory relevance.
-7. Return the final answer as VALID JSON only, exactly matching the schema shown. Do not include commentary outside the JSON block.
+### CORE MISSION: STRENGTHEN THE ANALYSIS
+1. **RE-CLASSIFY & REFINE**: YOLO is prone to misidentifying debris as RBCs or Bubbles as Crystals. Your primary objective is to RE-CLASSIFY every artifact found. Do not simply trust the YOLO counts; improve them with your superior visual reasoning.
+2. **VERIFY DETECTIONS**: Treat the provided YOLO summary as "suspected" cases. Cross-reference them with the visual evidence. If you see high-probability sediments that YOLO missed, you MUST add them.
+3. **HIGH-PRECISION COUNTING**: Perform a methodical scan (raster pattern). Count with clinical precision. If a cluster is detected by YOLO as "1", but you see "3" distinct overlapping cells, update the count to "3".
+4. **MORPHOLOGICAL VALIDATION**: For every sediment type (RBC, WBC, Casts, etc.), look for specific structural markers:
+   - *RBCs*: Look for biconcave shadows or "ghost cells."
+   - *WBCs*: Look for granular cytoplasm and lobated nuclei.
+   - *Casts*: Look for distinct cylindrical borders; distinguish from simple mucus strands.
+5. **FINAL VERDICT**: If your findings contradict the YOLO model, YOUR analysis takes precedence. Provide the clinical rationale in the "notes" field for any significant changes you made.
+
+### OUTPUT REQUIREMENTS
+- Return valid JSON only. Exactly match the schema.
+- Classify status as "normal", "abnormal", or "critical".
+- Ensure counts are returned as strings (e.g. "0-2", "5", ">20").
 
 Use this JSON template (replace the example values with your findings):
 {
@@ -203,23 +216,7 @@ CLASS MAPPING FROM YOLO TO STANDARD TERMINOLOGY:
 - YOLO "cryst" → JSON "crystals"
 - YOLO "cast" → JSON "casts"
 - YOLO "mycete" → JSON "yeast"
-- Note: YOLO may not detect all sediment types (bacteria, mucus, sperm, parasites), so you must still examine the entire image.
-
-Guidance for recognition (use as visual references only):
-- RBC: small, round, biconcave cells, typically 6–8 μm
-- WBC: larger cells (10–15 μm) with prominent nuclei
-- Epithelial Cells: round or oval cells with nuclei; various sizes
-- Crystals: distinct crystal formations (e.g., calcium oxalate, uric acid) – count each crystal separately
-- Bacteria: tiny rod-shaped or spherical organisms (1–3 μm)
-- Yeast: oval or round fungal cells, often budding
-- Sperm: spermatozoa with head and tail structures
-- Parasites: parasitic organisms or eggs
-- Mucus: long, thin, translucent strands
-- Casts: cylindrical structures (hyaline, granular, cellular)
-- Squamous Epithelial: large, flat cells with irregular borders
-- Abnormal Crystals: unusual crystal forms (non-calcium oxalate standard)
-
-Ensure all numeric values remain strings as shown in the template.`
+- Note: YOLO may not detect all sediment types (bacteria, mucus, sperm, parasites), so you must still examine the entire image.`
 
     // Simple rate limiting / backoff before calling Gemini
     const throttle = isGeminiThrottled()
@@ -238,6 +235,8 @@ Ensure all numeric values remain strings as shown in the template.`
 
     // Call Gemini API (env key first, then client-provided fallback keys)
     const geminiKeys = getFallbackGeminiKeys(request)
+    const selectedModel = getGeminiModel(request)
+
     if (geminiKeys.length === 0) {
       return NextResponse.json(
         { error: 'Gemini API key not configured' },
@@ -257,9 +256,9 @@ Ensure all numeric values remain strings as shown in the template.`
     for (let i = 0; i < geminiKeys.length; i++) {
       const apiKey = geminiKeys[i]
       try {
-        console.log(`[Gemini] Using API key #${i + 1} for YOLO+Gemini pipeline`)
+        console.log(`[Gemini] Using API key #${i + 1} with model "${selectedModel}"`)
         const client = new GoogleGenerativeAI(apiKey)
-        const model = client.getGenerativeModel({ model: 'gemini-2.5-flash' })
+        const model = client.getGenerativeModel({ model: selectedModel })
         result = await model.generateContent([
           prompt,
           {
