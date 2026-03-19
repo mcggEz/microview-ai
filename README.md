@@ -39,13 +39,11 @@ flowchart TB
   subgraph Hardware Assembly
     ARD[Arduino Nano/Uno]
     STEP[Stepper Motors X/Y]
-    CAM[HDMI Camera Sensor]
-    CAP[HDMI Capture Card]
+    CAM[Microscope Camera Sensor]
     
     MOTOR <-->|Serial| ARD
     ARD -->|Pulses| STEP
-    CAM -->|HDMI| CAP
-    CAP -->|USB 3.0| UI
+    CAM -->|USB / CSI| UI
   end
 
   %% Data Flow
@@ -73,8 +71,7 @@ flowchart LR
     SENSOR[Camera Sensor]
   end
 
-  SENSOR -->|HDMI| CAP[HDMI Capture Card]
-  CAP -->|USB| RPI[Raspberry Pi / Laptop]
+  SENSOR -->|USB / CSI| RPI[Raspberry Pi / Laptop]
 
   RPI -->|USB/Serial| ARD[Arduino]
   ARD -->|Pins 4-11| STEP[Stepper Motors]
