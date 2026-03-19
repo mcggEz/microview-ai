@@ -13813,3 +13813,16 @@
 2026-03-18 21:50:19,277 - INFO - Arduino: STABLE_READY
 2026-03-18 21:50:19,278 - INFO - 127.0.0.1 - - [18/Mar/2026 21:50:19] "POST /next_sample HTTP/1.1" 200 -
 2026-03-18 21:50:19,789 - INFO - 127.0.0.1 - - [18/Mar/2026 21:50:19] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 19:40:38,241 - INFO - Loaded sensitivity: 1.0
+2026-03-19 19:40:38,273 - INFO - Scanning 1 serial ports (Bluetooth excluded)...
+2026-03-19 19:40:38,273 - INFO - Trying port COM6 (Arduino Uno (COM6))...
+2026-03-19 19:40:41,288 - INFO -   Boot messages: ['Stepper Motor Test Starting...', 'Stepper 1 -> Counter Clockwise']
+2026-03-19 19:40:43,904 - INFO -   STATUS response: 'Stepper 1 -> Clockwise'
+2026-03-19 19:40:43,905 - WARNING - Arduino initialization failed — no device found
+2026-03-19 19:40:43,982 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.4:3001
+2026-03-19 19:40:43,982 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-19 19:40:51,217 - INFO - 127.0.0.1 - - [19/Mar/2026 19:40:51] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 19:40:51,241 - INFO - 127.0.0.1 - - [19/Mar/2026 19:40:51] "GET /get_config HTTP/1.1" 200 -

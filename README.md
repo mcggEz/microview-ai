@@ -17,72 +17,77 @@ This research contributes to the advancement of accessible medical diagnostics a
 ## 🏗️ System Architecture
 
 ```mermaid
-flowchart LR
-  U[User or Lab Technician] -->|uses| UI[Web App - Next.js and React]
+flowchart TB
+  subgraph Cloud Services
+    DB[(Supabase DB)]
+    ST[(Supabase Storage)]
+    VLM[Google Gemini VLM]
+  end
 
-  UI -->|auth| AUTH[Traditional Auth - med_tech table]
-  UI -->|CRUD| DB[(Supabase Database)]
-  UI -->|files| ST[(Supabase Storage)]
-  UI -->|analysis| VLM[Google Gemini VLM]
+  subgraph Local Workstation [Raspberry Pi / Laptop]
+    UI[Next.js Web App]
+    
+    subgraph Microservices
+      YOLO[YOLO v11 Backend - FastAPI]
+      MOTOR[Motor Server - Flask]
+    end
+    
+    UI <-->|Control & Capture| YOLO
+    UI <-->|Scan Commands| MOTOR
+  end
 
-  CAM[Raspberry Pi Camera] --> CAP[Image Capture]
-  CAP --> PREP[Quality check: crop, denoise, normalize]
-  PREP --> UP{Upload via Web App}
-  UP --> ST
-  ST --> UI
+  subgraph Hardware Assembly
+    ARD[Arduino Nano/Uno]
+    STEP[Stepper Motors X/Y]
+    CAM[HDMI Camera Sensor]
+    CAP[HDMI Capture Card]
+    
+    MOTOR <-->|Serial| ARD
+    ARD -->|Pulses| STEP
+    CAM -->|HDMI| CAP
+    CAP -->|USB 3.0| UI
+  end
 
-  VLM --> ANA[Reasoning and Findings]
-  ANA --> EXP[Explanations and Recommendations]
-
-  EXP --> UI
-  UI --> REP[Reports and Visualization]
-  UI --> AUD[Audit Logs and Traceability]
-
-  REP --> DB
-  AUD --> DB
-  AUTH --> DB
+  %% Data Flow
+  UI -->|Auth & Logs| DB
+  UI -->|Save Captures| ST
+  UI -->|Reasoning| VLM
 ```
 
-### Frontend Stack
-- **Next.js 15.5.0** - React framework with App Router
-- **React 19.1.0** - Modern React with concurrent features
-- **TypeScript** - Type-safe development
-- **Tailwind CSS** - Utility-first CSS framework
+### Software Stack
+- **Frontend**: **Next.js 15** (React 19, TypeScript, Tailwind) - Central orchestrator and UI.
+- **AI Backend**: **FastAPI (`mv-backend1-yolo`)** - Runs **YOLO v11** for real-time urine sediment detection.
+- **Hardware Backend**: **Flask (`mv-backend2-motor`)** - Manages automated stage movement via serial communication.
+- **Database & Storage**: **Supabase** - Handles authentication, patient reports, and image archival.
+- **Clinical Insight**: **Google Gemini 2.0** - Large Vision-Language Model for generating detailed urinalysis reports based on scan findings.
 
-
-### Backend & Services
-- **Supabase** - Backend-as-a-Service for database, storage, and traditional table-based authentication
-- **Google Gemini AI** - Large Language Model for image analysis and urinalysis interpretation
-- **Traditional Authentication** - Email/password authentication using `med_tech` table with bcrypt password hashing
-- **`mv-backend1-yolo`** - FastAPI microservice exposing the YOLO v11 urine sediment detection model as a pure API (default port `7860`); see `mv-backend1-yolo/README.md` for details.
-- **`mv-backend2-motor`** - Flask-based motor control server for automated sample positioning and microscope movement (default port `3001`), used by the web app to coordinate LPF/HPF field capture.
-
+---
 
 ## 🔌 Hardware Setup Overview
 
 ```mermaid
-flowchart TB
-  subgraph Microscope Assembly
-    MICRO[Compound Microscope]
-    CAM[Digital Camera Sensor]
-    MICRO -- Optical coupling --> CAM
+flowchart LR
+  subgraph Microscope
+    SCOPE[Compound Microscope]
+    STAGE[Automated X/Y Stage]
+    SENSOR[Camera Sensor]
   end
 
-  CAM -->|HDMI cable| CAP[HDMI Capture Card]
-  CAP -->|USB 3.0| PI[Raspberry Pi]
+  SENSOR -->|HDMI| CAP[HDMI Capture Card]
+  CAP -->|USB| RPI[Raspberry Pi / Laptop]
 
-  PI -->|HDMI cable| MON[External Monitor]
-  PI -->|USB| KEYB[USB Keyboard]
-  PI -->|USB cable or 2.4 GHz dongle| MOUSE[Mouse]
-  PI -->|Wi-Fi / Ethernet| NET[(Local Network)]
-  PI -->|5V PSU| POWER[Dedicated Power Supply]
+  RPI -->|USB/Serial| ARD[Arduino]
+  ARD -->|Pins 4-11| STEP[Stepper Motors]
+  STEP -.->|Mechanical Drive| STAGE
+
+  RPI -->|UI| MON[Monitor]
 ```
 
-- **Raspberry Pi workstation**: Runs the web application and handles image ingestion from the HDMI capture card; powered by a dedicated 5 V supply.
-- **Microscope + camera sensor**: The camera sensor is mounted on the microscope eyepiece; its HDMI feed is routed through the capture card before reaching the Raspberry Pi.
-- **Display**: External monitor connected via standard HDMI cable for the lab technician interface.
-- **Input devices**: USB keyboard plus a wired mouse (or a mouse connected through a 2.4 GHz dongle) for direct control; no servo motors or automated stages are used.
-- **Connectivity**: Raspberry Pi links to the broader network over Wi-Fi or Ethernet for Supabase access and Gemini API requests.
+### Key Hardware Components
+- **Microscope Automation**: Driven by **28BYJ-48 Stepper Motors** with **ULN2003 drivers**, controlled via an Arduino to enable precise serpentine scanning (LPF/HPF).
+- **Imaging System**: A high-definition camera sensor mounted on the microscope eyepiece; its feed is ingested by the Raspberry Pi through an HDMI capture card for processing in the Web App.
+- **Control Unit**: A **Raspberry Pi** (or Laptop) running the local microservices and the web interface, providing a unified console for the lab technician.
+- **Precision Scanning**: Includes a **600ms settle time** after each mechanical move to ensure zero vibration during image capture.
 
 
 *This document serves as the comprehensive academic record of the undergraduate thesis project in Bachelor of Science in Computer Engineering at Pamantasang ng Lungsod ng Maynila, focusing on the development and validation of a cost-effective, Raspberry Pi–based augmentative system enhanced with Vision-Language Models for urine microscopy analysis.*
