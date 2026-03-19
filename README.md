@@ -94,41 +94,48 @@ flowchart LR
 ### 1. Image Acquisition Process
 ```mermaid
 flowchart TD
-    Start([START]) --> GetSample[User clicks 'Get Sample']
-    GetSample --> Init[Initialize System<br/>Raspberry Pi, Arduino, Camera]
-    Init --> SetCounter[Set Image Counter = 1]
+    Start([START]) --> UserInit[User Initiates Scan Session]
+    UserInit --> MotorZero[Zero Motors & Generate Serpentine Scan Path]
+    MotorZero --> PhaseDecision[Set Objective Phase:<br/>First LPF 10x, then HPF 40x]
     
-    SetCounter --> IfCounter{Is Counter ≤ 10?}
+    PhaseDecision --> SampleLoop{Capture 10 Samples<br/>Per Phase}
     
-    IfCounter -->|NO| Proceed[Proceed to Image Processing]
+    SampleLoop -->|Next Move| MoveStage[Arduino Moves Stepper Motors X-Y]
+    MoveStage --> AutoCapture[Camera Captures Image]
     
-    IfCounter -->|YES| MoveStage[Move Stage X-Y using Stepper Motors]
-    MoveStage --> CaptureImg[Capture Image from Digital Microscope]
-    CaptureImg --> IfClear{Is image clear?}
+    AutoCapture --> IfClear{MedTech verifies<br/>image clarity}
+    IfClear -->|NO| Adjust[Manual Focus Adjustment & Retake]
+    Adjust --> AutoCapture
     
-    IfClear -->|NO| Adjust[Adjust / Re-capture Image]
-    Adjust --> CaptureImg
+    IfClear -->|YES| Save[Save Image to Supabase Storage]
+    Save --> SampleLoop
     
-    IfClear -->|YES| SaveImg[Save Image to Raspberry Pi / Supabase]
-    SaveImg --> IncCounter[Counter = Counter + 1]
-    IncCounter --> IfCounter
+    SampleLoop -->|Phase Complete| CheckPhase{Is HPF Phase<br/>Complete?}
+    CheckPhase -->|NO| SwitchObj[Prompt MedTech to switch to 40x Objective<br/>& Return Motors to Origin]
+    SwitchObj --> SampleLoop
+    
+    CheckPhase -->|YES| Proceed([Proceed to AI Analysis])
 ```
 
 ### 2. AI Analysis & Reporting Process
 ```mermaid
 flowchart TD
-    Preprocess[Image Pre-processing] --> RunYOLO[Run YOLO for Sediment Detection]
-    RunYOLO --> IfSediment{Are sediments detected?}
+    Start([Proceed from Image Acquisition]) --> SendFastAPI[Send Images to FastAPI YOLO Backend]
+    SendFastAPI --> YoloDetect[YOLOv11 Scans Images<br/>Locates & Classifies Sediments]
     
-    IfSediment -->|NO| TagNormal[Tag as Normal Sample]
-    TagNormal --> GenReport[Generate Digital Report]
+    YoloDetect --> AnyDetected{Are sediments<br/>detected?}
     
-    IfSediment -->|YES| SendGemini[Send Results to Gemini for Interpretation]
-    SendGemini --> GenReport
+    AnyDetected -->|NO| TagNormal[Tag as Normal Sample]
+    TagNormal --> GenReport
     
-    GenReport --> Store[Store Results in Supabase]
-    Store --> Display[Display Results to MedTech]
-    Display --> End([END])
+    AnyDetected -->|YES| CropImages[Next.js App Crops Detected Bounding Boxes]
+    CropImages --> SendGemini[Send YOLO Data & Cropped Images to Gemini Vision]
+    SendGemini --> GeminiAnalyse[Google Gemini Performs<br/>Clinical Verification & Contextualization]
+    GeminiAnalyse --> GenReport[Compile Findings into Urinalysis Digital Report]
+    
+    GenReport --> SaveDB[Store Final Report Data in Supabase]
+    SaveDB --> Review[Display Interactive Report to MedTech for Approval]
+    Review --> End([END])
 ```
 
 ---
