@@ -142,33 +142,48 @@ flowchart TD
 
 ## 📖 User Manual: Step-by-Step Guide
 
-#### Step 1: Login to the System
-1. Open the MicroView AI web application on your computer or tablet.
-2. Enter your secure lab technician credentials.
-> 💡 **Tip:** Ensure your microscope and control box are powered on before logging in!
+### 🛠️ Part 1: Hardware Setup
+*A guide to getting the physical microscope and system ready.*
 
-#### Step 2: Register a Patient & Test
-1. Navigate to the **Dashboard**.
-2. Click **"+ New Patient"** or select an existing patient.
-3. Enter patient details (Name, Age, Gender).
-4. A unique `Test Code` will be automatically generated for the session.
+#### Step 1: Powering On
+1. **Plug in the Control Box**: Connect the automated motor control box to a power outlet.
+2. **Connect to the System**: Plug the USB cable from the control box into your main computer (Raspberry Pi or Laptop).
+3. **Turn on the Microscope**: Switch on your compound microscope and adjust the light source until it is bright enough to clearly see a slide.
+4. **Attach the Camera**: Carefully insert the digital camera sensor into the microscope's eyepiece tube, then plug its USB cable into your computer.
 
-#### Step 3: Start Image Acquisition
-1. Place the prepared urine sample slide carefully onto the microscope stage.
-2. Focus the microscope manually until the view is clear.
-3. On the web app, click **"Start Auto-Scan"**.
-4. 🛑 **Do not touch the microscope** while the stage is moving. The system will automatically capture multiple images in a grid pattern.
+#### Step 2: Preparing the Stage
+1. Ensure the automated microscope stage is clear of any obstacles.
+2. Gently place your prepared urine sample slide securely onto the clips of the automated stage.
+3. Turn the microscope's objective lens to **10x (Low Power Field - LPF)** to prepare for the first scan.
 
-#### Step 4: AI Analysis
-1. Once capturing is complete, the images will appear on your screen.
-2. Click **"Run AI Analysis"**.
-3. The system will detect particles (like Red Blood Cells, White Blood Cells, etc.) automatically.
-4. Wait a few moments for the Gemini AI to finalize the interpretations.
+---
 
-#### Step 5: Review and Approve
-1. Read through the generated urinalysis report.
-2. Verify the AI's findings against the captured images provided on the screen.
-3. Click **"Approve & Finalize"** to save the report to the database. You can now print or share the results!
+### 💻 Part 2: Software Usage
+*A guide to using the MicroView AI application to scan and diagnose.*
+
+#### Step 1: Login & Register Patient
+1. Open the **MicroView AI** web application on your computer monitor.
+2. Enter your secure lab technician credentials to log in.
+3. On the main Dashboard, click **"+ New Patient"**. Enter the patient's Name, Age, and Gender. 
+4. A unique tracking `Test Code` will be automatically generated for this session.
+
+#### Step 2: Running the 10x (LPF) Scan
+1. Look at your computer screen to view the live camera feed coming from the microscope.
+2. Carefully adjust the microscope's focus knob by hand until the image of the urine sample is crisp and clear.
+3. Click the **"Start Auto-Scan"** button.
+4. 🛑 **Hands Off!** The system will automatically move the slide and take 10 clear pictures. Please do not touch the microscope while the motors are moving.
+
+#### Step 3: Running the 40x (HPF) Scan
+1. Once the first scanning phase is done, the system will prompt you on-screen.
+2. Manually rotate the microscope lens to the **40x (High Power Field - HPF)** objective. 
+3. Re-adjust the fine focus knob until the high-magnification image is perfectly sharp.
+4. Click **"Continue"** on the screen. The stage will automatically return to the start and capture 10 highly-magnified pictures.
+
+#### Step 4: AI Analysis & Final Report
+1. After all pictures are successfully captured, click **"Run AI Analysis"**.
+2. The AI will automatically search for and detect particles like Red Blood Cells, White Blood Cells, and crystals.
+3. **Gemini AI** will then compile these findings into a readable clinical report.
+4. **Approve & Finalize:** Read through the generated report on your screen. Verify the AI's findings against the captured images, click approve, and print the results for the patient or doctor!
 
 ---
 
