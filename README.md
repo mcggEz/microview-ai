@@ -91,39 +91,45 @@ flowchart LR
 
 ## 🧑‍⚕️ For Non-Technical Users: How It Works
 
-### 1. Image Acquisition (Getting the Pictures)
+### 1. Image Acquisition Process
 ```mermaid
-flowchart LR
-    A["🧪 Prepare Sample"] --> B["🔬 Place on Microscope"]
-    B --> C["🤖 Auto-Scan & Capture"]
-    C --> D["💾 Save Securely"]
+flowchart TD
+    Start([START]) --> GetSample[User clicks "Get Sample"]
+    GetSample --> Init[Initialize System<br/>Raspberry Pi, Arduino, Camera]
+    Init --> SetCounter[Set Image Counter = 1]
     
-    style A fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#000
-    style B fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#000
-    style C fill:#fce7f3,stroke:#db2777,stroke-width:2px,color:#000
-    style D fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#000
+    SetCounter --> IfCounter{Is Counter ≤ 10?}
+    
+    IfCounter -- "NO" --> Proceed[Proceed to Image Processing]
+    
+    IfCounter -- "YES" --> MoveStage[Move Stage X-Y using Stepper Motors]
+    MoveStage --> CaptureImg[Capture Image from Digital Microscope]
+    CaptureImg --> IfClear{Is image clear?}
+    
+    IfClear -- "NO" --> Adjust[Adjust / Re-capture Image]
+    Adjust --> CaptureImg
+    
+    IfClear -- "YES" --> SaveImg[Save Image to Raspberry Pi / Supabase]
+    SaveImg --> IncCounter[Counter = Counter + 1]
+    IncCounter --> IfCounter
 ```
-* **Prepare Sample**: A standard urine sample is placed on a glass slide.
-* **Place on Microscope**: The slide is inserted into our automated microscope.
-* **Auto-Scan & Capture**: The system automatically moves the slide and takes highly-magnified, clear photos of the sample.
-* **Save Securely**: The images are securely saved within the patient's record.
 
-### 2. AI Analysis & Reporting (Understanding the Results)
+### 2. AI Analysis & Reporting Process
 ```mermaid
-flowchart LR
-    A["📸 Saved Images"] --> B["🧠 AI Detection"]
-    B --> C["🤖 Gemini AI Analysis"]
-    C --> D["📄 Generate Report"]
+flowchart TD
+    Preprocess[Image Pre-processing] --> RunYOLO[Run YOLO for Sediment Detection]
+    RunYOLO --> IfSediment{Are sediments detected?}
     
-    style A fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#000
-    style B fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#000
-    style C fill:#fef08a,stroke:#ca8a04,stroke-width:2px,color:#000
-    style D fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#000
+    IfSediment -- "NO" --> TagNormal[Tag as Normal Sample]
+    TagNormal --> GenReport[Generate Digital Report]
+    
+    IfSediment -- "YES" --> SendGemini[Send Results to Gemini for Interpretation]
+    SendGemini --> GenReport
+    
+    GenReport --> Store[Store Results in Supabase]
+    Store --> Display[Display Results to MedTech]
+    Display --> End([END])
 ```
-* **Saved Images**: The high-resolution images are sent to the AI.
-* **AI Detection**: The system identifies specific cells, crystals, and particles in the urine.
-* **Gemini AI Analysis**: A medical-grade AI reviews the findings to provide clinical context and explanations.
-* **Generate Report**: A simple, readable report is printed or shown to the healthcare professional for final approval.
 
 ---
 
