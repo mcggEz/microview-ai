@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,9 +72,10 @@ export default function SettingsPage() {
     fetchMotorConfig();
   }, []);
 
-  const fetchMotorConfig = async () => {
+  const fetchMotorConfig = async (overrideUrl?: string) => {
+    const baseUrl = overrideUrl || motorUrl;
     try {
-      const res = await fetch(`${getMotorServerUrl()}/get_config`);
+      const res = await fetch(`${baseUrl}/get_config`);
       if (res.ok) {
         const data = await res.json();
         setSensitivity(data.sensitivity || 1.0);
@@ -97,7 +98,7 @@ export default function SettingsPage() {
     // Always save locally so the value persists even without server
     localStorage.setItem("MICROVIEW_MOTOR_SENSITIVITY", String(sensitivity));
     try {
-      const res = await fetch(`${getMotorServerUrl()}/update_config`, {
+      const res = await fetch(`${motorUrl}/update_config`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sensitivity })
@@ -122,11 +123,11 @@ export default function SettingsPage() {
     }
   };
 
-  const manualMove = async (axis: "x" | "y", direction: 1 | -1) => {
+  const manualMove = useCallback(async (axis: "x" | "y", direction: 1 | -1) => {
     setIsMoving(true);
     setMoveStatus(null);
     try {
-      const res = await fetch(`${getMotorServerUrl()}/manual_move`, {
+      const res = await fetch(`${motorUrl}/manual_move`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ axis, units: manualStep * direction }),
@@ -145,13 +146,13 @@ export default function SettingsPage() {
       setIsMoving(false);
       setTimeout(() => setMoveStatus(null), 2000);
     }
-  };
+  }, [motorUrl, manualStep]);
 
-  const manualHome = async () => {
+  const manualHome = useCallback(async () => {
     setIsMoving(true);
     setMoveStatus(null);
     try {
-      const res = await fetch(`${getMotorServerUrl()}/manual_home`, { method: "POST" });
+      const res = await fetch(`${motorUrl}/manual_home`, { method: "POST" });
       if (res.ok) {
         setMoveStatus({ type: "success", msg: "Motors returned home" });
         setIsConnected(true);
@@ -165,14 +166,13 @@ export default function SettingsPage() {
       setIsMoving(false);
       setTimeout(() => setMoveStatus(null), 2000);
     }
-  };
+  }, [motorUrl]);
 
-  const manualZero = async () => {
+  const manualZero = useCallback(async () => {
     setIsMoving(true);
     setMoveStatus(null);
     try {
-      // We'll call the initialize endpoint then send a zero via test_motors-style
-      const res = await fetch(`${getMotorServerUrl()}/manual_zero`, { method: "POST" });
+      const res = await fetch(`${motorUrl}/manual_zero`, { method: "POST" });
       if (res.ok) {
         setMoveStatus({ type: "success", msg: "Origin set to current position" });
         setIsConnected(true);
@@ -186,7 +186,60 @@ export default function SettingsPage() {
       setIsMoving(false);
       setTimeout(() => setMoveStatus(null), 2000);
     }
-  };
+  }, [motorUrl]);
+
+  // Keyboard shortcuts for manual control
+  useEffect(() => {
+    if (!isConnected) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input field
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      if (isMoving) return;
+
+      switch (e.key.toLowerCase()) {
+        case "arrowup":
+        case "w":
+          e.preventDefault();
+          manualMove("y", -1);
+          break;
+        case "arrowdown":
+        case "s":
+          e.preventDefault();
+          manualMove("y", 1);
+          break;
+        case "arrowleft":
+        case "a":
+          e.preventDefault();
+          manualMove("x", -1);
+          break;
+        case "arrowright":
+        case "d":
+          e.preventDefault();
+          manualMove("x", 1);
+          break;
+        case "h":
+          manualHome();
+          break;
+        case "z":
+          manualZero();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isConnected, isMoving, manualMove, manualHome, manualZero]);
 
   const cleanedKeys = useMemo(
     () =>
@@ -427,7 +480,7 @@ export default function SettingsPage() {
               onClick={() => {
                 localStorage.setItem(MOTOR_SERVER_URL_STORAGE_KEY, motorUrl);
                 setSavedAt(Date.now());
-                fetchMotorConfig();
+                fetchMotorConfig(motorUrl);
               }}
             >
               Update URL
@@ -458,7 +511,7 @@ export default function SettingsPage() {
               <Button
                 variant="outline"
                 className="ml-auto h-7 px-2 text-[10px] rounded-md border-amber-300 text-amber-700 hover:bg-amber-100"
-                onClick={fetchMotorConfig}
+                onClick={() => fetchMotorConfig()}
               >
                 <RefreshCw className="h-3 w-3 mr-1" />
                 Retry
