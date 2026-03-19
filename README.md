@@ -94,22 +94,22 @@ flowchart LR
 ### 1. Image Acquisition Process
 ```mermaid
 flowchart TD
-    Start([START]) --> GetSample[User clicks "Get Sample"]
+    Start([START]) --> GetSample[User clicks 'Get Sample']
     GetSample --> Init[Initialize System<br/>Raspberry Pi, Arduino, Camera]
     Init --> SetCounter[Set Image Counter = 1]
     
     SetCounter --> IfCounter{Is Counter ≤ 10?}
     
-    IfCounter -- "NO" --> Proceed[Proceed to Image Processing]
+    IfCounter -->|NO| Proceed[Proceed to Image Processing]
     
-    IfCounter -- "YES" --> MoveStage[Move Stage X-Y using Stepper Motors]
+    IfCounter -->|YES| MoveStage[Move Stage X-Y using Stepper Motors]
     MoveStage --> CaptureImg[Capture Image from Digital Microscope]
     CaptureImg --> IfClear{Is image clear?}
     
-    IfClear -- "NO" --> Adjust[Adjust / Re-capture Image]
+    IfClear -->|NO| Adjust[Adjust / Re-capture Image]
     Adjust --> CaptureImg
     
-    IfClear -- "YES" --> SaveImg[Save Image to Raspberry Pi / Supabase]
+    IfClear -->|YES| SaveImg[Save Image to Raspberry Pi / Supabase]
     SaveImg --> IncCounter[Counter = Counter + 1]
     IncCounter --> IfCounter
 ```
@@ -120,10 +120,10 @@ flowchart TD
     Preprocess[Image Pre-processing] --> RunYOLO[Run YOLO for Sediment Detection]
     RunYOLO --> IfSediment{Are sediments detected?}
     
-    IfSediment -- "NO" --> TagNormal[Tag as Normal Sample]
+    IfSediment -->|NO| TagNormal[Tag as Normal Sample]
     TagNormal --> GenReport[Generate Digital Report]
     
-    IfSediment -- "YES" --> SendGemini[Send Results to Gemini for Interpretation]
+    IfSediment -->|YES| SendGemini[Send Results to Gemini for Interpretation]
     SendGemini --> GenReport
     
     GenReport --> Store[Store Results in Supabase]
