@@ -401,6 +401,62 @@ def stop_scan():
         'homed': homed
     })
 
+@app.route('/manual_zero', methods=['POST'])
+def manual_zero():
+    """Mark the current position as the new origin (no movement)."""
+    if not is_initialized and not initialize_arduino():
+        return jsonify({'status': 'error', 'message': 'Hardware not connected'}), 503
+
+    result = send_command("ZERO", timeout=5)
+    if result:
+        logger.info("Manual ZERO: origin set to current position")
+        return jsonify({'status': 'success', 'message': 'Origin set'})
+    return jsonify({'status': 'error', 'message': 'ZERO command failed'}), 500
+
+@app.route('/manual_home', methods=['POST'])
+def manual_home():
+    """Return motors to the origin position."""
+    if not is_initialized and not initialize_arduino():
+        return jsonify({'status': 'error', 'message': 'Hardware not connected'}), 503
+
+    result = send_command("HOME", timeout=120)
+    if result:
+        send_command("ZERO", timeout=5)
+        logger.info("Manual HOME: motors returned to origin")
+        return jsonify({'status': 'success', 'message': 'Returned to origin'})
+    return jsonify({'status': 'error', 'message': 'HOME command failed'}), 500
+
+@app.route('/manual_move', methods=['POST'])
+def manual_move():
+    """Manually move a single axis by a specified amount.
+
+    Body: {"axis": "x"|"y", "units": float}
+    Positive units = right (X) or down (Y). Negative = opposite.
+    """
+    if not is_initialized and not initialize_arduino():
+        return jsonify({'status': 'error', 'message': 'Hardware not connected'}), 503
+
+    data = request.json or {}
+    axis = data.get('axis', '').lower()
+    units = float(data.get('units', 0))
+
+    if axis not in ('x', 'y'):
+        return jsonify({'status': 'error', 'message': 'axis must be "x" or "y"'}), 400
+    if units == 0:
+        return jsonify({'status': 'error', 'message': 'units must be non-zero'}), 400
+
+    if axis == 'x':
+        dx, dy = units, 0
+    else:
+        dx, dy = 0, units
+
+    logger.info(f"Manual move: axis={axis}, units={units}")
+    result = move_relative(dx, dy)
+
+    if result:
+        return jsonify({'status': 'success', 'axis': axis, 'units': units})
+    return jsonify({'status': 'error', 'message': f'Motor did not respond'}), 500
+
 @app.route('/test_motors', methods=['POST'])
 def test_motors():
     """Test each motor independently. Moves X then Y, then returns HOME.

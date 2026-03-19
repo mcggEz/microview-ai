@@ -91,7 +91,7 @@ def generate_scan_moves(sensitivity):
     moves.append((0, S))
     for _ in range(4):
         moves.append((S, 0))
-        return moves
+    return moves
 
 def current_sample_name():
     if not scan['active']:
@@ -257,7 +257,7 @@ def get_samples():
     scan['index'] = 1
     scan['moves'] = list(moves)
 
-    logger.info(f"Scan started: method={method}, sensitivity={state['sensitivity']}")
+    logger.info(f"Scan started: longitudinal, sensitivity={state['sensitivity']}, field=lpf")
 
     return jsonify({
         'status': 'success', 'sample': current_sample_name(),

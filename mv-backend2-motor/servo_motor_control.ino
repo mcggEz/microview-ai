@@ -26,7 +26,7 @@
 // === HARDWARE CONFIG ===
 // Different steps-per-revolution to compensate for hardware differences
 const int X_STEPS_PER_REV = 1024;  // X motor
-const int Y_STEPS_PER_REV = 512;  // Y motor (needs more steps for same travel)
+const int Y_STEPS_PER_REV = 1024;  // Y motor (needs more steps for same travel)
 const int MOTOR_SPEED = 12;        // RPM (higher = faster, but may skip steps)
 
 // Pin order for ULN2003 driver

@@ -13826,3 +13826,696 @@
 2026-03-19 19:40:43,982 - INFO - [33mPress CTRL+C to quit[0m
 2026-03-19 19:40:51,217 - INFO - 127.0.0.1 - - [19/Mar/2026 19:40:51] "GET /get_config HTTP/1.1" 200 -
 2026-03-19 19:40:51,241 - INFO - 127.0.0.1 - - [19/Mar/2026 19:40:51] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 19:55:14,306 - INFO - 127.0.0.1 - - [19/Mar/2026 19:55:14] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 19:55:19,957 - INFO - 127.0.0.1 - - [19/Mar/2026 19:55:19] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 19:55:19,981 - INFO - Scanning 1 serial ports (Bluetooth excluded)...
+2026-03-19 19:55:19,981 - INFO - Trying port COM6 (Arduino Uno (COM6))...
+2026-03-19 19:55:22,990 - INFO -   Boot messages: ['Stepper Motor Test Starting...', 'Stepper 1 -> Counter Clockwise']
+2026-03-19 19:55:25,618 - INFO -   STATUS response: 'Stepper 1 -> Clockwise'
+2026-03-19 19:55:25,630 - WARNING - Arduino initialization failed — no device found
+2026-03-19 19:55:25,631 - INFO - 127.0.0.1 - - [19/Mar/2026 19:55:25] "[35m[1mPOST /get_samples HTTP/1.1[0m" 503 -
+2026-03-19 19:55:35,789 - INFO - Loaded sensitivity: 1.0
+2026-03-19 19:55:35,798 - INFO - Scanning 1 serial ports (Bluetooth excluded)...
+2026-03-19 19:55:35,798 - INFO - Trying port COM6 (Arduino Uno (COM6))...
+2026-03-19 19:55:38,813 - INFO -   Boot messages: ['Stepper Motor Test Starting...', 'Stepper 1 -> Counter Clockwise']
+2026-03-19 19:55:41,436 - INFO -   STATUS response: 'Stepper 1 -> Clockwise'
+2026-03-19 19:55:41,437 - WARNING - Arduino initialization failed — no device found
+2026-03-19 19:55:41,467 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.4:3001
+2026-03-19 19:55:41,467 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-19 19:56:19,726 - INFO - 127.0.0.1 - - [19/Mar/2026 19:56:19] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 19:56:19,734 - INFO - Scanning 1 serial ports (Bluetooth excluded)...
+2026-03-19 19:56:19,734 - INFO - Trying port COM6 (Arduino Uno (COM6))...
+2026-03-19 19:56:22,739 - INFO -   Boot messages: ['Stepper Motor Test Starting...', 'Stepper 1 -> Counter Clockwise']
+2026-03-19 19:56:25,367 - INFO -   STATUS response: 'Stepper 1 -> Clockwise'
+2026-03-19 19:56:25,368 - WARNING - Arduino initialization failed — no device found
+2026-03-19 19:56:25,369 - INFO - 127.0.0.1 - - [19/Mar/2026 19:56:25] "[35m[1mPOST /get_samples HTTP/1.1[0m" 503 -
+2026-03-19 19:56:36,836 - INFO - 127.0.0.1 - - [19/Mar/2026 19:56:36] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 19:56:36,861 - INFO - Scanning 1 serial ports (Bluetooth excluded)...
+2026-03-19 19:56:36,862 - INFO - Trying port COM6 (Arduino Uno (COM6))...
+2026-03-19 19:56:39,874 - INFO -   Boot messages: ['Stepper Motor Test Starting...', 'Stepper 1 -> Counter Clockwise']
+2026-03-19 19:56:42,496 - INFO -   STATUS response: 'Stepper 1 -> Clockwise'
+2026-03-19 19:56:42,496 - WARNING - Arduino initialization failed — no device found
+2026-03-19 19:56:42,497 - INFO - 127.0.0.1 - - [19/Mar/2026 19:56:42] "[35m[1mPOST /get_samples HTTP/1.1[0m" 503 -
+2026-03-19 19:56:58,943 - INFO - 127.0.0.1 - - [19/Mar/2026 19:56:58] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 19:56:58,951 - INFO - Scanning 1 serial ports (Bluetooth excluded)...
+2026-03-19 19:56:58,951 - INFO - Trying port COM6 (Arduino Uno (COM6))...
+2026-03-19 19:57:01,963 - INFO -   Boot messages: ['Stepper Motor Test Starting...', 'Stepper 1 -> Counter Clockwise']
+2026-03-19 19:57:04,588 - INFO -   STATUS response: 'Stepper 1 -> Clockwise'
+2026-03-19 19:57:04,588 - WARNING - Arduino initialization failed — no device found
+2026-03-19 19:57:04,589 - INFO - 127.0.0.1 - - [19/Mar/2026 19:57:04] "[35m[1mPOST /get_samples HTTP/1.1[0m" 503 -
+2026-03-19 19:57:47,104 - INFO - Loaded sensitivity: 1.0
+2026-03-19 19:57:47,113 - INFO - Scanning 1 serial ports (Bluetooth excluded)...
+2026-03-19 19:57:47,113 - INFO - Trying port COM6 (Arduino Uno (COM6))...
+2026-03-19 19:57:50,119 - INFO -   Boot messages: ['Stepper Motor Test Starting...', 'Stepper 1 -> Counter Clockwise']
+2026-03-19 19:57:52,750 - INFO -   STATUS response: 'Stepper 1 -> Clockwise'
+2026-03-19 19:57:52,751 - WARNING - Arduino initialization failed — no device found
+2026-03-19 19:57:52,763 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.4:3001
+2026-03-19 19:57:52,763 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-19 20:03:16,297 - INFO - Loaded sensitivity: 1.0
+2026-03-19 20:03:16,320 - INFO - Scanning 1 serial ports (Bluetooth excluded)...
+2026-03-19 20:03:16,320 - INFO - Trying port COM6 (Arduino Uno (COM6))...
+2026-03-19 20:03:19,381 - INFO -   Boot messages: ['Stepper Motor Test Starting...', 'Stepper 1 -> Counter Clockwise']
+2026-03-19 20:03:22,013 - INFO -   STATUS response: 'Stepper 1 -> Clockwise'
+2026-03-19 20:03:22,013 - WARNING - Arduino initialization failed — no device found
+2026-03-19 20:03:22,031 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.4:3001
+2026-03-19 20:03:22,032 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-19 20:04:08,940 - INFO - Loaded sensitivity: 1.0
+2026-03-19 20:04:08,950 - INFO - Scanning 1 serial ports (Bluetooth excluded)...
+2026-03-19 20:04:08,953 - INFO - Trying port COM6 (Arduino Uno (COM6))...
+2026-03-19 20:04:11,961 - INFO -   Boot messages: ['=== Stepper Control System Ready ===', 'OK']
+2026-03-19 20:04:11,961 - INFO - Arduino identified on COM6 (via boot message)
+2026-03-19 20:04:11,961 - INFO - Arduino initialized successfully
+2026-03-19 20:04:12,022 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.4:3001
+2026-03-19 20:04:12,023 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-19 20:04:44,866 - INFO - 127.0.0.1 - - [19/Mar/2026 20:04:44] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 20:04:44,871 - INFO - Sent: ZERO
+2026-03-19 20:04:44,935 - INFO - Arduino: STABLE_READY
+2026-03-19 20:04:44,942 - INFO - Scan started: longitudinal, sensitivity=1.0, field=lpf
+2026-03-19 20:04:44,944 - INFO - Move sequence (9 moves): [(-1.0, 0), (-1.0, 0), (-1.0, 0), (-1.0, 0), (0, 1.0), (1.0, 0), (1.0, 0), (1.0, 0), (1.0, 0)]
+2026-03-19 20:04:44,946 - INFO - 127.0.0.1 - - [19/Mar/2026 20:04:44] "POST /get_samples HTTP/1.1" 200 -
+2026-03-19 20:04:46,208 - INFO - Moving to lpf_2: dx=-1.0, dy=0
+2026-03-19 20:04:46,209 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:04:46,269 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:04:47,832 - INFO - Arduino: STABLE_READY
+2026-03-19 20:04:47,832 - INFO - 127.0.0.1 - - [19/Mar/2026 20:04:47] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:04:48,367 - INFO - Moving to lpf_3: dx=-1.0, dy=0
+2026-03-19 20:04:48,368 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:04:48,426 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:04:50,004 - INFO - Arduino: STABLE_READY
+2026-03-19 20:04:50,004 - INFO - 127.0.0.1 - - [19/Mar/2026 20:04:50] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:04:50,568 - INFO - Moving to lpf_4: dx=-1.0, dy=0
+2026-03-19 20:04:50,568 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:04:50,630 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:04:52,174 - INFO - Arduino: STABLE_READY
+2026-03-19 20:04:52,175 - INFO - 127.0.0.1 - - [19/Mar/2026 20:04:52] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:04:52,758 - INFO - Moving to lpf_5: dx=-1.0, dy=0
+2026-03-19 20:04:52,759 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:04:52,821 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:04:54,398 - INFO - Arduino: STABLE_READY
+2026-03-19 20:04:54,398 - INFO - 127.0.0.1 - - [19/Mar/2026 20:04:54] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:04:54,932 - INFO - Moving to lpf_6: dx=0, dy=1.0
+2026-03-19 20:04:54,932 - INFO - Sent: MOVE 0,1.0
+2026-03-19 20:04:54,988 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-19 20:04:59,502 - INFO - Arduino: STABLE_READY
+2026-03-19 20:04:59,502 - INFO - 127.0.0.1 - - [19/Mar/2026 20:04:59] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:05:00,359 - INFO - Moving to lpf_7: dx=1.0, dy=0
+2026-03-19 20:05:00,360 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:05:00,416 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:05:01,998 - INFO - Arduino: STABLE_READY
+2026-03-19 20:05:01,998 - INFO - 127.0.0.1 - - [19/Mar/2026 20:05:01] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:05:02,804 - INFO - Moving to lpf_8: dx=1.0, dy=0
+2026-03-19 20:05:02,804 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:05:02,871 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:05:04,442 - INFO - Arduino: STABLE_READY
+2026-03-19 20:05:04,445 - INFO - 127.0.0.1 - - [19/Mar/2026 20:05:04] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:05:05,969 - INFO - Moving to lpf_9: dx=1.0, dy=0
+2026-03-19 20:05:05,969 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:05:06,031 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:05:07,605 - INFO - Arduino: STABLE_READY
+2026-03-19 20:05:07,606 - INFO - 127.0.0.1 - - [19/Mar/2026 20:05:07] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:05:08,181 - INFO - Moving to lpf_10: dx=1.0, dy=0
+2026-03-19 20:05:08,181 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:05:08,238 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:05:09,821 - INFO - Arduino: STABLE_READY
+2026-03-19 20:05:09,822 - INFO - 127.0.0.1 - - [19/Mar/2026 20:05:09] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:05:10,907 - INFO - 127.0.0.1 - - [19/Mar/2026 20:05:10] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:07:36,914 - INFO - Sent: HOME
+2026-03-19 20:07:36,981 - INFO - Arduino: Returning to origin: X=0 Y=-400
+2026-03-19 20:07:41,457 - INFO - Arduino: STABLE_READY
+2026-03-19 20:07:41,457 - INFO - Sent: ZERO
+2026-03-19 20:07:41,515 - INFO - Arduino: STABLE_READY
+2026-03-19 20:07:41,515 - INFO - HPF scan started: longitudinal, sensitivity=1.0
+2026-03-19 20:07:41,515 - INFO - 127.0.0.1 - - [19/Mar/2026 20:07:41] "POST /continue_after_switch HTTP/1.1" 200 -
+2026-03-19 20:07:42,195 - INFO - Moving to hpf_2: dx=-1.0, dy=0
+2026-03-19 20:07:42,196 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:07:42,256 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:07:43,835 - INFO - Arduino: STABLE_READY
+2026-03-19 20:07:43,835 - INFO - 127.0.0.1 - - [19/Mar/2026 20:07:43] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:07:44,720 - INFO - Moving to hpf_3: dx=-1.0, dy=0
+2026-03-19 20:07:44,720 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:07:44,781 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:07:46,327 - INFO - Arduino: STABLE_READY
+2026-03-19 20:07:46,327 - INFO - 127.0.0.1 - - [19/Mar/2026 20:07:46] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:07:46,861 - INFO - Moving to hpf_4: dx=-1.0, dy=0
+2026-03-19 20:07:46,863 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:07:46,921 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:07:48,468 - INFO - Arduino: STABLE_READY
+2026-03-19 20:07:48,468 - INFO - 127.0.0.1 - - [19/Mar/2026 20:07:48] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:07:48,672 - INFO - 127.0.0.1 - - [19/Mar/2026 20:07:48] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 20:07:48,674 - INFO - Sent: ZERO
+2026-03-19 20:07:48,730 - INFO - Arduino: STABLE_READY
+2026-03-19 20:07:48,731 - INFO - Scan started: longitudinal, sensitivity=1.0, field=lpf
+2026-03-19 20:07:48,731 - INFO - Move sequence (9 moves): [(-1.0, 0), (-1.0, 0), (-1.0, 0), (-1.0, 0), (0, 1.0), (1.0, 0), (1.0, 0), (1.0, 0), (1.0, 0)]
+2026-03-19 20:07:48,731 - INFO - 127.0.0.1 - - [19/Mar/2026 20:07:48] "POST /get_samples HTTP/1.1" 200 -
+2026-03-19 20:07:48,863 - INFO - Moving to lpf_2: dx=-1.0, dy=0
+2026-03-19 20:07:48,865 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:07:48,927 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:07:49,161 - INFO - Moving to lpf_3: dx=-1.0, dy=0
+2026-03-19 20:07:49,162 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:07:50,477 - INFO - Arduino: STBL_RE
+2026-03-19 20:07:50,513 - INFO - Arduino: AEADYMove: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:07:52,044 - INFO - Arduino: TBLEAY
+2026-03-19 20:07:55,049 - INFO - Arduino: SAE_RD
+2026-03-19 20:08:02,760 - INFO - 127.0.0.1 - - [19/Mar/2026 20:08:02] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 20:08:02,763 - INFO - Sent: ZERO
+2026-03-19 20:08:02,815 - INFO - Arduino: LREY
+2026-03-19 20:08:05,820 - INFO - Arduino: B_A
+2026-03-19 20:08:05,820 - INFO - Arduino: STAED
+2026-03-19 20:08:07,784 - WARNING - 'ZERO' timed out after 5s
+2026-03-19 20:08:07,785 - WARNING - ZERO command failed — attempting to continue anyway
+2026-03-19 20:08:07,785 - INFO - Scan started: longitudinal, sensitivity=1.0, field=lpf
+2026-03-19 20:08:07,785 - INFO - Move sequence (9 moves): [(-1.0, 0), (-1.0, 0), (-1.0, 0), (-1.0, 0), (0, 1.0), (1.0, 0), (1.0, 0), (1.0, 0), (1.0, 0)]
+2026-03-19 20:08:07,785 - INFO - 127.0.0.1 - - [19/Mar/2026 20:08:07] "POST /get_samples HTTP/1.1" 200 -
+2026-03-19 20:08:07,896 - INFO - Sent: HOME
+2026-03-19 20:08:07,960 - INFO - Arduino: en toog =
+2026-03-19 20:08:08,518 - INFO - Arduino: trngri: 0TB_EAD
+2026-03-19 20:08:11,520 - INFO - Arduino: Rui inX0Y=SALERY
+2026-03-19 20:08:11,948 - INFO - 127.0.0.1 - - [19/Mar/2026 20:08:11] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 20:08:11,952 - INFO - Sent: ZERO
+2026-03-19 20:08:11,999 - INFO - Arduino: TLERA
+2026-03-19 20:08:15,004 - INFO - Arduino: SAB_EDY
+2026-03-19 20:08:16,997 - WARNING - 'ZERO' timed out after 5s
+2026-03-19 20:08:16,997 - WARNING - ZERO command failed — attempting to continue anyway
+2026-03-19 20:08:17,000 - INFO - Scan started: longitudinal, sensitivity=1.0, field=lpf
+2026-03-19 20:08:17,000 - INFO - Move sequence (9 moves): [(-1.0, 0), (-1.0, 0), (-1.0, 0), (-1.0, 0), (0, 1.0), (1.0, 0), (1.0, 0), (1.0, 0), (1.0, 0)]
+2026-03-19 20:08:17,003 - INFO - 127.0.0.1 - - [19/Mar/2026 20:08:17] "POST /get_samples HTTP/1.1" 200 -
+2026-03-19 20:08:17,776 - INFO - Moving to lpf_2: dx=-1.0, dy=0
+2026-03-19 20:08:17,776 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:08:17,836 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:08:19,384 - INFO - Arduino: A_Y
+2026-03-19 20:08:22,388 - INFO - Arduino: SBLED 
+2026-03-19 20:08:22,388 - INFO - Arduino: TR 
+2026-03-19 20:08:22,389 - INFO - Arduino: EA 
+2026-03-19 20:08:32,518 - ERROR - Command error for 'MOVE -1.0,0': ClearCommError failed (PermissionError(13, 'The device does not recognize the command.', None, 22))
+2026-03-19 20:08:32,518 - ERROR - Command error for 'MOVE -1.0,0': ClearCommError failed (PermissionError(13, 'The device does not recognize the command.', None, 22))
+2026-03-19 20:08:32,519 - ERROR - Command error for 'MOVE -1.0,0': ClearCommError failed (PermissionError(13, 'The device does not recognize the command.', None, 22))
+2026-03-19 20:08:32,519 - ERROR - Command error for 'HOME': ClearCommError failed (PermissionError(13, 'The device does not recognize the command.', None, 22))
+2026-03-19 20:08:32,519 - INFO - 127.0.0.1 - - [19/Mar/2026 20:08:32] "[35m[1mPOST /next_sample HTTP/1.1[0m" 500 -
+2026-03-19 20:08:32,520 - INFO - 127.0.0.1 - - [19/Mar/2026 20:08:32] "[35m[1mPOST /next_sample HTTP/1.1[0m" 500 -
+2026-03-19 20:08:32,520 - INFO - 127.0.0.1 - - [19/Mar/2026 20:08:32] "[35m[1mPOST /next_sample HTTP/1.1[0m" 500 -
+2026-03-19 20:08:32,521 - WARNING - Stop: HOME command failed
+2026-03-19 20:08:32,527 - INFO - Scan stopped by user
+2026-03-19 20:08:32,530 - INFO - 127.0.0.1 - - [19/Mar/2026 20:08:32] "POST /stop HTTP/1.1" 200 -
+2026-03-19 20:09:22,158 - INFO - 127.0.0.1 - - [19/Mar/2026 20:09:22] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 20:09:22,162 - ERROR - Command error for 'ZERO': WriteFile failed (PermissionError(13, 'The device does not recognize the command.', None, 22))
+2026-03-19 20:09:22,163 - WARNING - ZERO command failed — attempting to continue anyway
+2026-03-19 20:09:22,163 - INFO - Scan started: longitudinal, sensitivity=1.0, field=lpf
+2026-03-19 20:09:22,163 - INFO - Move sequence (9 moves): [(-1.0, 0), (-1.0, 0), (-1.0, 0), (-1.0, 0), (0, 1.0), (1.0, 0), (1.0, 0), (1.0, 0), (1.0, 0)]
+2026-03-19 20:09:22,164 - INFO - 127.0.0.1 - - [19/Mar/2026 20:09:22] "POST /get_samples HTTP/1.1" 200 -
+2026-03-19 20:09:23,392 - INFO - Moving to lpf_2: dx=-1.0, dy=0
+2026-03-19 20:09:23,392 - ERROR - Command error for 'MOVE -1.0,0': WriteFile failed (PermissionError(13, 'The device does not recognize the command.', None, 22))
+2026-03-19 20:09:23,392 - INFO - 127.0.0.1 - - [19/Mar/2026 20:09:23] "[35m[1mPOST /next_sample HTTP/1.1[0m" 500 -
+2026-03-19 20:09:31,480 - INFO - 127.0.0.1 - - [19/Mar/2026 20:09:31] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 20:09:31,484 - ERROR - Command error for 'ZERO': WriteFile failed (PermissionError(13, 'The device does not recognize the command.', None, 22))
+2026-03-19 20:09:31,484 - WARNING - ZERO command failed — attempting to continue anyway
+2026-03-19 20:09:31,484 - INFO - Scan started: longitudinal, sensitivity=1.0, field=lpf
+2026-03-19 20:09:31,484 - INFO - Move sequence (9 moves): [(-1.0, 0), (-1.0, 0), (-1.0, 0), (-1.0, 0), (0, 1.0), (1.0, 0), (1.0, 0), (1.0, 0), (1.0, 0)]
+2026-03-19 20:09:31,485 - INFO - 127.0.0.1 - - [19/Mar/2026 20:09:31] "POST /get_samples HTTP/1.1" 200 -
+2026-03-19 20:10:00,453 - INFO - Moving to lpf_2: dx=-1.0, dy=0
+2026-03-19 20:10:00,453 - ERROR - Command error for 'MOVE -1.0,0': WriteFile failed (PermissionError(13, 'The device does not recognize the command.', None, 22))
+2026-03-19 20:10:00,454 - INFO - 127.0.0.1 - - [19/Mar/2026 20:10:00] "[35m[1mPOST /next_sample HTTP/1.1[0m" 500 -
+2026-03-19 20:12:18,986 - INFO - 127.0.0.1 - - [19/Mar/2026 20:12:18] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 20:12:18,988 - ERROR - Command error for 'ZERO': WriteFile failed (PermissionError(13, 'The device does not recognize the command.', None, 22))
+2026-03-19 20:12:18,988 - WARNING - ZERO command failed — attempting to continue anyway
+2026-03-19 20:12:18,989 - INFO - Scan started: longitudinal, sensitivity=1.0, field=lpf
+2026-03-19 20:12:18,989 - INFO - Move sequence (9 moves): [(-1.0, 0), (-1.0, 0), (-1.0, 0), (-1.0, 0), (0, 1.0), (1.0, 0), (1.0, 0), (1.0, 0), (1.0, 0)]
+2026-03-19 20:12:18,989 - INFO - 127.0.0.1 - - [19/Mar/2026 20:12:18] "POST /get_samples HTTP/1.1" 200 -
+2026-03-19 20:12:20,064 - INFO - Moving to lpf_2: dx=-1.0, dy=0
+2026-03-19 20:12:20,064 - ERROR - Command error for 'MOVE -1.0,0': WriteFile failed (PermissionError(13, 'The device does not recognize the command.', None, 22))
+2026-03-19 20:12:20,065 - INFO - 127.0.0.1 - - [19/Mar/2026 20:12:20] "[35m[1mPOST /next_sample HTTP/1.1[0m" 500 -
+2026-03-19 20:12:30,205 - INFO - Loaded sensitivity: 1.0
+2026-03-19 20:12:30,215 - INFO - Scanning 1 serial ports (Bluetooth excluded)...
+2026-03-19 20:12:30,215 - INFO - Trying port COM6 (Arduino Uno (COM6))...
+2026-03-19 20:12:33,219 - INFO -   Boot messages: ['=== Stepper Control System Ready ===', 'OK']
+2026-03-19 20:12:33,219 - INFO - Arduino identified on COM6 (via boot message)
+2026-03-19 20:12:33,219 - INFO - Arduino initialized successfully
+2026-03-19 20:12:33,233 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.4:3001
+2026-03-19 20:12:33,233 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-19 20:12:49,944 - INFO - 127.0.0.1 - - [19/Mar/2026 20:12:49] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 20:12:49,948 - INFO - Sent: ZERO
+2026-03-19 20:12:50,008 - INFO - Arduino: STABLE_READY
+2026-03-19 20:12:50,008 - INFO - Scan started: longitudinal, sensitivity=1.0, field=lpf
+2026-03-19 20:12:50,008 - INFO - Move sequence (9 moves): [(-1.0, 0), (-1.0, 0), (-1.0, 0), (-1.0, 0), (0, 1.0), (1.0, 0), (1.0, 0), (1.0, 0), (1.0, 0)]
+2026-03-19 20:12:50,009 - INFO - 127.0.0.1 - - [19/Mar/2026 20:12:50] "POST /get_samples HTTP/1.1" 200 -
+2026-03-19 20:12:50,800 - INFO - Moving to lpf_2: dx=-1.0, dy=0
+2026-03-19 20:12:50,800 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:12:50,859 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:12:52,423 - INFO - Arduino: STABLE_READY
+2026-03-19 20:12:52,423 - INFO - 127.0.0.1 - - [19/Mar/2026 20:12:52] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:12:53,015 - INFO - Moving to lpf_3: dx=-1.0, dy=0
+2026-03-19 20:12:53,015 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:12:53,076 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:12:54,644 - INFO - Arduino: STABLE_READY
+2026-03-19 20:12:54,644 - INFO - 127.0.0.1 - - [19/Mar/2026 20:12:54] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:12:55,330 - INFO - Moving to lpf_4: dx=-1.0, dy=0
+2026-03-19 20:12:55,331 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:12:55,389 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:12:56,952 - INFO - Arduino: STABLE_READY
+2026-03-19 20:12:56,953 - INFO - 127.0.0.1 - - [19/Mar/2026 20:12:56] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:12:57,545 - INFO - Moving to lpf_5: dx=-1.0, dy=0
+2026-03-19 20:12:57,545 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:12:57,605 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:12:59,160 - INFO - Arduino: STABLE_READY
+2026-03-19 20:12:59,162 - INFO - 127.0.0.1 - - [19/Mar/2026 20:12:59] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:12:59,869 - INFO - Moving to lpf_6: dx=0, dy=1.0
+2026-03-19 20:12:59,869 - INFO - Sent: MOVE 0,1.0
+2026-03-19 20:12:59,928 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-19 20:13:04,403 - INFO - Arduino: STABLE_READY
+2026-03-19 20:13:04,407 - INFO - 127.0.0.1 - - [19/Mar/2026 20:13:04] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:13:05,081 - INFO - Moving to lpf_7: dx=1.0, dy=0
+2026-03-19 20:13:05,081 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:13:05,137 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:13:06,720 - INFO - Arduino: STABLE_READY
+2026-03-19 20:13:06,720 - INFO - 127.0.0.1 - - [19/Mar/2026 20:13:06] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:13:07,496 - INFO - Moving to lpf_8: dx=1.0, dy=0
+2026-03-19 20:13:07,497 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:13:07,554 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:13:09,109 - INFO - Arduino: STABLE_READY
+2026-03-19 20:13:09,109 - INFO - 127.0.0.1 - - [19/Mar/2026 20:13:09] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:13:09,800 - INFO - Moving to lpf_9: dx=1.0, dy=0
+2026-03-19 20:13:09,800 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:13:09,862 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:13:11,432 - INFO - Arduino: STABLE_READY
+2026-03-19 20:13:11,433 - INFO - 127.0.0.1 - - [19/Mar/2026 20:13:11] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:13:11,986 - INFO - Moving to lpf_10: dx=1.0, dy=0
+2026-03-19 20:13:11,986 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:13:12,047 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:13:13,591 - INFO - Arduino: STABLE_READY
+2026-03-19 20:13:13,591 - INFO - 127.0.0.1 - - [19/Mar/2026 20:13:13] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:13:14,225 - INFO - 127.0.0.1 - - [19/Mar/2026 20:13:14] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:13:52,064 - INFO - 127.0.0.1 - - [19/Mar/2026 20:13:52] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 20:13:52,068 - INFO - 127.0.0.1 - - [19/Mar/2026 20:13:52] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 20:14:12,765 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:12] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 20:14:12,769 - INFO - Sent: ZERO
+2026-03-19 20:14:12,824 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:12,824 - INFO - Scan started: longitudinal, sensitivity=1.0, field=lpf
+2026-03-19 20:14:12,824 - INFO - Move sequence (9 moves): [(-1.0, 0), (-1.0, 0), (-1.0, 0), (-1.0, 0), (0, 1.0), (1.0, 0), (1.0, 0), (1.0, 0), (1.0, 0)]
+2026-03-19 20:14:12,824 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:12] "POST /get_samples HTTP/1.1" 200 -
+2026-03-19 20:14:12,946 - INFO - Moving to lpf_2: dx=-1.0, dy=0
+2026-03-19 20:14:12,946 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:14:13,007 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:14:14,550 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:14,550 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:14] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:14,667 - INFO - Moving to lpf_3: dx=-1.0, dy=0
+2026-03-19 20:14:14,669 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:14:14,729 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:14:16,273 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:16,273 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:16] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:16,390 - INFO - Moving to lpf_4: dx=-1.0, dy=0
+2026-03-19 20:14:16,392 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:14:16,450 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:14:18,000 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:18,003 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:18] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:18,110 - INFO - Moving to lpf_5: dx=-1.0, dy=0
+2026-03-19 20:14:18,111 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:14:18,174 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:14:19,736 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:19,736 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:19] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:19,845 - INFO - Moving to lpf_6: dx=0, dy=1.0
+2026-03-19 20:14:19,845 - INFO - Sent: MOVE 0,1.0
+2026-03-19 20:14:19,906 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-19 20:14:24,386 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:24,386 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:24] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:24,492 - INFO - Moving to lpf_7: dx=1.0, dy=0
+2026-03-19 20:14:24,492 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:14:24,552 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:14:26,107 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:26,108 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:26] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:26,262 - INFO - Moving to lpf_8: dx=1.0, dy=0
+2026-03-19 20:14:26,262 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:14:26,326 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:14:27,868 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:27,869 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:27] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:27,973 - INFO - Moving to lpf_9: dx=1.0, dy=0
+2026-03-19 20:14:27,973 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:14:28,035 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:14:29,597 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:29,597 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:29] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:29,701 - INFO - Moving to lpf_10: dx=1.0, dy=0
+2026-03-19 20:14:29,701 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:14:29,760 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:14:31,309 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:31,312 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:31] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:31,423 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:31] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:36,601 - INFO - Sent: HOME
+2026-03-19 20:14:36,655 - INFO - Arduino: Returning to origin: X=0 Y=-400
+2026-03-19 20:14:41,160 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:41,161 - INFO - Sent: ZERO
+2026-03-19 20:14:41,219 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:41,220 - INFO - HPF scan started: longitudinal, sensitivity=1.0
+2026-03-19 20:14:41,222 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:41] "POST /continue_after_switch HTTP/1.1" 200 -
+2026-03-19 20:14:41,860 - INFO - Moving to hpf_2: dx=-1.0, dy=0
+2026-03-19 20:14:41,861 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:14:41,921 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:14:43,506 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:43,506 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:43] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:44,094 - INFO - Moving to hpf_3: dx=-1.0, dy=0
+2026-03-19 20:14:44,094 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:14:44,156 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:14:45,702 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:45,704 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:45] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:46,279 - INFO - Moving to hpf_4: dx=-1.0, dy=0
+2026-03-19 20:14:46,279 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:14:46,340 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:14:47,888 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:47,892 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:47] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:48,492 - INFO - Moving to hpf_5: dx=-1.0, dy=0
+2026-03-19 20:14:48,492 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:14:48,557 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:14:50,096 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:50,096 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:50] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:50,706 - INFO - Moving to hpf_6: dx=0, dy=1.0
+2026-03-19 20:14:50,706 - INFO - Sent: MOVE 0,1.0
+2026-03-19 20:14:50,766 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-19 20:14:55,280 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:55,280 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:55] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:55,887 - INFO - Moving to hpf_7: dx=1.0, dy=0
+2026-03-19 20:14:55,887 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:14:55,945 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:14:57,523 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:57,523 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:57] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:14:58,358 - INFO - Moving to hpf_8: dx=1.0, dy=0
+2026-03-19 20:14:58,359 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:14:58,414 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:14:59,977 - INFO - Arduino: STABLE_READY
+2026-03-19 20:14:59,977 - INFO - 127.0.0.1 - - [19/Mar/2026 20:14:59] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:15:00,879 - INFO - Moving to hpf_9: dx=1.0, dy=0
+2026-03-19 20:15:00,879 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:15:00,938 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:15:02,505 - INFO - Arduino: STABLE_READY
+2026-03-19 20:15:02,505 - INFO - 127.0.0.1 - - [19/Mar/2026 20:15:02] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:15:03,379 - INFO - Moving to hpf_10: dx=1.0, dy=0
+2026-03-19 20:15:03,381 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:15:03,436 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:15:05,016 - INFO - Arduino: STABLE_READY
+2026-03-19 20:15:05,017 - INFO - 127.0.0.1 - - [19/Mar/2026 20:15:05] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:15:05,819 - INFO - 127.0.0.1 - - [19/Mar/2026 20:15:05] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:19:38,350 - INFO - Loaded sensitivity: 1.0
+2026-03-19 20:19:38,361 - INFO - Scanning 1 serial ports (Bluetooth excluded)...
+2026-03-19 20:19:38,361 - INFO - Trying port COM6 (Arduino Uno (COM6))...
+2026-03-19 20:19:41,365 - INFO -   Boot messages: ['=== Stepper Control System Ready ===', 'OK']
+2026-03-19 20:19:41,365 - INFO - Arduino identified on COM6 (via boot message)
+2026-03-19 20:19:41,365 - INFO - Arduino initialized successfully
+2026-03-19 20:19:41,379 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.4:3001
+2026-03-19 20:19:41,379 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-19 20:19:45,010 - INFO - 127.0.0.1 - - [19/Mar/2026 20:19:45] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 20:19:45,012 - INFO - Sent: ZERO
+2026-03-19 20:19:45,075 - INFO - Arduino: STABLE_READY
+2026-03-19 20:19:45,076 - INFO - Scan started: longitudinal, sensitivity=1.0, field=lpf
+2026-03-19 20:19:45,076 - INFO - Move sequence (9 moves): [(-1.0, 0), (-1.0, 0), (-1.0, 0), (-1.0, 0), (0, 1.0), (1.0, 0), (1.0, 0), (1.0, 0), (1.0, 0)]
+2026-03-19 20:19:45,076 - INFO - 127.0.0.1 - - [19/Mar/2026 20:19:45] "POST /get_samples HTTP/1.1" 200 -
+2026-03-19 20:19:45,288 - INFO - Moving to lpf_2: dx=-1.0, dy=0
+2026-03-19 20:19:45,288 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:19:45,350 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:19:46,913 - INFO - Arduino: STABLE_READY
+2026-03-19 20:19:46,915 - INFO - 127.0.0.1 - - [19/Mar/2026 20:19:46] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:19:47,041 - INFO - Moving to lpf_3: dx=-1.0, dy=0
+2026-03-19 20:19:47,042 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:19:47,102 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:19:48,668 - INFO - Arduino: STABLE_READY
+2026-03-19 20:19:48,668 - INFO - 127.0.0.1 - - [19/Mar/2026 20:19:48] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:19:48,781 - INFO - Moving to lpf_4: dx=-1.0, dy=0
+2026-03-19 20:19:48,781 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:19:48,843 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:19:50,398 - INFO - Arduino: STABLE_READY
+2026-03-19 20:19:50,402 - INFO - 127.0.0.1 - - [19/Mar/2026 20:19:50] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:19:50,531 - INFO - Moving to lpf_5: dx=-1.0, dy=0
+2026-03-19 20:19:50,531 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:19:50,592 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:19:52,138 - INFO - Arduino: STABLE_READY
+2026-03-19 20:19:52,138 - INFO - 127.0.0.1 - - [19/Mar/2026 20:19:52] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:19:52,242 - INFO - Moving to lpf_6: dx=0, dy=1.0
+2026-03-19 20:19:52,242 - INFO - Sent: MOVE 0,1.0
+2026-03-19 20:19:52,299 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-19 20:19:54,841 - INFO - Arduino: STABLE_READY
+2026-03-19 20:19:54,841 - INFO - 127.0.0.1 - - [19/Mar/2026 20:19:54] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:19:54,948 - INFO - Moving to lpf_7: dx=1.0, dy=0
+2026-03-19 20:19:54,949 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:19:55,009 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:19:56,574 - INFO - Arduino: STABLE_READY
+2026-03-19 20:19:56,575 - INFO - 127.0.0.1 - - [19/Mar/2026 20:19:56] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:19:56,681 - INFO - Moving to lpf_8: dx=1.0, dy=0
+2026-03-19 20:19:56,683 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:19:56,741 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:19:58,325 - INFO - Arduino: STABLE_READY
+2026-03-19 20:19:58,328 - INFO - 127.0.0.1 - - [19/Mar/2026 20:19:58] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:19:58,460 - INFO - Moving to lpf_9: dx=1.0, dy=0
+2026-03-19 20:19:58,461 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:19:58,526 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:20:00,071 - INFO - Arduino: STABLE_READY
+2026-03-19 20:20:00,071 - INFO - 127.0.0.1 - - [19/Mar/2026 20:20:00] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:20:00,178 - INFO - Moving to lpf_10: dx=1.0, dy=0
+2026-03-19 20:20:00,179 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:20:00,233 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:20:01,791 - INFO - Arduino: STABLE_READY
+2026-03-19 20:20:01,792 - INFO - 127.0.0.1 - - [19/Mar/2026 20:20:01] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:20:01,900 - INFO - 127.0.0.1 - - [19/Mar/2026 20:20:01] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:20:53,849 - INFO - Sent: HOME
+2026-03-19 20:20:53,906 - INFO - Arduino: Returning to origin: X=0 Y=-400
+2026-03-19 20:20:56,448 - INFO - Arduino: STABLE_READY
+2026-03-19 20:20:56,448 - INFO - Sent: ZERO
+2026-03-19 20:20:56,500 - INFO - Arduino: STABLE_READY
+2026-03-19 20:20:56,501 - INFO - HPF scan started: longitudinal, sensitivity=1.0
+2026-03-19 20:20:56,505 - INFO - 127.0.0.1 - - [19/Mar/2026 20:20:56] "POST /continue_after_switch HTTP/1.1" 200 -
+2026-03-19 20:20:56,640 - INFO - Moving to hpf_2: dx=-1.0, dy=0
+2026-03-19 20:20:56,642 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:20:56,704 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:20:58,266 - INFO - Arduino: STABLE_READY
+2026-03-19 20:20:58,266 - INFO - 127.0.0.1 - - [19/Mar/2026 20:20:58] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:20:58,373 - INFO - Moving to hpf_3: dx=-1.0, dy=0
+2026-03-19 20:20:58,374 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:20:58,435 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:20:59,974 - INFO - Arduino: STABLE_READY
+2026-03-19 20:20:59,981 - INFO - 127.0.0.1 - - [19/Mar/2026 20:20:59] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:00,085 - INFO - Moving to hpf_4: dx=-1.0, dy=0
+2026-03-19 20:21:00,085 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:21:00,146 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:21:01,699 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:01,700 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:01] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:01,714 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:01] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 20:21:01,719 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:01] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 20:21:01,850 - INFO - Moving to hpf_5: dx=-1.0, dy=0
+2026-03-19 20:21:01,850 - INFO - Sent: MOVE -1.0,0
+2026-03-19 20:21:01,911 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 20:21:03,454 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:03,458 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:03] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:03,566 - INFO - Moving to hpf_6: dx=0, dy=1.0
+2026-03-19 20:21:03,569 - INFO - Sent: MOVE 0,1.0
+2026-03-19 20:21:03,634 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-19 20:21:06,172 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:06,172 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:06] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:06,279 - INFO - Moving to hpf_7: dx=1.0, dy=0
+2026-03-19 20:21:06,279 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:21:06,332 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:21:07,908 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:07,908 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:07] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:08,021 - INFO - Moving to hpf_8: dx=1.0, dy=0
+2026-03-19 20:21:08,023 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:21:08,081 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:21:09,638 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:09,641 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:09] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:09,754 - INFO - Moving to hpf_9: dx=1.0, dy=0
+2026-03-19 20:21:09,756 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:21:09,812 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:21:11,387 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:11,387 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:11] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:11,500 - INFO - Moving to hpf_10: dx=1.0, dy=0
+2026-03-19 20:21:11,500 - INFO - Sent: MOVE 1.0,0
+2026-03-19 20:21:11,557 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 20:21:13,109 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:13,109 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:13] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:13,226 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:13] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:21,420 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:21] "OPTIONS /update_config HTTP/1.1" 200 -
+2026-03-19 20:21:21,424 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:21] "POST /update_config HTTP/1.1" 200 -
+2026-03-19 20:21:28,874 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:28] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 20:21:28,877 - INFO - Sent: ZERO
+2026-03-19 20:21:28,938 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:28,938 - INFO - Scan started: longitudinal, sensitivity=0.1, field=lpf
+2026-03-19 20:21:28,938 - INFO - Move sequence (9 moves): [(-0.1, 0), (-0.1, 0), (-0.1, 0), (-0.1, 0), (0, 0.1), (0.1, 0), (0.1, 0), (0.1, 0), (0.1, 0)]
+2026-03-19 20:21:28,939 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:28] "POST /get_samples HTTP/1.1" 200 -
+2026-03-19 20:21:29,058 - INFO - Moving to lpf_2: dx=-0.1, dy=0
+2026-03-19 20:21:29,058 - INFO - Sent: MOVE -0.1,0
+2026-03-19 20:21:29,119 - INFO - Arduino: Move: dx=-0.10 dy=0.00 (steps X=-20 Y=0)
+2026-03-19 20:21:29,786 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:29,786 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:29] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:29,893 - INFO - Moving to lpf_3: dx=-0.1, dy=0
+2026-03-19 20:21:29,896 - INFO - Sent: MOVE -0.1,0
+2026-03-19 20:21:29,957 - INFO - Arduino: Move: dx=-0.10 dy=0.00 (steps X=-20 Y=0)
+2026-03-19 20:21:30,658 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:30,658 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:30] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:30,766 - INFO - Moving to lpf_4: dx=-0.1, dy=0
+2026-03-19 20:21:30,766 - INFO - Sent: MOVE -0.1,0
+2026-03-19 20:21:30,828 - INFO - Arduino: Move: dx=-0.10 dy=0.00 (steps X=-20 Y=0)
+2026-03-19 20:21:31,507 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:31,508 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:31] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:31,612 - INFO - Moving to lpf_5: dx=-0.1, dy=0
+2026-03-19 20:21:31,612 - INFO - Sent: MOVE -0.1,0
+2026-03-19 20:21:31,670 - INFO - Arduino: Move: dx=-0.10 dy=0.00 (steps X=-20 Y=0)
+2026-03-19 20:21:32,347 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:32,348 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:32] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:32,452 - INFO - Moving to lpf_6: dx=0, dy=0.1
+2026-03-19 20:21:32,452 - INFO - Sent: MOVE 0,0.1
+2026-03-19 20:21:32,511 - INFO - Arduino: Move: dx=0.00 dy=0.10 (steps X=0 Y=40)
+2026-03-19 20:21:33,284 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:33,284 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:33] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:33,390 - INFO - Moving to lpf_7: dx=0.1, dy=0
+2026-03-19 20:21:33,392 - INFO - Sent: MOVE 0.1,0
+2026-03-19 20:21:33,446 - INFO - Arduino: Move: dx=0.10 dy=0.00 (steps X=20 Y=0)
+2026-03-19 20:21:34,112 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:34,112 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:34] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:34,223 - INFO - Moving to lpf_8: dx=0.1, dy=0
+2026-03-19 20:21:34,223 - INFO - Sent: MOVE 0.1,0
+2026-03-19 20:21:34,281 - INFO - Arduino: Move: dx=0.10 dy=0.00 (steps X=20 Y=0)
+2026-03-19 20:21:34,973 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:34,973 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:34] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:35,124 - INFO - Moving to lpf_9: dx=0.1, dy=0
+2026-03-19 20:21:35,124 - INFO - Sent: MOVE 0.1,0
+2026-03-19 20:21:35,183 - INFO - Arduino: Move: dx=0.10 dy=0.00 (steps X=20 Y=0)
+2026-03-19 20:21:35,850 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:35,850 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:35] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:35,950 - INFO - Moving to lpf_10: dx=0.1, dy=0
+2026-03-19 20:21:35,950 - INFO - Sent: MOVE 0.1,0
+2026-03-19 20:21:36,009 - INFO - Arduino: Move: dx=0.10 dy=0.00 (steps X=20 Y=0)
+2026-03-19 20:21:36,673 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:36,678 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:36] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:36,783 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:36] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:37,939 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:37] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 20:21:37,943 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:37] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 20:21:40,513 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:40] "OPTIONS /update_config HTTP/1.1" 200 -
+2026-03-19 20:21:40,527 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:40] "POST /update_config HTTP/1.1" 200 -
+2026-03-19 20:21:44,089 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:44] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 20:21:44,092 - INFO - Sent: ZERO
+2026-03-19 20:21:44,154 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:44,155 - INFO - Scan started: longitudinal, sensitivity=0.3, field=lpf
+2026-03-19 20:21:44,155 - INFO - Move sequence (9 moves): [(-0.3, 0), (-0.3, 0), (-0.3, 0), (-0.3, 0), (0, 0.3), (0.3, 0), (0.3, 0), (0.3, 0), (0.3, 0)]
+2026-03-19 20:21:44,156 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:44] "POST /get_samples HTTP/1.1" 200 -
+2026-03-19 20:21:44,273 - INFO - Moving to lpf_2: dx=-0.3, dy=0
+2026-03-19 20:21:44,273 - INFO - Sent: MOVE -0.3,0
+2026-03-19 20:21:44,335 - INFO - Arduino: Move: dx=-0.30 dy=0.00 (steps X=-60 Y=0)
+2026-03-19 20:21:45,196 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:45,196 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:45] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:45,306 - INFO - Moving to lpf_3: dx=-0.3, dy=0
+2026-03-19 20:21:45,307 - INFO - Sent: MOVE -0.3,0
+2026-03-19 20:21:45,368 - INFO - Arduino: Move: dx=-0.30 dy=0.00 (steps X=-60 Y=0)
+2026-03-19 20:21:46,229 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:46,229 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:46] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:46,335 - INFO - Moving to lpf_4: dx=-0.3, dy=0
+2026-03-19 20:21:46,335 - INFO - Sent: MOVE -0.3,0
+2026-03-19 20:21:46,392 - INFO - Arduino: Move: dx=-0.30 dy=0.00 (steps X=-60 Y=0)
+2026-03-19 20:21:47,273 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:47,274 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:47] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:47,380 - INFO - Moving to lpf_5: dx=-0.3, dy=0
+2026-03-19 20:21:47,381 - INFO - Sent: MOVE -0.3,0
+2026-03-19 20:21:47,450 - INFO - Arduino: Move: dx=-0.30 dy=0.00 (steps X=-60 Y=0)
+2026-03-19 20:21:48,318 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:48,319 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:48] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:48,423 - INFO - Moving to lpf_6: dx=0, dy=0.3
+2026-03-19 20:21:48,423 - INFO - Sent: MOVE 0,0.3
+2026-03-19 20:21:48,481 - INFO - Arduino: Move: dx=0.00 dy=0.30 (steps X=0 Y=120)
+2026-03-19 20:21:49,631 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:49,639 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:49] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:49,750 - INFO - Moving to lpf_7: dx=0.3, dy=0
+2026-03-19 20:21:49,750 - INFO - Sent: MOVE 0.3,0
+2026-03-19 20:21:49,804 - INFO - Arduino: Move: dx=0.30 dy=0.00 (steps X=60 Y=0)
+2026-03-19 20:21:50,693 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:50,693 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:50] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:50,797 - INFO - Moving to lpf_8: dx=0.3, dy=0
+2026-03-19 20:21:50,797 - INFO - Sent: MOVE 0.3,0
+2026-03-19 20:21:50,852 - INFO - Arduino: Move: dx=0.30 dy=0.00 (steps X=60 Y=0)
+2026-03-19 20:21:51,730 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:51,731 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:51] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:51,855 - INFO - Moving to lpf_9: dx=0.3, dy=0
+2026-03-19 20:21:51,856 - INFO - Sent: MOVE 0.3,0
+2026-03-19 20:21:51,913 - INFO - Arduino: Move: dx=0.30 dy=0.00 (steps X=60 Y=0)
+2026-03-19 20:21:52,809 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:52,810 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:52] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:52,915 - INFO - Moving to lpf_10: dx=0.3, dy=0
+2026-03-19 20:21:52,915 - INFO - Sent: MOVE 0.3,0
+2026-03-19 20:21:52,969 - INFO - Arduino: Move: dx=0.30 dy=0.00 (steps X=60 Y=0)
+2026-03-19 20:21:53,832 - INFO - Arduino: STABLE_READY
+2026-03-19 20:21:53,832 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:53] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:53,945 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:53] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:21:56,385 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:56] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 20:21:56,390 - INFO - 127.0.0.1 - - [19/Mar/2026 20:21:56] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 20:22:07,989 - INFO - 127.0.0.1 - - [19/Mar/2026 20:22:07] "OPTIONS /update_config HTTP/1.1" 200 -
+2026-03-19 20:22:07,999 - INFO - 127.0.0.1 - - [19/Mar/2026 20:22:07] "POST /update_config HTTP/1.1" 200 -
+2026-03-19 20:22:14,756 - INFO - 127.0.0.1 - - [19/Mar/2026 20:22:14] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-19 20:22:14,758 - INFO - Sent: ZERO
+2026-03-19 20:22:14,812 - INFO - Arduino: STABLE_READY
+2026-03-19 20:22:14,812 - INFO - Scan started: longitudinal, sensitivity=0.75, field=lpf
+2026-03-19 20:22:14,812 - INFO - Move sequence (9 moves): [(-0.75, 0), (-0.75, 0), (-0.75, 0), (-0.75, 0), (0, 0.75), (0.75, 0), (0.75, 0), (0.75, 0), (0.75, 0)]
+2026-03-19 20:22:14,813 - INFO - 127.0.0.1 - - [19/Mar/2026 20:22:14] "POST /get_samples HTTP/1.1" 200 -
+2026-03-19 20:22:14,931 - INFO - Moving to lpf_2: dx=-0.75, dy=0
+2026-03-19 20:22:14,932 - INFO - Sent: MOVE -0.75,0
+2026-03-19 20:22:14,993 - INFO - Arduino: Move: dx=-0.75 dy=0.00 (steps X=-150 Y=0)
+2026-03-19 20:22:16,295 - INFO - Arduino: STABLE_READY
+2026-03-19 20:22:16,295 - INFO - 127.0.0.1 - - [19/Mar/2026 20:22:16] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:22:16,411 - INFO - Moving to lpf_3: dx=-0.75, dy=0
+2026-03-19 20:22:16,413 - INFO - Sent: MOVE -0.75,0
+2026-03-19 20:22:16,472 - INFO - Arduino: Move: dx=-0.75 dy=0.00 (steps X=-150 Y=0)
+2026-03-19 20:22:17,792 - INFO - Arduino: STABLE_READY
+2026-03-19 20:22:17,792 - INFO - 127.0.0.1 - - [19/Mar/2026 20:22:17] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:22:17,901 - INFO - Moving to lpf_4: dx=-0.75, dy=0
+2026-03-19 20:22:17,903 - INFO - Sent: MOVE -0.75,0
+2026-03-19 20:22:17,962 - INFO - Arduino: Move: dx=-0.75 dy=0.00 (steps X=-150 Y=0)
+2026-03-19 20:22:19,297 - INFO - Arduino: STABLE_READY
+2026-03-19 20:22:19,297 - INFO - 127.0.0.1 - - [19/Mar/2026 20:22:19] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:22:19,402 - INFO - Moving to lpf_5: dx=-0.75, dy=0
+2026-03-19 20:22:19,402 - INFO - Sent: MOVE -0.75,0
+2026-03-19 20:22:19,459 - INFO - Arduino: Move: dx=-0.75 dy=0.00 (steps X=-150 Y=0)
+2026-03-19 20:22:20,764 - INFO - Arduino: STABLE_READY
+2026-03-19 20:22:20,765 - INFO - 127.0.0.1 - - [19/Mar/2026 20:22:20] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:22:20,874 - INFO - Moving to lpf_6: dx=0, dy=0.75
+2026-03-19 20:22:20,874 - INFO - Sent: MOVE 0,0.75
+2026-03-19 20:22:20,931 - INFO - Arduino: Move: dx=0.00 dy=0.75 (steps X=0 Y=300)
+2026-03-19 20:22:22,990 - INFO - Arduino: STABLE_READY
+2026-03-19 20:22:22,991 - INFO - 127.0.0.1 - - [19/Mar/2026 20:22:22] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:22:23,094 - INFO - Moving to lpf_7: dx=0.75, dy=0
+2026-03-19 20:22:23,094 - INFO - Sent: MOVE 0.75,0
+2026-03-19 20:22:23,152 - INFO - Arduino: Move: dx=0.75 dy=0.00 (steps X=150 Y=0)
+2026-03-19 20:22:24,455 - INFO - Arduino: STABLE_READY
+2026-03-19 20:22:24,455 - INFO - 127.0.0.1 - - [19/Mar/2026 20:22:24] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:22:24,558 - INFO - Moving to lpf_8: dx=0.75, dy=0
+2026-03-19 20:22:24,558 - INFO - Sent: MOVE 0.75,0
+2026-03-19 20:22:24,618 - INFO - Arduino: Move: dx=0.75 dy=0.00 (steps X=150 Y=0)
+2026-03-19 20:22:25,954 - INFO - Arduino: STABLE_READY
+2026-03-19 20:22:25,954 - INFO - 127.0.0.1 - - [19/Mar/2026 20:22:25] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:22:26,059 - INFO - Moving to lpf_9: dx=0.75, dy=0
+2026-03-19 20:22:26,062 - INFO - Sent: MOVE 0.75,0
+2026-03-19 20:22:26,121 - INFO - Arduino: Move: dx=0.75 dy=0.00 (steps X=150 Y=0)
+2026-03-19 20:22:27,423 - INFO - Arduino: STABLE_READY
+2026-03-19 20:22:27,425 - INFO - 127.0.0.1 - - [19/Mar/2026 20:22:27] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:22:27,531 - INFO - Moving to lpf_10: dx=0.75, dy=0
+2026-03-19 20:22:27,531 - INFO - Sent: MOVE 0.75,0
+2026-03-19 20:22:27,589 - INFO - Arduino: Move: dx=0.75 dy=0.00 (steps X=150 Y=0)
+2026-03-19 20:22:28,897 - INFO - Arduino: STABLE_READY
+2026-03-19 20:22:28,897 - INFO - 127.0.0.1 - - [19/Mar/2026 20:22:28] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:22:29,001 - INFO - 127.0.0.1 - - [19/Mar/2026 20:22:29] "POST /next_sample HTTP/1.1" 200 -
+2026-03-19 20:26:23,281 - INFO - 127.0.0.1 - - [19/Mar/2026 20:26:23] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 20:26:23,284 - INFO - 127.0.0.1 - - [19/Mar/2026 20:26:23] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 20:29:48,904 - INFO - 127.0.0.1 - - [19/Mar/2026 20:29:48] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 20:29:48,908 - INFO - 127.0.0.1 - - [19/Mar/2026 20:29:48] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 20:29:52,495 - INFO - 127.0.0.1 - - [19/Mar/2026 20:29:52] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 20:30:14,573 - INFO - 127.0.0.1 - - [19/Mar/2026 20:30:14] "[33mOPTIONS /manual_move HTTP/1.1[0m" 404 -
+2026-03-19 20:31:19,093 - INFO - 127.0.0.1 - - [19/Mar/2026 20:31:19] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 20:32:09,330 - INFO - 127.0.0.1 - - [19/Mar/2026 20:32:09] "[33mPOST /manual_zero HTTP/1.1[0m" 404 -
+2026-03-19 20:32:10,146 - INFO - 127.0.0.1 - - [19/Mar/2026 20:32:10] "[33mPOST /manual_zero HTTP/1.1[0m" 404 -
+2026-03-19 20:32:10,939 - INFO - 127.0.0.1 - - [19/Mar/2026 20:32:10] "[33mOPTIONS /manual_move HTTP/1.1[0m" 404 -

@@ -16,7 +16,7 @@ import {
 import {
   getScanMethodFromLocalStorage,
 } from "@/lib/scan-method";
-import { Cpu, Eye, EyeOff, Plus, Trash2, ArrowLeft, Microscope, RefreshCw, CheckCircle, Gauge, Save } from "lucide-react";
+import { Cpu, Eye, EyeOff, Plus, Trash2, ArrowLeft, Microscope, RefreshCw, CheckCircle, Gauge, Save, Move, ArrowUp, ArrowDown, ArrowRight, Home, Crosshair } from "lucide-react";
 
 function maskKey(key: string) {
   const clean = key.trim();
@@ -58,6 +58,11 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "local">("idle");
   const [geminiModel, setGeminiModel] = useState("gemini-1.5-flash");
+
+  // Manual motor control
+  const [manualStep, setManualStep] = useState<number>(0.5);
+  const [isMoving, setIsMoving] = useState(false);
+  const [moveStatus, setMoveStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   useEffect(() => {
     setKeys(getGeminiKeysFromLocalStorage());
@@ -114,6 +119,72 @@ export default function SettingsPage() {
       setIsSaving(false);
       // Auto-clear the status after 3 seconds
       setTimeout(() => setSaveStatus("idle"), 3000);
+    }
+  };
+
+  const manualMove = async (axis: "x" | "y", direction: 1 | -1) => {
+    setIsMoving(true);
+    setMoveStatus(null);
+    try {
+      const res = await fetch(`${getMotorServerUrl()}/manual_move`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ axis, units: manualStep * direction }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMoveStatus({ type: "success", msg: `Moved ${axis.toUpperCase()} ${direction > 0 ? "+" : "−"}${manualStep}` });
+        setIsConnected(true);
+      } else {
+        setMoveStatus({ type: "error", msg: data.message || "Move failed" });
+      }
+    } catch {
+      setMoveStatus({ type: "error", msg: "Motor server offline" });
+      setIsConnected(false);
+    } finally {
+      setIsMoving(false);
+      setTimeout(() => setMoveStatus(null), 2000);
+    }
+  };
+
+  const manualHome = async () => {
+    setIsMoving(true);
+    setMoveStatus(null);
+    try {
+      const res = await fetch(`${getMotorServerUrl()}/manual_home`, { method: "POST" });
+      if (res.ok) {
+        setMoveStatus({ type: "success", msg: "Motors returned home" });
+        setIsConnected(true);
+      } else {
+        setMoveStatus({ type: "error", msg: "Home failed" });
+      }
+    } catch {
+      setMoveStatus({ type: "error", msg: "Motor server offline" });
+      setIsConnected(false);
+    } finally {
+      setIsMoving(false);
+      setTimeout(() => setMoveStatus(null), 2000);
+    }
+  };
+
+  const manualZero = async () => {
+    setIsMoving(true);
+    setMoveStatus(null);
+    try {
+      // We'll call the initialize endpoint then send a zero via test_motors-style
+      const res = await fetch(`${getMotorServerUrl()}/manual_zero`, { method: "POST" });
+      if (res.ok) {
+        setMoveStatus({ type: "success", msg: "Origin set to current position" });
+        setIsConnected(true);
+      } else {
+        setMoveStatus({ type: "error", msg: "Zero failed" });
+      }
+    } catch {
+      setMoveStatus({ type: "error", msg: "Motor server offline" });
+      setIsConnected(false);
+    } finally {
+      setIsMoving(false);
+      setTimeout(() => setMoveStatus(null), 2000);
     }
   };
 
@@ -456,6 +527,155 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Manual Motor Control */}
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
+          <div className="flex items-start gap-3 mb-4">
+            <Move className="h-5 w-5 text-gray-700 mt-0.5" />
+            <div>
+              <div className="text-sm font-semibold text-gray-900">
+                Manual Motor Control
+              </div>
+              <div className="text-xs text-gray-600 mt-1 leading-relaxed">
+                Manually jog the X and Y motors. Useful for positioning the stage before a scan.
+              </div>
+            </div>
+          </div>
+
+          {/* Step Size */}
+          <div className="mb-4">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Step Size (units)</div>
+            <div className="flex items-center gap-2">
+              {[0.1, 0.25, 0.5, 1.0, 2.0].map((val) => (
+                <button
+                  key={val}
+                  onClick={() => setManualStep(val)}
+                  className={`h-8 px-3 rounded-lg text-xs font-semibold transition-colors ${
+                    manualStep === val
+                      ? "bg-gray-900 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {val}
+                </button>
+              ))}
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={manualStep}
+                onChange={(e) => setManualStep(Math.max(0.01, parseFloat(e.target.value) || 0.01))}
+                className="w-20 h-8 text-center rounded-lg border border-gray-300 text-xs font-mono outline-none focus:ring-1 focus:ring-gray-400"
+              />
+            </div>
+          </div>
+
+          {/* D-pad style controls */}
+          <div className="flex flex-col items-center gap-2 py-4">
+            {/* Y- (up on stage) */}
+            <Button
+              variant="outline"
+              disabled={isMoving || !isConnected}
+              onClick={() => manualMove("y", -1)}
+              className="h-12 w-12 rounded-xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 disabled:opacity-40"
+              title="Move Y− (up)"
+            >
+              <ArrowUp className="h-5 w-5" />
+            </Button>
+
+            <div className="flex items-center gap-2">
+              {/* X- (left) */}
+              <Button
+                variant="outline"
+                disabled={isMoving || !isConnected}
+                onClick={() => manualMove("x", -1)}
+                className="h-12 w-12 rounded-xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 disabled:opacity-40"
+                title="Move X− (left)"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+
+              {/* Center: step size indicator */}
+              <div className="h-12 w-16 rounded-xl bg-gray-50 border-2 border-gray-100 flex items-center justify-center">
+                <span className="text-xs font-bold text-gray-400">{manualStep}</span>
+              </div>
+
+              {/* X+ (right) */}
+              <Button
+                variant="outline"
+                disabled={isMoving || !isConnected}
+                onClick={() => manualMove("x", 1)}
+                className="h-12 w-12 rounded-xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 disabled:opacity-40"
+                title="Move X+ (right)"
+              >
+                <ArrowRight className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Y+ (down on stage) */}
+            <Button
+              variant="outline"
+              disabled={isMoving || !isConnected}
+              onClick={() => manualMove("y", 1)}
+              className="h-12 w-12 rounded-xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 disabled:opacity-40"
+              title="Move Y+ (down)"
+            >
+              <ArrowDown className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Home / Zero buttons */}
+          <div className="flex gap-2 mt-2">
+            <Button
+              variant="outline"
+              disabled={isMoving || !isConnected}
+              onClick={manualHome}
+              className="flex-1 h-10 rounded-xl border-2 border-gray-200 hover:border-orange-400 hover:bg-orange-50 text-sm font-semibold disabled:opacity-40"
+            >
+              <Home className="h-4 w-4 mr-2" />
+              Home
+            </Button>
+            <Button
+              variant="outline"
+              disabled={isMoving || !isConnected}
+              onClick={manualZero}
+              className="flex-1 h-10 rounded-xl border-2 border-gray-200 hover:border-green-400 hover:bg-green-50 text-sm font-semibold disabled:opacity-40"
+            >
+              <Crosshair className="h-4 w-4 mr-2" />
+              Set Origin
+            </Button>
+          </div>
+
+          {/* Status feedback */}
+          {isMoving && (
+            <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200">
+              <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+              <span className="text-xs text-blue-700">Moving...</span>
+            </div>
+          )}
+          {moveStatus && (
+            <div className={`mt-3 flex items-center gap-2 px-3 py-2 rounded-lg border animate-in fade-in slide-in-from-bottom-2 duration-200 ${
+              moveStatus.type === "success"
+                ? "bg-green-50 border-green-200"
+                : "bg-red-50 border-red-200"
+            }`}>
+              <span className={`text-xs font-medium ${
+                moveStatus.type === "success" ? "text-green-700" : "text-red-700"
+              }`}>
+                {moveStatus.msg}
+              </span>
+            </div>
+          )}
+
+          {!isConnected && (
+            <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
+              <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+              <span className="text-xs text-amber-700">
+                Connect to the motor server to use manual controls.
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="mt-8 text-[11px] text-gray-400 text-center pb-8 flex items-center justify-center gap-1">
