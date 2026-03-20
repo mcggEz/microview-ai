@@ -12,6 +12,8 @@ import {
 import {
   MOTOR_SERVER_URL_STORAGE_KEY,
   getMotorServerUrl,
+  getMotorSensitivity,
+  setMotorSensitivity,
 } from "@/lib/motor-config";
 import {
   getScanMethodFromLocalStorage,
@@ -60,7 +62,6 @@ export default function SettingsPage() {
   const [geminiModel, setGeminiModel] = useState("gemini-1.5-flash");
 
   // Manual motor control
-  const [manualStep, setManualStep] = useState<number>(0.5);
   const [isMoving, setIsMoving] = useState(false);
   const [moveStatus, setMoveStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
@@ -69,6 +70,7 @@ export default function SettingsPage() {
     setGeminiModel(getGeminiModelFromLocalStorage());
     // Scan method is always longitudinal
     setMotorUrl(getMotorServerUrl());
+    setSensitivity(getMotorSensitivity());
     fetchMotorConfig();
   }, []);
 
@@ -96,7 +98,7 @@ export default function SettingsPage() {
     setIsSaving(true);
     setSaveStatus("idle");
     // Always save locally so the value persists even without server
-    localStorage.setItem("MICROVIEW_MOTOR_SENSITIVITY", String(sensitivity));
+    setMotorSensitivity(sensitivity);
     try {
       const res = await fetch(`${motorUrl}/update_config`, {
         method: "POST",
@@ -130,11 +132,11 @@ export default function SettingsPage() {
       const res = await fetch(`${motorUrl}/manual_move`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ axis, units: manualStep * direction }),
+        body: JSON.stringify({ axis, units: sensitivity * direction }),
       });
       const data = await res.json();
       if (res.ok) {
-        setMoveStatus({ type: "success", msg: `Moved ${axis.toUpperCase()} ${direction > 0 ? "+" : "−"}${manualStep}` });
+        setMoveStatus({ type: "success", msg: `Moved ${axis.toUpperCase()} ${direction > 0 ? "+" : "−"}${sensitivity}` });
         setIsConnected(true);
       } else {
         setMoveStatus({ type: "error", msg: data.message || "Move failed" });
@@ -146,7 +148,7 @@ export default function SettingsPage() {
       setIsMoving(false);
       setTimeout(() => setMoveStatus(null), 2000);
     }
-  }, [motorUrl, manualStep]);
+  }, [motorUrl, sensitivity]);
 
   const manualHome = useCallback(async () => {
     setIsMoving(true);
@@ -596,34 +598,6 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Step Size */}
-          <div className="mb-4">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Step Size (units)</div>
-            <div className="flex items-center gap-2">
-              {[0.1, 0.25, 0.5, 1.0, 2.0].map((val) => (
-                <button
-                  key={val}
-                  onClick={() => setManualStep(val)}
-                  className={`h-8 px-3 rounded-lg text-xs font-semibold transition-colors ${
-                    manualStep === val
-                      ? "bg-gray-900 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  {val}
-                </button>
-              ))}
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={manualStep}
-                onChange={(e) => setManualStep(Math.max(0.01, parseFloat(e.target.value) || 0.01))}
-                className="w-20 h-8 text-center rounded-lg border border-gray-300 text-xs font-mono outline-none focus:ring-1 focus:ring-gray-400"
-              />
-            </div>
-          </div>
-
           {/* D-pad style controls */}
           <div className="flex flex-col items-center gap-2 py-4">
             {/* Y- (up on stage) */}
@@ -649,9 +623,9 @@ export default function SettingsPage() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
 
-              {/* Center: step size indicator */}
+              {/* Center: sensitivity indicator */}
               <div className="h-12 w-16 rounded-xl bg-gray-50 border-2 border-gray-100 flex items-center justify-center">
-                <span className="text-xs font-bold text-gray-400">{manualStep}</span>
+                <span className="text-xs font-bold text-gray-400">{sensitivity}x</span>
               </div>
 
               {/* X+ (right) */}

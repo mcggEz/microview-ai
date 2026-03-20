@@ -63,6 +63,8 @@ import { Button } from "@/components/ui/button";
 import { getGeminiKeysFromLocalStorage, getGeminiModelFromLocalStorage } from "@/lib/client-gemini-keys";
 import { getScanMethodFromLocalStorage } from "@/lib/scan-method";
 import ObjectiveSwitchModal from "@/components/ObjectiveSwitchModal";
+import ManualMotorControl from "@/components/ManualMotorControl";
+import { Move } from "lucide-react";
 
 export default function Report() {
   const router = useRouter();
@@ -103,6 +105,7 @@ export default function Report() {
 
   const [showSwitchModal, setShowSwitchModal] = useState(false);
   const switchModalResolver = useRef<((value: boolean) => void) | null>(null);
+  const [showManualControl, setShowManualControl] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState<{ full_name?: string; email?: string } | null>(null);
@@ -2392,6 +2395,13 @@ export default function Report() {
   return (
     <Suspense fallback={null}>
       <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+        {/* Manual Motor Control Floating Panel */}
+        <ManualMotorControl 
+          show={showManualControl} 
+          onClose={() => setShowManualControl(false)} 
+          motorUrl={getMotorServerUrl()}
+        />
+
         {/* Header */}
         <div className="flex-shrink-0 bg-white border-b border-gray-200 px-3 md:px-4 py-2 md:py-3 relative z-[60]">
           <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
@@ -2465,6 +2475,21 @@ export default function Report() {
               >
                 <Plus className="h-3 w-3" />
                 <span className="tracking-tight">Add Test</span>
+              </Button>
+
+              {/* Manual Control Toggle */}
+              <Button
+                onClick={() => setShowManualControl(!showManualControl)}
+                variant="secondary"
+                className={`h-7 px-2.5 rounded-md text-xs font-semibold tracking-tight shadow-sm border ${
+                  showManualControl 
+                    ? "bg-gray-900 text-white border-gray-900" 
+                    : "bg-gray-200 text-gray-900 border-gray-300 hover:bg-gray-300"
+                }`}
+                title="Manual Motor Control"
+              >
+                <Move className="h-3.5 w-3.5" />
+                <span className="ml-1 tracking-tight">Jog</span>
               </Button>
 
               {/* Get Samples - attempts request and logs full routine */}

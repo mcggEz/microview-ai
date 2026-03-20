@@ -15545,3 +15545,1400 @@
 2026-03-19 22:51:08,824 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
 2026-03-19 22:51:09,888 - INFO - Arduino: STABLE_READY
 2026-03-19 22:51:09,888 - INFO - 127.0.0.1 - - [19/Mar/2026 22:51:09] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 22:56:07,205 - INFO - 127.0.0.1 - - [19/Mar/2026 22:56:07] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 22:56:07,207 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 22:56:07,208 - INFO - Sent: MOVE 0,0.5
+2026-03-19 22:56:07,263 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 22:56:08,836 - INFO - Arduino: STABLE_READY
+2026-03-19 22:56:08,837 - INFO - 127.0.0.1 - - [19/Mar/2026 22:56:08] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:17:48,806 - INFO - 127.0.0.1 - - [19/Mar/2026 23:17:48] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 23:17:48,809 - INFO - 127.0.0.1 - - [19/Mar/2026 23:17:48] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 23:17:54,955 - INFO - 127.0.0.1 - - [19/Mar/2026 23:17:54] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:17:54,957 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:17:54,958 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:17:55,015 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:17:56,074 - INFO - Arduino: STABLE_READY
+2026-03-19 23:17:56,074 - INFO - 127.0.0.1 - - [19/Mar/2026 23:17:56] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:18:09,922 - INFO - 127.0.0.1 - - [19/Mar/2026 23:18:09] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:18:09,924 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:18:09,925 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:18:09,983 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:18:11,041 - INFO - Arduino: STABLE_READY
+2026-03-19 23:18:11,041 - INFO - 127.0.0.1 - - [19/Mar/2026 23:18:11] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:18:15,231 - INFO - 127.0.0.1 - - [19/Mar/2026 23:18:15] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:18:15,233 - INFO - Manual move: axis=x, units=-0.5
+2026-03-19 23:18:15,234 - INFO - Sent: MOVE -0.5,0
+2026-03-19 23:18:15,296 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-19 23:18:16,349 - INFO - Arduino: STABLE_READY
+2026-03-19 23:18:16,349 - INFO - 127.0.0.1 - - [19/Mar/2026 23:18:16] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:18:18,067 - INFO - Manual move: axis=x, units=-0.5
+2026-03-19 23:18:18,067 - INFO - Sent: MOVE -0.5,0
+2026-03-19 23:18:18,126 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-19 23:18:19,183 - INFO - Arduino: STABLE_READY
+2026-03-19 23:18:19,183 - INFO - 127.0.0.1 - - [19/Mar/2026 23:18:19] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:18:19,980 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:18:19,981 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:18:20,040 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:18:21,587 - INFO - Arduino: STABLE_READY
+2026-03-19 23:18:21,587 - INFO - 127.0.0.1 - - [19/Mar/2026 23:18:21] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:18:22,616 - INFO - 127.0.0.1 - - [19/Mar/2026 23:18:22] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:18:22,618 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:18:22,619 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:18:22,681 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:18:24,225 - INFO - Arduino: STABLE_READY
+2026-03-19 23:18:24,226 - INFO - 127.0.0.1 - - [19/Mar/2026 23:18:24] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:18:24,891 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:18:24,892 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:18:24,954 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:18:26,498 - INFO - Arduino: STABLE_READY
+2026-03-19 23:18:26,499 - INFO - 127.0.0.1 - - [19/Mar/2026 23:18:26] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:18:29,419 - INFO - 127.0.0.1 - - [19/Mar/2026 23:18:29] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:18:29,420 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:18:29,421 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:18:29,480 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:18:31,027 - INFO - Arduino: STABLE_READY
+2026-03-19 23:18:31,028 - INFO - 127.0.0.1 - - [19/Mar/2026 23:18:31] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:18:35,645 - INFO - 127.0.0.1 - - [19/Mar/2026 23:18:35] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:18:35,646 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:18:35,647 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:18:35,714 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:18:36,764 - INFO - Arduino: STABLE_READY
+2026-03-19 23:18:36,764 - INFO - 127.0.0.1 - - [19/Mar/2026 23:18:36] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:18:37,234 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:18:37,234 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:18:37,294 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:18:38,840 - INFO - Arduino: STABLE_READY
+2026-03-19 23:18:38,842 - INFO - 127.0.0.1 - - [19/Mar/2026 23:18:38] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:18:39,188 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:18:39,188 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:18:39,254 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:18:40,798 - INFO - Arduino: STABLE_READY
+2026-03-19 23:18:40,798 - INFO - 127.0.0.1 - - [19/Mar/2026 23:18:40] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:19:04,565 - INFO - 127.0.0.1 - - [19/Mar/2026 23:19:04] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 23:19:04,568 - INFO - 127.0.0.1 - - [19/Mar/2026 23:19:04] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 23:19:09,427 - INFO - 127.0.0.1 - - [19/Mar/2026 23:19:09] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:19:09,429 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:19:09,431 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:19:09,488 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:19:10,544 - INFO - Arduino: STABLE_READY
+2026-03-19 23:19:10,545 - INFO - 127.0.0.1 - - [19/Mar/2026 23:19:10] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:19:13,625 - INFO - Manual move: axis=x, units=-0.5
+2026-03-19 23:19:13,625 - INFO - Sent: MOVE -0.5,0
+2026-03-19 23:19:13,686 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-19 23:19:14,742 - INFO - Arduino: STABLE_READY
+2026-03-19 23:19:14,743 - INFO - 127.0.0.1 - - [19/Mar/2026 23:19:14] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:19:15,891 - INFO - 127.0.0.1 - - [19/Mar/2026 23:19:15] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:19:15,894 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:19:15,895 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:19:15,950 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:19:17,513 - INFO - Arduino: STABLE_READY
+2026-03-19 23:19:17,514 - INFO - 127.0.0.1 - - [19/Mar/2026 23:19:17] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:19:18,301 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:19:18,301 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:19:18,361 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:19:19,415 - INFO - Arduino: STABLE_READY
+2026-03-19 23:19:19,416 - INFO - 127.0.0.1 - - [19/Mar/2026 23:19:19] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:19:20,126 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:19:20,127 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:19:20,185 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:19:21,737 - INFO - Arduino: STABLE_READY
+2026-03-19 23:19:21,737 - INFO - 127.0.0.1 - - [19/Mar/2026 23:19:21] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:20:06,430 - INFO - 127.0.0.1 - - [19/Mar/2026 23:20:06] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:20:06,432 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:20:06,432 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:20:06,488 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:20:07,545 - INFO - Arduino: STABLE_READY
+2026-03-19 23:20:07,545 - INFO - 127.0.0.1 - - [19/Mar/2026 23:20:07] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:20:22,331 - INFO - Loaded sensitivity: 0.75
+2026-03-19 23:20:22,342 - INFO - Scanning 1 serial ports (Bluetooth excluded)...
+2026-03-19 23:20:22,342 - INFO - Trying port COM6 (Arduino Uno (COM6))...
+2026-03-19 23:20:25,358 - INFO -   Boot messages: ['=== Stepper Control System Ready ===', 'OK']
+2026-03-19 23:20:25,359 - INFO - Arduino identified on COM6 (via boot message)
+2026-03-19 23:20:25,359 - INFO - Arduino initialized successfully
+2026-03-19 23:20:25,370 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://192.168.1.4:3001
+2026-03-19 23:20:25,371 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-19 23:20:36,012 - INFO - 127.0.0.1 - - [19/Mar/2026 23:20:36] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:20:36,015 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:20:36,016 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:20:36,072 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:20:37,129 - INFO - Arduino: STABLE_READY
+2026-03-19 23:20:37,130 - INFO - 127.0.0.1 - - [19/Mar/2026 23:20:37] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:20:38,698 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:20:38,698 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:20:38,757 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:20:39,811 - INFO - Arduino: STABLE_READY
+2026-03-19 23:20:39,812 - INFO - 127.0.0.1 - - [19/Mar/2026 23:20:39] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:22:27,606 - INFO - 127.0.0.1 - - [19/Mar/2026 23:22:27] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:22:27,608 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:22:27,609 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:22:27,666 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:22:28,723 - INFO - Arduino: STABLE_READY
+2026-03-19 23:22:28,724 - INFO - 127.0.0.1 - - [19/Mar/2026 23:22:28] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:22:42,782 - INFO - 127.0.0.1 - - [19/Mar/2026 23:22:42] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:22:42,784 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:22:42,785 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:22:42,843 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:22:43,898 - INFO - Arduino: STABLE_READY
+2026-03-19 23:22:43,898 - INFO - 127.0.0.1 - - [19/Mar/2026 23:22:43] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:22:44,721 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:22:44,721 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:22:44,779 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:22:45,835 - INFO - Arduino: STABLE_READY
+2026-03-19 23:22:45,835 - INFO - 127.0.0.1 - - [19/Mar/2026 23:22:45] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:22:47,055 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:22:47,055 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:22:47,117 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:22:48,662 - INFO - Arduino: STABLE_READY
+2026-03-19 23:22:48,662 - INFO - 127.0.0.1 - - [19/Mar/2026 23:22:48] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:22:52,871 - INFO - 127.0.0.1 - - [19/Mar/2026 23:22:52] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:22:52,873 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:22:52,874 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:22:52,937 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:22:53,992 - INFO - Arduino: STABLE_READY
+2026-03-19 23:22:53,993 - INFO - 127.0.0.1 - - [19/Mar/2026 23:22:53] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:22:55,127 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:22:55,128 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:22:55,186 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:22:56,730 - INFO - Arduino: STABLE_READY
+2026-03-19 23:22:56,730 - INFO - 127.0.0.1 - - [19/Mar/2026 23:22:56] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:22:58,755 - INFO - 127.0.0.1 - - [19/Mar/2026 23:22:58] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:22:58,757 - INFO - Manual move: axis=x, units=-0.5
+2026-03-19 23:22:58,757 - INFO - Sent: MOVE -0.5,0
+2026-03-19 23:22:58,821 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-19 23:22:59,875 - INFO - Arduino: STABLE_READY
+2026-03-19 23:22:59,876 - INFO - 127.0.0.1 - - [19/Mar/2026 23:22:59] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:00,256 - INFO - Manual move: axis=x, units=-0.5
+2026-03-19 23:23:00,256 - INFO - Sent: MOVE -0.5,0
+2026-03-19 23:23:00,318 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-19 23:23:01,370 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:01,371 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:01] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:02,502 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:23:02,503 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:23:02,562 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:23:04,107 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:04,107 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:04] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:04,159 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:04] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:04,161 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:23:04,162 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:23:04,221 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:23:05,765 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:05,765 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:05] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:05,866 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:23:05,866 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:23:05,925 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:23:07,473 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:07,474 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:07] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:08,668 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:23:08,668 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:23:08,727 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:23:10,275 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:10,276 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:10] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:10,419 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:10] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:10,421 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:23:10,422 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:23:10,480 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:23:12,027 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:12,028 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:12] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:12,091 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:23:12,092 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:23:12,150 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:23:13,695 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:13,696 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:13] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:13,857 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:23:13,858 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:23:13,920 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:23:15,468 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:15,469 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:15] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:15,860 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:15] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:15,862 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:23:15,863 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:23:15,919 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:23:17,467 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:17,467 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:17] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:18,249 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:23:18,249 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:23:18,311 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:23:19,855 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:19,855 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:19] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:21,156 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:21] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:21,159 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:23:21,159 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:23:21,219 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:23:22,769 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:22,769 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:22] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:23,947 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:23:23,948 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:23:24,008 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:23:25,553 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:25,553 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:25] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:32,723 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:32] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:32,726 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:23:32,726 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:23:32,785 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:23:34,330 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:34,330 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:34] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:35,247 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:23:35,248 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:23:35,309 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:23:36,861 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:36,862 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:36] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:36,963 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:23:36,963 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:23:37,020 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:23:38,569 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:38,570 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:38] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:40,339 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:40] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:40,340 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:23:40,341 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:23:40,402 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:23:41,947 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:41,948 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:41] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:42,665 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:23:42,665 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:23:42,726 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:23:44,269 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:44,270 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:44] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:46,352 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:46] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:46,354 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:23:46,355 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:23:46,416 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:23:47,960 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:47,960 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:47] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:49,772 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:23:49,772 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:23:49,832 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:23:51,375 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:51,376 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:51] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:55,037 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:55] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:23:55,040 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:23:55,041 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:23:55,103 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:23:56,653 - INFO - Arduino: STABLE_READY
+2026-03-19 23:23:56,654 - INFO - 127.0.0.1 - - [19/Mar/2026 23:23:56] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:02,566 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:02] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:02,567 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:24:02,568 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:24:02,627 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:24:04,172 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:04,172 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:04] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:05,533 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:24:05,533 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:24:05,592 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:24:07,154 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:07,154 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:07] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:08,811 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:08] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:08,813 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:24:08,814 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:24:08,921 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:24:10,450 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:10,451 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:10] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:10,925 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:24:10,925 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:24:10,992 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:24:12,543 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:12,544 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:12] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:12,835 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:24:12,835 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:24:12,895 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:24:14,441 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:14,442 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:14] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:15,110 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:15] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:15,112 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:24:15,112 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:24:15,169 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:24:16,717 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:16,717 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:16] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:20,571 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:20] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:20,573 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:24:20,573 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:24:20,632 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:24:22,210 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:22,210 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:22] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:22,931 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:24:22,931 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:24:22,991 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:24:24,540 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:24,540 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:24] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:26,412 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:26] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:26,414 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:24:26,415 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:24:26,477 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:24:28,021 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:28,021 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:28] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:28,654 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:24:28,654 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:24:28,714 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:24:30,262 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:30,262 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:30] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:30,952 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:24:30,953 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:24:31,018 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:24:32,564 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:32,565 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:32] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:32,843 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:32] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:32,844 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:24:32,845 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:24:32,903 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:24:34,451 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:34,452 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:34] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:37,240 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:24:37,240 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:24:37,304 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:24:38,853 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:38,853 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:38] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:39,959 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:39] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:39,961 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:24:39,961 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:24:40,023 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:24:41,572 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:41,573 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:41] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:43,546 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:24:43,546 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:24:43,601 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:24:45,149 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:45,150 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:45] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:45,250 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:45] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:45,253 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:24:45,253 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:24:45,314 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:24:46,857 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:46,858 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:46] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:49,597 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:24:49,597 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:24:49,663 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:24:51,213 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:51,213 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:51] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:52,666 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:52] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:52,668 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:24:52,669 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:24:52,730 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:24:54,275 - INFO - Arduino: STABLE_READY
+2026-03-19 23:24:54,275 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:54] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:58,034 - INFO - 127.0.0.1 - - [19/Mar/2026 23:24:58] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:24:58,036 - INFO - Manual move: axis=y, units=-1.0
+2026-03-19 23:24:58,037 - INFO - Sent: MOVE 0,-1.0
+2026-03-19 23:24:58,097 - INFO - Arduino: Move: dx=0.00 dy=-1.00 (steps X=0 Y=-400)
+2026-03-19 23:25:00,624 - INFO - Arduino: STABLE_READY
+2026-03-19 23:25:00,624 - INFO - 127.0.0.1 - - [19/Mar/2026 23:25:00] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:25:02,838 - INFO - Manual move: axis=y, units=1.0
+2026-03-19 23:25:02,839 - INFO - Sent: MOVE 0,1.0
+2026-03-19 23:25:02,897 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-19 23:25:05,428 - INFO - Arduino: STABLE_READY
+2026-03-19 23:25:05,429 - INFO - 127.0.0.1 - - [19/Mar/2026 23:25:05] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:25:07,989 - INFO - 127.0.0.1 - - [19/Mar/2026 23:25:07] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:25:07,991 - INFO - Manual move: axis=y, units=1.0
+2026-03-19 23:25:07,991 - INFO - Sent: MOVE 0,1.0
+2026-03-19 23:25:08,049 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-19 23:25:10,579 - INFO - Arduino: STABLE_READY
+2026-03-19 23:25:10,581 - INFO - 127.0.0.1 - - [19/Mar/2026 23:25:10] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:25:11,753 - INFO - Manual move: axis=y, units=1.0
+2026-03-19 23:25:11,753 - INFO - Sent: MOVE 0,1.0
+2026-03-19 23:25:11,813 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-19 23:25:14,356 - INFO - Arduino: STABLE_READY
+2026-03-19 23:25:14,357 - INFO - 127.0.0.1 - - [19/Mar/2026 23:25:14] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:25:14,620 - INFO - 127.0.0.1 - - [19/Mar/2026 23:25:14] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:25:14,622 - INFO - Manual move: axis=y, units=1.0
+2026-03-19 23:25:14,623 - INFO - Sent: MOVE 0,1.0
+2026-03-19 23:25:14,680 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-19 23:25:17,214 - INFO - Arduino: STABLE_READY
+2026-03-19 23:25:17,216 - INFO - 127.0.0.1 - - [19/Mar/2026 23:25:17] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:33:55,051 - INFO - 127.0.0.1 - - [19/Mar/2026 23:33:55] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 23:33:55,054 - INFO - 127.0.0.1 - - [19/Mar/2026 23:33:55] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 23:34:02,433 - INFO - Sent: ZERO
+2026-03-19 23:34:02,492 - INFO - Arduino: STABLE_READY
+2026-03-19 23:34:02,492 - INFO - Manual ZERO: origin set to current position
+2026-03-19 23:34:02,493 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:02] "POST /manual_zero HTTP/1.1" 200 -
+2026-03-19 23:34:06,593 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:06] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:34:06,595 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:34:06,596 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:34:06,655 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:34:07,711 - INFO - Arduino: STABLE_READY
+2026-03-19 23:34:07,712 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:07] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:34:10,380 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:34:10,380 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:34:10,438 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:34:11,495 - INFO - Arduino: STABLE_READY
+2026-03-19 23:34:11,497 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:11] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:34:12,464 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:12] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:34:12,466 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:34:12,467 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:34:12,523 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:34:14,071 - INFO - Arduino: STABLE_READY
+2026-03-19 23:34:14,073 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:14] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:34:14,144 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:34:14,144 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:34:14,202 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:34:15,746 - INFO - Arduino: STABLE_READY
+2026-03-19 23:34:15,747 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:15] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:34:16,229 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:34:16,229 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:34:16,288 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:34:17,832 - INFO - Arduino: STABLE_READY
+2026-03-19 23:34:17,832 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:17] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:34:18,825 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:18] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:34:18,827 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:34:18,827 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:34:18,892 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:34:20,457 - INFO - Arduino: STABLE_READY
+2026-03-19 23:34:20,458 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:20] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:34:22,611 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:34:22,611 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:34:22,677 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:34:24,223 - INFO - Arduino: STABLE_READY
+2026-03-19 23:34:24,224 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:24] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:34:26,359 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:26] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:34:26,361 - INFO - Manual move: axis=x, units=-0.5
+2026-03-19 23:34:26,362 - INFO - Sent: MOVE -0.5,0
+2026-03-19 23:34:26,420 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-19 23:34:27,477 - INFO - Arduino: STABLE_READY
+2026-03-19 23:34:27,478 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:27] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:34:28,088 - INFO - Manual move: axis=x, units=-0.5
+2026-03-19 23:34:28,088 - INFO - Sent: MOVE -0.5,0
+2026-03-19 23:34:28,149 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-19 23:34:29,251 - INFO - Arduino: STABLE_READY
+2026-03-19 23:34:29,251 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:29] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:34:58,221 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:58] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:34:58,223 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:34:58,224 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:34:58,281 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:34:59,338 - INFO - Arduino: STABLE_READY
+2026-03-19 23:34:59,339 - INFO - 127.0.0.1 - - [19/Mar/2026 23:34:59] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:34:59,417 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:34:59,418 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:34:59,482 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:35:01,021 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:01,022 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:01] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:09,282 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:09] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:09,284 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:35:09,285 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:35:09,343 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:35:10,889 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:10,889 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:10] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:11,472 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:35:11,472 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:35:11,537 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:35:13,075 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:13,078 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:13] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:15,591 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:15] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:15,594 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:35:15,595 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:35:15,661 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:35:17,229 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:17,229 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:17] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:22,041 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:22] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:22,043 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:35:22,044 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:35:22,107 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:35:23,651 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:23,651 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:23] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:24,984 - INFO - Manual move: axis=y, units=1.0
+2026-03-19 23:35:24,985 - INFO - Sent: MOVE 0,1.0
+2026-03-19 23:35:25,045 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-19 23:35:27,596 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:27,597 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:27] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:28,351 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:28] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:28,354 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:35:28,354 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:35:28,414 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:35:29,958 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:29,959 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:29] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:31,752 - INFO - Manual move: axis=y, units=1.0
+2026-03-19 23:35:31,753 - INFO - Sent: MOVE 0,1.0
+2026-03-19 23:35:31,810 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-19 23:35:34,340 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:34,341 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:34] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:34,881 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:34] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:34,883 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:35:34,884 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:35:34,945 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:35:36,491 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:36,492 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:36] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:36,881 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:35:36,882 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:35:36,946 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:35:38,493 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:38,494 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:38] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:39,298 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:35:39,299 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:35:39,358 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:35:40,903 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:40,903 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:40] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:42,150 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:42] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:42,151 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:35:42,152 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:35:42,208 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:35:43,757 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:43,757 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:43] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:45,044 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:35:45,044 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:35:45,103 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:35:46,649 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:46,649 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:46] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:47,132 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:35:47,132 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:35:47,189 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:35:48,737 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:48,738 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:48] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:49,304 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:49] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:49,306 - INFO - Manual move: axis=y, units=1.0
+2026-03-19 23:35:49,307 - INFO - Sent: MOVE 0,1.0
+2026-03-19 23:35:49,367 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-19 23:35:51,894 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:51,895 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:51] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:56,150 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:56] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:56,152 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:35:56,153 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:35:56,218 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:35:57,761 - INFO - Arduino: STABLE_READY
+2026-03-19 23:35:57,762 - INFO - 127.0.0.1 - - [19/Mar/2026 23:35:57] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:35:59,393 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:35:59,393 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:35:59,456 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:36:01,002 - INFO - Arduino: STABLE_READY
+2026-03-19 23:36:01,002 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:01] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:02,024 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:02] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:02,026 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:36:02,027 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:36:02,085 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:36:03,634 - INFO - Arduino: STABLE_READY
+2026-03-19 23:36:03,634 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:03] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:05,264 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:36:05,264 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:36:05,326 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:36:06,871 - INFO - Arduino: STABLE_READY
+2026-03-19 23:36:06,872 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:06] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:10,415 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:10] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:10,418 - INFO - Manual move: axis=y, units=1.0
+2026-03-19 23:36:10,419 - INFO - Sent: MOVE 0,1.0
+2026-03-19 23:36:10,476 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-19 23:36:13,006 - INFO - Arduino: STABLE_READY
+2026-03-19 23:36:13,007 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:13] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:14,571 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:36:14,571 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:36:14,631 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:36:16,178 - INFO - Arduino: STABLE_READY
+2026-03-19 23:36:16,179 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:16] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:17,804 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:17] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:17,806 - INFO - Manual move: axis=y, units=-1.0
+2026-03-19 23:36:17,807 - INFO - Sent: MOVE 0,-1.0
+2026-03-19 23:36:17,871 - INFO - Arduino: Move: dx=0.00 dy=-1.00 (steps X=0 Y=-400)
+2026-03-19 23:36:20,404 - INFO - Arduino: STABLE_READY
+2026-03-19 23:36:20,406 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:20] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:32,747 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:32] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:32,748 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:36:32,749 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:36:32,814 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:36:34,357 - INFO - Arduino: STABLE_READY
+2026-03-19 23:36:34,358 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:34] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:37,893 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:37] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:37,898 - INFO - Manual move: axis=y, units=1.0
+2026-03-19 23:36:37,900 - INFO - Sent: MOVE 0,1.0
+2026-03-19 23:36:37,966 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-19 23:36:40,505 - INFO - Arduino: STABLE_READY
+2026-03-19 23:36:40,506 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:40] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:41,276 - INFO - Manual move: axis=y, units=-1.0
+2026-03-19 23:36:41,277 - INFO - Sent: MOVE 0,-1.0
+2026-03-19 23:36:41,341 - INFO - Arduino: Move: dx=0.00 dy=-1.00 (steps X=0 Y=-400)
+2026-03-19 23:36:43,897 - INFO - Arduino: STABLE_READY
+2026-03-19 23:36:43,898 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:43] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:50,165 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:50] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:50,167 - INFO - Manual move: axis=y, units=-1.0
+2026-03-19 23:36:50,168 - INFO - Sent: MOVE 0,-1.0
+2026-03-19 23:36:50,227 - INFO - Arduino: Move: dx=0.00 dy=-1.00 (steps X=0 Y=-400)
+2026-03-19 23:36:52,751 - INFO - Arduino: STABLE_READY
+2026-03-19 23:36:52,752 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:52] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:53,236 - INFO - Manual move: axis=y, units=-1.0
+2026-03-19 23:36:53,237 - INFO - Sent: MOVE 0,-1.0
+2026-03-19 23:36:53,296 - INFO - Arduino: Move: dx=0.00 dy=-1.00 (steps X=0 Y=-400)
+2026-03-19 23:36:55,828 - INFO - Arduino: STABLE_READY
+2026-03-19 23:36:55,828 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:55] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:56,213 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:56] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:56,215 - INFO - Manual move: axis=y, units=-1.0
+2026-03-19 23:36:56,216 - INFO - Sent: MOVE 0,-1.0
+2026-03-19 23:36:56,277 - INFO - Arduino: Move: dx=0.00 dy=-1.00 (steps X=0 Y=-400)
+2026-03-19 23:36:58,807 - INFO - Arduino: STABLE_READY
+2026-03-19 23:36:58,807 - INFO - 127.0.0.1 - - [19/Mar/2026 23:36:58] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:36:58,835 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:36:58,835 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:36:58,900 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:00,442 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:00,442 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:00] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:01,676 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:01] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:01,679 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:01,680 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:01,741 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:03,286 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:03,288 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:03] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:05,265 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:05,265 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:05,324 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:06,868 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:06,869 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:06] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:08,468 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:08] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:08,470 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:08,471 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:08,531 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:10,077 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:10,078 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:10] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:10,454 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:10,454 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:10,513 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:12,058 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:12,060 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:12] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:12,218 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:12,218 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:12,283 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:13,824 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:13,825 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:13] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:15,313 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:15] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:15,314 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:15,315 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:15,376 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:16,920 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:16,921 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:16] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:22,243 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:22] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:22,245 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:22,246 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:22,306 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:23,850 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:23,852 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:23] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:25,813 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:25,814 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:25,874 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:27,418 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:27,420 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:27] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:28,800 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:28] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:28,802 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:28,804 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:28,864 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:30,408 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:30,408 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:30] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:31,095 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:31,095 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:31,153 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:32,701 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:32,703 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:32] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:34,790 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:34] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:34,791 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:34,792 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:34,856 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:36,400 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:36,401 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:36] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:36,708 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:36,710 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:36,770 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:38,316 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:38,317 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:38] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:38,894 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:38,894 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:38,955 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:40,500 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:40,502 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:40] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:42,425 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:42] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:42,427 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:42,428 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:42,490 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:44,034 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:44,035 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:44] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:46,018 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:46,019 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:46,085 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:47,629 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:47,630 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:47] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:47,737 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:47] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:47,740 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:47,741 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:47,802 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:49,348 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:49,349 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:49] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:52,793 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:52] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:52,795 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:52,796 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:52,858 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:54,408 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:54,409 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:54] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:56,010 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:56,010 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:56,071 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:37:57,616 - INFO - Arduino: STABLE_READY
+2026-03-19 23:37:57,617 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:57] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:58,631 - INFO - 127.0.0.1 - - [19/Mar/2026 23:37:58] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:37:58,632 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:37:58,633 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:37:58,692 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:38:00,237 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:00,238 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:00] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:00,971 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:38:00,972 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:38:01,037 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:38:02,575 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:02,576 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:02] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:02,618 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:38:02,619 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:38:02,678 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:38:04,222 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:04,223 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:04] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:06,680 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:06] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:06,683 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:38:06,683 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:38:06,744 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:38:08,336 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:08,337 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:08] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:09,889 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:38:09,890 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:38:09,953 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:38:11,497 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:11,498 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:11] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:13,067 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:13] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:13,068 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:38:13,069 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:38:13,130 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:38:14,679 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:14,680 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:14] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:15,253 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:38:15,253 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:38:15,314 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:38:16,858 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:16,858 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:16] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:17,507 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:38:17,507 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:38:17,566 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:38:19,127 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:19,128 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:19] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:19,291 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:19] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:19,299 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:38:19,303 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:38:19,364 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:38:20,908 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:20,910 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:20] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:21,145 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:38:21,146 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:38:21,210 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:38:22,752 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:22,752 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:22] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:23,571 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:38:23,571 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:38:23,633 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:38:25,178 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:25,178 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:25] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:26,500 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:26] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:26,502 - INFO - Manual move: axis=x, units=-1.0
+2026-03-19 23:38:26,503 - INFO - Sent: MOVE -1.0,0
+2026-03-19 23:38:26,565 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-19 23:38:28,114 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:28,115 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:28] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:28,364 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:38:28,365 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:38:28,438 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:38:29,985 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:29,986 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:29] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:30,059 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:38:30,060 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:38:30,126 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:38:31,668 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:31,668 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:31] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:33,675 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:33] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:33,681 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:38:33,684 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:38:33,741 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:38:35,288 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:35,289 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:35] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:35,393 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:38:35,393 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:38:35,454 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:38:36,996 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:36,997 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:36] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:40,595 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:40] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:40,597 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:38:40,598 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:38:40,654 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:38:42,203 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:42,203 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:42] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:42,681 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:38:42,681 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:38:42,739 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:38:44,287 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:44,289 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:44] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:45,465 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:38:45,466 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:38:45,524 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:38:47,067 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:47,069 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:47] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:47,922 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:47] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:47,924 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:38:47,926 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:38:47,981 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:38:49,529 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:49,530 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:49] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:54,231 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:54] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:54,233 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:38:54,234 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:38:54,293 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:38:55,841 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:55,841 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:55] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:56,667 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:38:56,668 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:38:56,722 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:38:58,270 - INFO - Arduino: STABLE_READY
+2026-03-19 23:38:58,271 - INFO - 127.0.0.1 - - [19/Mar/2026 23:38:58] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:38:58,812 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:38:58,812 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:38:58,868 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:39:00,419 - INFO - Arduino: STABLE_READY
+2026-03-19 23:39:00,419 - INFO - 127.0.0.1 - - [19/Mar/2026 23:39:00] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:39:00,598 - INFO - 127.0.0.1 - - [19/Mar/2026 23:39:00] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:39:00,600 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:39:00,601 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:39:00,663 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:39:02,244 - INFO - Arduino: STABLE_READY
+2026-03-19 23:39:02,245 - INFO - 127.0.0.1 - - [19/Mar/2026 23:39:02] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:39:02,425 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:39:02,426 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:39:02,491 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:39:04,038 - INFO - Arduino: STABLE_READY
+2026-03-19 23:39:04,038 - INFO - 127.0.0.1 - - [19/Mar/2026 23:39:04] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:39:06,811 - INFO - 127.0.0.1 - - [19/Mar/2026 23:39:06] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:39:06,813 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:39:06,814 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:39:06,871 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:39:08,419 - INFO - Arduino: STABLE_READY
+2026-03-19 23:39:08,420 - INFO - 127.0.0.1 - - [19/Mar/2026 23:39:08] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:58:35,319 - INFO - 127.0.0.1 - - [19/Mar/2026 23:58:35] "GET /get_config HTTP/1.1" 200 -
+2026-03-19 23:58:38,795 - INFO - Sent: ZERO
+2026-03-19 23:58:38,862 - INFO - Arduino: STABLE_READY
+2026-03-19 23:58:38,862 - INFO - Manual ZERO: origin set to current position
+2026-03-19 23:58:38,863 - INFO - 127.0.0.1 - - [19/Mar/2026 23:58:38] "POST /manual_zero HTTP/1.1" 200 -
+2026-03-19 23:58:43,702 - INFO - Sent: HOME
+2026-03-19 23:58:43,762 - INFO - Arduino: Returning to origin: X=0 Y=0
+2026-03-19 23:58:44,326 - INFO - Arduino: STABLE_READY
+2026-03-19 23:58:44,327 - INFO - Sent: ZERO
+2026-03-19 23:58:44,382 - INFO - Arduino: STABLE_READY
+2026-03-19 23:58:44,382 - INFO - Manual HOME: motors returned to origin
+2026-03-19 23:58:44,383 - INFO - 127.0.0.1 - - [19/Mar/2026 23:58:44] "POST /manual_home HTTP/1.1" 200 -
+2026-03-19 23:58:46,169 - INFO - 127.0.0.1 - - [19/Mar/2026 23:58:46] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:58:46,173 - INFO - Manual move: axis=x, units=-0.5
+2026-03-19 23:58:46,173 - INFO - Sent: MOVE -0.5,0
+2026-03-19 23:58:46,234 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-19 23:58:47,290 - INFO - Arduino: STABLE_READY
+2026-03-19 23:58:47,291 - INFO - 127.0.0.1 - - [19/Mar/2026 23:58:47] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:58:47,366 - INFO - Manual move: axis=x, units=-0.5
+2026-03-19 23:58:47,366 - INFO - Sent: MOVE -0.5,0
+2026-03-19 23:58:47,425 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-19 23:58:48,483 - INFO - Arduino: STABLE_READY
+2026-03-19 23:58:48,483 - INFO - 127.0.0.1 - - [19/Mar/2026 23:58:48] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:58:49,307 - INFO - Manual move: axis=x, units=-0.5
+2026-03-19 23:58:49,308 - INFO - Sent: MOVE -0.5,0
+2026-03-19 23:58:49,373 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-19 23:58:50,424 - INFO - Arduino: STABLE_READY
+2026-03-19 23:58:50,425 - INFO - 127.0.0.1 - - [19/Mar/2026 23:58:50] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:58:50,784 - INFO - Manual move: axis=x, units=-0.5
+2026-03-19 23:58:50,784 - INFO - Sent: MOVE -0.5,0
+2026-03-19 23:58:50,846 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-19 23:58:51,898 - INFO - Arduino: STABLE_READY
+2026-03-19 23:58:51,899 - INFO - 127.0.0.1 - - [19/Mar/2026 23:58:51] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:58:52,001 - INFO - 127.0.0.1 - - [19/Mar/2026 23:58:52] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:58:52,004 - INFO - Manual move: axis=x, units=-0.5
+2026-03-19 23:58:52,005 - INFO - Sent: MOVE -0.5,0
+2026-03-19 23:58:52,066 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-19 23:58:53,119 - INFO - Arduino: STABLE_READY
+2026-03-19 23:58:53,119 - INFO - 127.0.0.1 - - [19/Mar/2026 23:58:53] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:58:53,684 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:58:53,685 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:58:53,741 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:58:54,798 - INFO - Arduino: STABLE_READY
+2026-03-19 23:58:54,799 - INFO - 127.0.0.1 - - [19/Mar/2026 23:58:54] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:58:54,932 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:58:54,932 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:58:54,991 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:58:56,047 - INFO - Arduino: STABLE_READY
+2026-03-19 23:58:56,048 - INFO - 127.0.0.1 - - [19/Mar/2026 23:58:56] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:58:56,186 - INFO - Manual move: axis=x, units=0.5
+2026-03-19 23:58:56,188 - INFO - Sent: MOVE 0.5,0
+2026-03-19 23:58:56,244 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-19 23:58:57,305 - INFO - Arduino: STABLE_READY
+2026-03-19 23:58:57,306 - INFO - 127.0.0.1 - - [19/Mar/2026 23:58:57] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:58:58,539 - INFO - 127.0.0.1 - - [19/Mar/2026 23:58:58] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:58:58,542 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:58:58,543 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:58:58,605 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:59:00,156 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:00,157 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:00] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:00,838 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:59:00,839 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:59:00,901 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:59:02,445 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:02,446 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:02] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:02,795 - INFO - Manual move: axis=x, units=-0.5
+2026-03-19 23:59:02,795 - INFO - Sent: MOVE -0.5,0
+2026-03-19 23:59:02,855 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-19 23:59:03,911 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:03,912 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:03] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:04,383 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:04] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:04,385 - INFO - Manual move: axis=x, units=-0.5
+2026-03-19 23:59:04,387 - INFO - Sent: MOVE -0.5,0
+2026-03-19 23:59:04,448 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-19 23:59:05,505 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:05,505 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:05] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:05,895 - INFO - Manual move: axis=x, units=-0.5
+2026-03-19 23:59:05,897 - INFO - Sent: MOVE -0.5,0
+2026-03-19 23:59:05,959 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-19 23:59:07,011 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:07,012 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:07] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:07,209 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:59:07,210 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:59:07,273 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:59:08,822 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:08,823 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:08] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:10,425 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:10] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:10,427 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:59:10,428 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:59:10,491 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:59:12,058 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:12,059 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:12] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:13,302 - INFO - Manual move: axis=y, units=-0.5
+2026-03-19 23:59:13,302 - INFO - Sent: MOVE 0,-0.5
+2026-03-19 23:59:13,364 - INFO - Arduino: Move: dx=0.00 dy=-0.50 (steps X=0 Y=-200)
+2026-03-19 23:59:14,909 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:14,909 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:14] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:15,812 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:15] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:15,815 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:59:15,815 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:59:15,870 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:59:17,419 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:17,420 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:17] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:17,885 - INFO - Manual move: axis=y, units=0.5
+2026-03-19 23:59:17,885 - INFO - Sent: MOVE 0,0.5
+2026-03-19 23:59:17,944 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-19 23:59:19,488 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:19,488 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:19] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:22,823 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:22] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:22,825 - INFO - Manual move: axis=y, units=2.0
+2026-03-19 23:59:22,826 - INFO - Sent: MOVE 0,2.0
+2026-03-19 23:59:22,892 - INFO - Arduino: Move: dx=0.00 dy=2.00 (steps X=0 Y=800)
+2026-03-19 23:59:27,395 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:27,396 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:27] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:30,205 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:30] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:30,207 - INFO - Manual move: axis=y, units=-2.0
+2026-03-19 23:59:30,209 - INFO - Sent: MOVE 0,-2.0
+2026-03-19 23:59:30,267 - INFO - Arduino: Move: dx=0.00 dy=-2.00 (steps X=0 Y=-800)
+2026-03-19 23:59:34,791 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:34,792 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:34] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:35,184 - INFO - Manual move: axis=y, units=-2.0
+2026-03-19 23:59:35,184 - INFO - Sent: MOVE 0,-2.0
+2026-03-19 23:59:35,244 - INFO - Arduino: Move: dx=0.00 dy=-2.00 (steps X=0 Y=-800)
+2026-03-19 23:59:39,752 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:39,753 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:39] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:39,941 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:39] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:39,944 - INFO - Manual move: axis=y, units=-2.0
+2026-03-19 23:59:39,945 - INFO - Sent: MOVE 0,-2.0
+2026-03-19 23:59:40,003 - INFO - Arduino: Move: dx=0.00 dy=-2.00 (steps X=0 Y=-800)
+2026-03-19 23:59:44,512 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:44,512 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:44] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:50,057 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:50] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:50,060 - INFO - Manual move: axis=y, units=-1.0
+2026-03-19 23:59:50,061 - INFO - Sent: MOVE 0,-1.0
+2026-03-19 23:59:50,126 - INFO - Arduino: Move: dx=0.00 dy=-1.00 (steps X=0 Y=-400)
+2026-03-19 23:59:52,655 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:52,655 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:52] "POST /manual_move HTTP/1.1" 200 -
+2026-03-19 23:59:53,776 - INFO - Manual move: axis=x, units=1.0
+2026-03-19 23:59:53,777 - INFO - Sent: MOVE 1.0,0
+2026-03-19 23:59:53,835 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-19 23:59:55,379 - INFO - Arduino: STABLE_READY
+2026-03-19 23:59:55,380 - INFO - 127.0.0.1 - - [19/Mar/2026 23:59:55] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:01,408 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:01] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:01,409 - INFO - Manual move: axis=x, units=-0.5
+2026-03-20 00:00:01,411 - INFO - Sent: MOVE -0.5,0
+2026-03-20 00:00:01,474 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-20 00:00:02,552 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:02,553 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:02] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:02,677 - INFO - Manual move: axis=x, units=-0.5
+2026-03-20 00:00:02,678 - INFO - Sent: MOVE -0.5,0
+2026-03-20 00:00:02,738 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-20 00:00:03,802 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:03,802 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:03] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:05,627 - INFO - Manual move: axis=x, units=-0.5
+2026-03-20 00:00:05,627 - INFO - Sent: MOVE -0.5,0
+2026-03-20 00:00:05,688 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-20 00:00:06,764 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:06,765 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:06] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:08,987 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:08] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:08,989 - INFO - Manual move: axis=x, units=-0.5
+2026-03-20 00:00:08,989 - INFO - Sent: MOVE -0.5,0
+2026-03-20 00:00:09,051 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-20 00:00:10,103 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:10,103 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:10] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:12,695 - INFO - Manual move: axis=y, units=0.5
+2026-03-20 00:00:12,695 - INFO - Sent: MOVE 0,0.5
+2026-03-20 00:00:12,753 - INFO - Arduino: Move: dx=0.00 dy=0.50 (steps X=0 Y=200)
+2026-03-20 00:00:14,297 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:14,298 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:14] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:16,565 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:16] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:16,569 - INFO - Manual move: axis=x, units=0.5
+2026-03-20 00:00:16,571 - INFO - Sent: MOVE 0.5,0
+2026-03-20 00:00:16,636 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-20 00:00:17,687 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:17,688 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:17] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:18,533 - INFO - Manual move: axis=x, units=0.5
+2026-03-20 00:00:18,534 - INFO - Sent: MOVE 0.5,0
+2026-03-20 00:00:18,590 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-20 00:00:19,646 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:19,648 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:19] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:20,025 - INFO - Manual move: axis=x, units=0.5
+2026-03-20 00:00:20,025 - INFO - Sent: MOVE 0.5,0
+2026-03-20 00:00:20,085 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-20 00:00:21,142 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:21,142 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:21] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:21,657 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:21] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:21,658 - INFO - Manual move: axis=x, units=0.5
+2026-03-20 00:00:21,659 - INFO - Sent: MOVE 0.5,0
+2026-03-20 00:00:21,723 - INFO - Arduino: Move: dx=0.50 dy=0.00 (steps X=100 Y=0)
+2026-03-20 00:00:22,776 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:22,777 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:22] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:24,611 - INFO - Manual move: axis=x, units=-0.5
+2026-03-20 00:00:24,611 - INFO - Sent: MOVE -0.5,0
+2026-03-20 00:00:24,672 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-20 00:00:25,729 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:25,730 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:25] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:26,220 - INFO - Manual move: axis=x, units=-0.5
+2026-03-20 00:00:26,220 - INFO - Sent: MOVE -0.5,0
+2026-03-20 00:00:26,281 - INFO - Arduino: Move: dx=-0.50 dy=0.00 (steps X=-100 Y=0)
+2026-03-20 00:00:27,339 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:27,339 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:27] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:34,094 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:34] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:34,096 - INFO - Manual move: axis=x, units=2.0
+2026-03-20 00:00:34,097 - INFO - Sent: MOVE 2.0,0
+2026-03-20 00:00:34,153 - INFO - Arduino: Move: dx=2.00 dy=0.00 (steps X=400 Y=0)
+2026-03-20 00:00:36,687 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:36,690 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:36] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:41,459 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:41] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:41,465 - INFO - Manual move: axis=y, units=1.0
+2026-03-20 00:00:41,468 - INFO - Sent: MOVE 0,1.0
+2026-03-20 00:00:41,526 - INFO - Arduino: Move: dx=0.00 dy=1.00 (steps X=0 Y=400)
+2026-03-20 00:00:44,049 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:44,050 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:44] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:45,032 - INFO - Manual move: axis=x, units=1.0
+2026-03-20 00:00:45,032 - INFO - Sent: MOVE 1.0,0
+2026-03-20 00:00:45,098 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-20 00:00:46,644 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:46,644 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:46] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:47,711 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:47] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:47,714 - INFO - Manual move: axis=x, units=1.0
+2026-03-20 00:00:47,714 - INFO - Sent: MOVE 1.0,0
+2026-03-20 00:00:47,773 - INFO - Arduino: Move: dx=1.00 dy=0.00 (steps X=200 Y=0)
+2026-03-20 00:00:49,320 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:49,321 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:49] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:51,115 - INFO - Manual move: axis=x, units=-1.0
+2026-03-20 00:00:51,116 - INFO - Sent: MOVE -1.0,0
+2026-03-20 00:00:51,177 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-20 00:00:52,719 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:52,720 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:52] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:54,201 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:54] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:54,203 - INFO - Manual move: axis=x, units=-1.0
+2026-03-20 00:00:54,204 - INFO - Sent: MOVE -1.0,0
+2026-03-20 00:00:54,264 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-20 00:00:55,813 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:55,814 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:55] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:00:56,432 - INFO - Manual move: axis=x, units=-1.0
+2026-03-20 00:00:56,433 - INFO - Sent: MOVE -1.0,0
+2026-03-20 00:00:56,493 - INFO - Arduino: Move: dx=-1.00 dy=0.00 (steps X=-200 Y=0)
+2026-03-20 00:00:58,037 - INFO - Arduino: STABLE_READY
+2026-03-20 00:00:58,038 - INFO - 127.0.0.1 - - [20/Mar/2026 00:00:58] "POST /manual_move HTTP/1.1" 200 -
+2026-03-20 00:01:09,018 - INFO - Sent: ZERO
+2026-03-20 00:01:09,077 - INFO - Arduino: STABLE_READY
+2026-03-20 00:01:09,077 - INFO - Manual ZERO: origin set to current position
+2026-03-20 00:01:09,078 - INFO - 127.0.0.1 - - [20/Mar/2026 00:01:09] "POST /manual_zero HTTP/1.1" 200 -
+2026-03-20 00:10:57,400 - INFO - 127.0.0.1 - - [20/Mar/2026 00:10:57] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-20 00:10:57,406 - INFO - Sent: ZERO
+2026-03-20 00:10:57,463 - INFO - Arduino: STABLE_READY
+2026-03-20 00:10:57,463 - INFO - Scan started: longitudinal, sensitivity=0.75, field=lpf
+2026-03-20 00:10:57,464 - INFO - Move sequence (9 moves): [(-0.75, 0), (-0.75, 0), (-0.75, 0), (-0.75, 0), (0, 0.75), (0.75, 0), (0.75, 0), (0.75, 0), (0.75, 0)]
+2026-03-20 00:10:57,465 - INFO - 127.0.0.1 - - [20/Mar/2026 00:10:57] "POST /get_samples HTTP/1.1" 200 -
+2026-03-20 00:11:29,786 - INFO - Moving to lpf_2: dx=-0.75, dy=0
+2026-03-20 00:11:29,787 - INFO - Sent: MOVE -0.75,0
+2026-03-20 00:11:29,849 - INFO - Arduino: Move: dx=-0.75 dy=0.00 (steps X=-150 Y=0)
+2026-03-20 00:11:31,147 - INFO - Arduino: STABLE_READY
+2026-03-20 00:11:31,147 - INFO - 127.0.0.1 - - [20/Mar/2026 00:11:31] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:11:33,430 - INFO - Moving to lpf_3: dx=-0.75, dy=0
+2026-03-20 00:11:33,430 - INFO - Sent: MOVE -0.75,0
+2026-03-20 00:11:33,490 - INFO - Arduino: Move: dx=-0.75 dy=0.00 (steps X=-150 Y=0)
+2026-03-20 00:11:34,793 - INFO - Arduino: STABLE_READY
+2026-03-20 00:11:34,793 - INFO - 127.0.0.1 - - [20/Mar/2026 00:11:34] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:11:35,400 - INFO - Moving to lpf_4: dx=-0.75, dy=0
+2026-03-20 00:11:35,401 - INFO - Sent: MOVE -0.75,0
+2026-03-20 00:11:35,460 - INFO - Arduino: Move: dx=-0.75 dy=0.00 (steps X=-150 Y=0)
+2026-03-20 00:11:36,763 - INFO - Arduino: STABLE_READY
+2026-03-20 00:11:36,763 - INFO - 127.0.0.1 - - [20/Mar/2026 00:11:36] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:11:37,274 - INFO - Moving to lpf_5: dx=-0.75, dy=0
+2026-03-20 00:11:37,274 - INFO - Sent: MOVE -0.75,0
+2026-03-20 00:11:37,336 - INFO - Arduino: Move: dx=-0.75 dy=0.00 (steps X=-150 Y=0)
+2026-03-20 00:11:38,634 - INFO - Arduino: STABLE_READY
+2026-03-20 00:11:38,635 - INFO - 127.0.0.1 - - [20/Mar/2026 00:11:38] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:11:39,229 - INFO - Moving to lpf_6: dx=0, dy=0.75
+2026-03-20 00:11:39,229 - INFO - Sent: MOVE 0,0.75
+2026-03-20 00:11:39,290 - INFO - Arduino: Move: dx=0.00 dy=0.75 (steps X=0 Y=300)
+2026-03-20 00:11:41,321 - INFO - Arduino: STABLE_READY
+2026-03-20 00:11:41,322 - INFO - 127.0.0.1 - - [20/Mar/2026 00:11:41] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:11:41,884 - INFO - Moving to lpf_7: dx=0.75, dy=0
+2026-03-20 00:11:41,885 - INFO - Sent: MOVE 0.75,0
+2026-03-20 00:11:41,944 - INFO - Arduino: Move: dx=0.75 dy=0.00 (steps X=150 Y=0)
+2026-03-20 00:11:43,246 - INFO - Arduino: STABLE_READY
+2026-03-20 00:11:43,246 - INFO - 127.0.0.1 - - [20/Mar/2026 00:11:43] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:11:43,844 - INFO - Moving to lpf_8: dx=0.75, dy=0
+2026-03-20 00:11:43,844 - INFO - Sent: MOVE 0.75,0
+2026-03-20 00:11:43,902 - INFO - Arduino: Move: dx=0.75 dy=0.00 (steps X=150 Y=0)
+2026-03-20 00:11:45,204 - INFO - Arduino: STABLE_READY
+2026-03-20 00:11:45,204 - INFO - 127.0.0.1 - - [20/Mar/2026 00:11:45] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:11:45,679 - INFO - Moving to lpf_9: dx=0.75, dy=0
+2026-03-20 00:11:45,679 - INFO - Sent: MOVE 0.75,0
+2026-03-20 00:11:45,737 - INFO - Arduino: Move: dx=0.75 dy=0.00 (steps X=150 Y=0)
+2026-03-20 00:11:47,038 - INFO - Arduino: STABLE_READY
+2026-03-20 00:11:47,039 - INFO - 127.0.0.1 - - [20/Mar/2026 00:11:47] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:11:47,641 - INFO - Moving to lpf_10: dx=0.75, dy=0
+2026-03-20 00:11:47,641 - INFO - Sent: MOVE 0.75,0
+2026-03-20 00:11:47,699 - INFO - Arduino: Move: dx=0.75 dy=0.00 (steps X=150 Y=0)
+2026-03-20 00:11:49,048 - INFO - Arduino: STABLE_READY
+2026-03-20 00:11:49,050 - INFO - 127.0.0.1 - - [20/Mar/2026 00:11:49] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:11:51,151 - INFO - 127.0.0.1 - - [20/Mar/2026 00:11:51] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:14:16,456 - INFO - 127.0.0.1 - - [20/Mar/2026 00:14:16] "GET /get_config HTTP/1.1" 200 -
+2026-03-20 00:14:30,472 - INFO - 127.0.0.1 - - [20/Mar/2026 00:14:30] "OPTIONS /update_config HTTP/1.1" 200 -
+2026-03-20 00:14:30,476 - INFO - 127.0.0.1 - - [20/Mar/2026 00:14:30] "POST /update_config HTTP/1.1" 200 -
+2026-03-20 00:16:43,915 - INFO - 127.0.0.1 - - [20/Mar/2026 00:16:43] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-20 00:16:43,918 - INFO - Sent: ZERO
+2026-03-20 00:16:43,975 - INFO - Arduino: STABLE_READY
+2026-03-20 00:16:43,975 - INFO - Scan started: longitudinal, sensitivity=0.1, field=lpf
+2026-03-20 00:16:43,975 - INFO - Move sequence (9 moves): [(-0.1, 0), (-0.1, 0), (-0.1, 0), (-0.1, 0), (0, 0.1), (0.1, 0), (0.1, 0), (0.1, 0), (0.1, 0)]
+2026-03-20 00:16:43,976 - INFO - 127.0.0.1 - - [20/Mar/2026 00:16:43] "POST /get_samples HTTP/1.1" 200 -
+2026-03-20 00:16:45,114 - INFO - Moving to lpf_2: dx=-0.1, dy=0
+2026-03-20 00:16:45,115 - INFO - Sent: MOVE -0.1,0
+2026-03-20 00:16:45,175 - INFO - Arduino: Move: dx=-0.10 dy=0.00 (steps X=-20 Y=0)
+2026-03-20 00:16:45,843 - INFO - Arduino: STABLE_READY
+2026-03-20 00:16:45,843 - INFO - 127.0.0.1 - - [20/Mar/2026 00:16:45] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:16:46,515 - INFO - Moving to lpf_3: dx=-0.1, dy=0
+2026-03-20 00:16:46,516 - INFO - Sent: MOVE -0.1,0
+2026-03-20 00:16:46,573 - INFO - Arduino: Move: dx=-0.10 dy=0.00 (steps X=-20 Y=0)
+2026-03-20 00:16:47,276 - INFO - Arduino: STABLE_READY
+2026-03-20 00:16:47,276 - INFO - 127.0.0.1 - - [20/Mar/2026 00:16:47] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:16:47,950 - INFO - Moving to lpf_4: dx=-0.1, dy=0
+2026-03-20 00:16:47,950 - INFO - Sent: MOVE -0.1,0
+2026-03-20 00:16:48,018 - INFO - Arduino: Move: dx=-0.10 dy=0.00 (steps X=-20 Y=0)
+2026-03-20 00:16:48,693 - INFO - Arduino: STABLE_READY
+2026-03-20 00:16:48,693 - INFO - 127.0.0.1 - - [20/Mar/2026 00:16:48] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:16:49,600 - INFO - Moving to lpf_5: dx=-0.1, dy=0
+2026-03-20 00:16:49,601 - INFO - Sent: MOVE -0.1,0
+2026-03-20 00:16:49,663 - INFO - Arduino: Move: dx=-0.10 dy=0.00 (steps X=-20 Y=0)
+2026-03-20 00:16:50,341 - INFO - Arduino: STABLE_READY
+2026-03-20 00:16:50,342 - INFO - 127.0.0.1 - - [20/Mar/2026 00:16:50] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:16:50,989 - INFO - Moving to lpf_6: dx=0, dy=0.1
+2026-03-20 00:16:50,990 - INFO - Sent: MOVE 0,0.1
+2026-03-20 00:16:51,049 - INFO - Arduino: Move: dx=0.00 dy=0.10 (steps X=0 Y=40)
+2026-03-20 00:16:51,856 - INFO - Arduino: STABLE_READY
+2026-03-20 00:16:51,856 - INFO - 127.0.0.1 - - [20/Mar/2026 00:16:51] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:16:52,476 - INFO - Moving to lpf_7: dx=0.1, dy=0
+2026-03-20 00:16:52,476 - INFO - Sent: MOVE 0.1,0
+2026-03-20 00:16:52,532 - INFO - Arduino: Move: dx=0.10 dy=0.00 (steps X=20 Y=0)
+2026-03-20 00:16:53,212 - INFO - Arduino: STABLE_READY
+2026-03-20 00:16:53,213 - INFO - 127.0.0.1 - - [20/Mar/2026 00:16:53] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:16:53,891 - INFO - Moving to lpf_8: dx=0.1, dy=0
+2026-03-20 00:16:53,892 - INFO - Sent: MOVE 0.1,0
+2026-03-20 00:16:53,951 - INFO - Arduino: Move: dx=0.10 dy=0.00 (steps X=20 Y=0)
+2026-03-20 00:16:54,633 - INFO - Arduino: STABLE_READY
+2026-03-20 00:16:54,634 - INFO - 127.0.0.1 - - [20/Mar/2026 00:16:54] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:16:55,246 - INFO - Moving to lpf_9: dx=0.1, dy=0
+2026-03-20 00:16:55,246 - INFO - Sent: MOVE 0.1,0
+2026-03-20 00:16:55,310 - INFO - Arduino: Move: dx=0.10 dy=0.00 (steps X=20 Y=0)
+2026-03-20 00:16:55,991 - INFO - Arduino: STABLE_READY
+2026-03-20 00:16:55,992 - INFO - 127.0.0.1 - - [20/Mar/2026 00:16:55] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:16:56,663 - INFO - Moving to lpf_10: dx=0.1, dy=0
+2026-03-20 00:16:56,664 - INFO - Sent: MOVE 0.1,0
+2026-03-20 00:16:56,722 - INFO - Arduino: Move: dx=0.10 dy=0.00 (steps X=20 Y=0)
+2026-03-20 00:16:57,397 - INFO - Arduino: STABLE_READY
+2026-03-20 00:16:57,398 - INFO - 127.0.0.1 - - [20/Mar/2026 00:16:57] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:16:58,043 - INFO - 127.0.0.1 - - [20/Mar/2026 00:16:58] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:17:03,182 - INFO - Sent: HOME
+2026-03-20 00:17:03,243 - INFO - Arduino: Returning to origin: X=0 Y=-40
+2026-03-20 00:17:03,996 - INFO - Arduino: STABLE_READY
+2026-03-20 00:17:03,996 - INFO - Sent: ZERO
+2026-03-20 00:17:04,062 - INFO - Arduino: STABLE_READY
+2026-03-20 00:17:04,062 - INFO - HPF scan started: longitudinal, sensitivity=0.1
+2026-03-20 00:17:04,063 - INFO - 127.0.0.1 - - [20/Mar/2026 00:17:04] "POST /continue_after_switch HTTP/1.1" 200 -
+2026-03-20 00:17:04,769 - INFO - Moving to hpf_2: dx=-0.1, dy=0
+2026-03-20 00:17:04,769 - INFO - Sent: MOVE -0.1,0
+2026-03-20 00:17:04,832 - INFO - Arduino: Move: dx=-0.10 dy=0.00 (steps X=-20 Y=0)
+2026-03-20 00:17:05,511 - INFO - Arduino: STABLE_READY
+2026-03-20 00:17:05,512 - INFO - 127.0.0.1 - - [20/Mar/2026 00:17:05] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:17:06,202 - INFO - Moving to hpf_3: dx=-0.1, dy=0
+2026-03-20 00:17:06,203 - INFO - Sent: MOVE -0.1,0
+2026-03-20 00:17:06,268 - INFO - Arduino: Move: dx=-0.10 dy=0.00 (steps X=-20 Y=0)
+2026-03-20 00:17:06,947 - INFO - Arduino: STABLE_READY
+2026-03-20 00:17:06,948 - INFO - 127.0.0.1 - - [20/Mar/2026 00:17:06] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:17:07,679 - INFO - Moving to hpf_4: dx=-0.1, dy=0
+2026-03-20 00:17:07,679 - INFO - Sent: MOVE -0.1,0
+2026-03-20 00:17:07,739 - INFO - Arduino: Move: dx=-0.10 dy=0.00 (steps X=-20 Y=0)
+2026-03-20 00:17:08,406 - INFO - Arduino: STABLE_READY
+2026-03-20 00:17:08,406 - INFO - 127.0.0.1 - - [20/Mar/2026 00:17:08] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:17:09,310 - INFO - Moving to hpf_5: dx=-0.1, dy=0
+2026-03-20 00:17:09,311 - INFO - Sent: MOVE -0.1,0
+2026-03-20 00:17:09,369 - INFO - Arduino: Move: dx=-0.10 dy=0.00 (steps X=-20 Y=0)
+2026-03-20 00:17:10,042 - INFO - Arduino: STABLE_READY
+2026-03-20 00:17:10,042 - INFO - 127.0.0.1 - - [20/Mar/2026 00:17:10] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:17:10,658 - INFO - Moving to hpf_6: dx=0, dy=0.1
+2026-03-20 00:17:10,658 - INFO - Sent: MOVE 0,0.1
+2026-03-20 00:17:10,718 - INFO - Arduino: Move: dx=0.00 dy=0.10 (steps X=0 Y=40)
+2026-03-20 00:17:11,523 - INFO - Arduino: STABLE_READY
+2026-03-20 00:17:11,524 - INFO - 127.0.0.1 - - [20/Mar/2026 00:17:11] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:17:12,099 - INFO - Moving to hpf_7: dx=0.1, dy=0
+2026-03-20 00:17:12,099 - INFO - Sent: MOVE 0.1,0
+2026-03-20 00:17:12,157 - INFO - Arduino: Move: dx=0.10 dy=0.00 (steps X=20 Y=0)
+2026-03-20 00:17:12,840 - INFO - Arduino: STABLE_READY
+2026-03-20 00:17:12,840 - INFO - 127.0.0.1 - - [20/Mar/2026 00:17:12] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:17:13,436 - INFO - Moving to hpf_8: dx=0.1, dy=0
+2026-03-20 00:17:13,437 - INFO - Sent: MOVE 0.1,0
+2026-03-20 00:17:13,494 - INFO - Arduino: Move: dx=0.10 dy=0.00 (steps X=20 Y=0)
+2026-03-20 00:17:14,168 - INFO - Arduino: STABLE_READY
+2026-03-20 00:17:14,170 - INFO - 127.0.0.1 - - [20/Mar/2026 00:17:14] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:17:14,779 - INFO - Moving to hpf_9: dx=0.1, dy=0
+2026-03-20 00:17:14,779 - INFO - Sent: MOVE 0.1,0
+2026-03-20 00:17:14,846 - INFO - Arduino: Move: dx=0.10 dy=0.00 (steps X=20 Y=0)
+2026-03-20 00:17:15,524 - INFO - Arduino: STABLE_READY
+2026-03-20 00:17:15,525 - INFO - 127.0.0.1 - - [20/Mar/2026 00:17:15] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:17:16,187 - INFO - Moving to hpf_10: dx=0.1, dy=0
+2026-03-20 00:17:16,187 - INFO - Sent: MOVE 0.1,0
+2026-03-20 00:17:16,250 - INFO - Arduino: Move: dx=0.10 dy=0.00 (steps X=20 Y=0)
+2026-03-20 00:17:16,930 - INFO - Arduino: STABLE_READY
+2026-03-20 00:17:16,930 - INFO - 127.0.0.1 - - [20/Mar/2026 00:17:16] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:17:17,590 - INFO - 127.0.0.1 - - [20/Mar/2026 00:17:17] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:17:31,357 - INFO - 127.0.0.1 - - [20/Mar/2026 00:17:31] "GET /get_config HTTP/1.1" 200 -
+2026-03-20 00:17:43,374 - INFO - 127.0.0.1 - - [20/Mar/2026 00:17:43] "OPTIONS /update_config HTTP/1.1" 200 -
+2026-03-20 00:17:43,379 - INFO - 127.0.0.1 - - [20/Mar/2026 00:17:43] "POST /update_config HTTP/1.1" 200 -
+2026-03-20 00:17:53,473 - INFO - 127.0.0.1 - - [20/Mar/2026 00:17:53] "GET /get_config HTTP/1.1" 200 -
+2026-03-20 00:17:59,599 - INFO - Sent: HOME
+2026-03-20 00:17:59,658 - INFO - Arduino: Returning to origin: X=0 Y=-40
+2026-03-20 00:18:00,459 - INFO - Arduino: STABLE_READY
+2026-03-20 00:18:00,459 - INFO - Sent: ZERO
+2026-03-20 00:18:00,520 - INFO - Arduino: STABLE_READY
+2026-03-20 00:18:00,520 - INFO - Manual HOME: motors returned to origin
+2026-03-20 00:18:00,521 - INFO - 127.0.0.1 - - [20/Mar/2026 00:18:00] "POST /manual_home HTTP/1.1" 200 -
+2026-03-20 00:19:04,450 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:04] "OPTIONS /get_samples HTTP/1.1" 200 -
+2026-03-20 00:19:04,453 - INFO - Sent: ZERO
+2026-03-20 00:19:04,510 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:04,510 - INFO - Scan started: longitudinal, sensitivity=0.3, field=lpf
+2026-03-20 00:19:04,510 - INFO - Move sequence (9 moves): [(-0.3, 0), (-0.3, 0), (-0.3, 0), (-0.3, 0), (0, 0.3), (0.3, 0), (0.3, 0), (0.3, 0), (0.3, 0)]
+2026-03-20 00:19:04,510 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:04] "POST /get_samples HTTP/1.1" 200 -
+2026-03-20 00:19:05,534 - INFO - Moving to lpf_2: dx=-0.3, dy=0
+2026-03-20 00:19:05,535 - INFO - Sent: MOVE -0.3,0
+2026-03-20 00:19:05,592 - INFO - Arduino: Move: dx=-0.30 dy=0.00 (steps X=-60 Y=0)
+2026-03-20 00:19:06,456 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:06,457 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:06] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:07,130 - INFO - Moving to lpf_3: dx=-0.3, dy=0
+2026-03-20 00:19:07,130 - INFO - Sent: MOVE -0.3,0
+2026-03-20 00:19:07,196 - INFO - Arduino: Move: dx=-0.30 dy=0.00 (steps X=-60 Y=0)
+2026-03-20 00:19:08,065 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:08,065 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:08] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:08,762 - INFO - Moving to lpf_4: dx=-0.3, dy=0
+2026-03-20 00:19:08,762 - INFO - Sent: MOVE -0.3,0
+2026-03-20 00:19:08,824 - INFO - Arduino: Move: dx=-0.30 dy=0.00 (steps X=-60 Y=0)
+2026-03-20 00:19:09,683 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:09,683 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:09] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:10,365 - INFO - Moving to lpf_5: dx=-0.3, dy=0
+2026-03-20 00:19:10,365 - INFO - Sent: MOVE -0.3,0
+2026-03-20 00:19:10,425 - INFO - Arduino: Move: dx=-0.30 dy=0.00 (steps X=-60 Y=0)
+2026-03-20 00:19:11,294 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:11,294 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:11] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:11,961 - INFO - Moving to lpf_6: dx=0, dy=0.3
+2026-03-20 00:19:11,961 - INFO - Sent: MOVE 0,0.3
+2026-03-20 00:19:12,018 - INFO - Arduino: Move: dx=0.00 dy=0.30 (steps X=0 Y=120)
+2026-03-20 00:19:13,189 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:13,189 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:13] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:13,889 - INFO - Moving to lpf_7: dx=0.3, dy=0
+2026-03-20 00:19:13,890 - INFO - Sent: MOVE 0.3,0
+2026-03-20 00:19:13,947 - INFO - Arduino: Move: dx=0.30 dy=0.00 (steps X=60 Y=0)
+2026-03-20 00:19:14,808 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:14,809 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:14] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:15,445 - INFO - Moving to lpf_8: dx=0.3, dy=0
+2026-03-20 00:19:15,446 - INFO - Sent: MOVE 0.3,0
+2026-03-20 00:19:15,504 - INFO - Arduino: Move: dx=0.30 dy=0.00 (steps X=60 Y=0)
+2026-03-20 00:19:16,371 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:16,372 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:16] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:17,144 - INFO - Moving to lpf_9: dx=0.3, dy=0
+2026-03-20 00:19:17,144 - INFO - Sent: MOVE 0.3,0
+2026-03-20 00:19:17,200 - INFO - Arduino: Move: dx=0.30 dy=0.00 (steps X=60 Y=0)
+2026-03-20 00:19:18,063 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:18,064 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:18] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:18,728 - INFO - Moving to lpf_10: dx=0.3, dy=0
+2026-03-20 00:19:18,729 - INFO - Sent: MOVE 0.3,0
+2026-03-20 00:19:18,790 - INFO - Arduino: Move: dx=0.30 dy=0.00 (steps X=60 Y=0)
+2026-03-20 00:19:19,652 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:19,653 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:19] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:20,255 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:20] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:23,899 - INFO - Sent: HOME
+2026-03-20 00:19:23,961 - INFO - Arduino: Returning to origin: X=0 Y=-120
+2026-03-20 00:19:25,130 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:25,131 - INFO - Sent: ZERO
+2026-03-20 00:19:25,191 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:25,192 - INFO - HPF scan started: longitudinal, sensitivity=0.3
+2026-03-20 00:19:25,193 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:25] "POST /continue_after_switch HTTP/1.1" 200 -
+2026-03-20 00:19:25,816 - INFO - Moving to hpf_2: dx=-0.3, dy=0
+2026-03-20 00:19:25,817 - INFO - Sent: MOVE -0.3,0
+2026-03-20 00:19:25,874 - INFO - Arduino: Move: dx=-0.30 dy=0.00 (steps X=-60 Y=0)
+2026-03-20 00:19:26,738 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:26,738 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:26] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:27,374 - INFO - Moving to hpf_3: dx=-0.3, dy=0
+2026-03-20 00:19:27,375 - INFO - Sent: MOVE -0.3,0
+2026-03-20 00:19:27,439 - INFO - Arduino: Move: dx=-0.30 dy=0.00 (steps X=-60 Y=0)
+2026-03-20 00:19:28,302 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:28,303 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:28] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:29,037 - INFO - Moving to hpf_4: dx=-0.3, dy=0
+2026-03-20 00:19:29,038 - INFO - Sent: MOVE -0.3,0
+2026-03-20 00:19:29,111 - INFO - Arduino: Move: dx=-0.30 dy=0.00 (steps X=-60 Y=0)
+2026-03-20 00:19:29,985 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:29,985 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:29] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:30,646 - INFO - Moving to hpf_5: dx=-0.3, dy=0
+2026-03-20 00:19:30,646 - INFO - Sent: MOVE -0.3,0
+2026-03-20 00:19:30,706 - INFO - Arduino: Move: dx=-0.30 dy=0.00 (steps X=-60 Y=0)
+2026-03-20 00:19:31,569 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:31,569 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:31] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:32,242 - INFO - Moving to hpf_6: dx=0, dy=0.3
+2026-03-20 00:19:32,242 - INFO - Sent: MOVE 0,0.3
+2026-03-20 00:19:32,307 - INFO - Arduino: Move: dx=0.00 dy=0.30 (steps X=0 Y=120)
+2026-03-20 00:19:33,480 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:33,481 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:33] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:34,110 - INFO - Moving to hpf_7: dx=0.3, dy=0
+2026-03-20 00:19:34,110 - INFO - Sent: MOVE 0.3,0
+2026-03-20 00:19:34,172 - INFO - Arduino: Move: dx=0.30 dy=0.00 (steps X=60 Y=0)
+2026-03-20 00:19:35,038 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:35,039 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:35] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:35,726 - INFO - Moving to hpf_8: dx=0.3, dy=0
+2026-03-20 00:19:35,726 - INFO - Sent: MOVE 0.3,0
+2026-03-20 00:19:35,782 - INFO - Arduino: Move: dx=0.30 dy=0.00 (steps X=60 Y=0)
+2026-03-20 00:19:36,646 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:36,647 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:36] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:37,261 - INFO - Moving to hpf_9: dx=0.3, dy=0
+2026-03-20 00:19:37,261 - INFO - Sent: MOVE 0.3,0
+2026-03-20 00:19:37,318 - INFO - Arduino: Move: dx=0.30 dy=0.00 (steps X=60 Y=0)
+2026-03-20 00:19:38,182 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:38,182 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:38] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:38,942 - INFO - Moving to hpf_10: dx=0.3, dy=0
+2026-03-20 00:19:38,943 - INFO - Sent: MOVE 0.3,0
+2026-03-20 00:19:38,996 - INFO - Arduino: Move: dx=0.30 dy=0.00 (steps X=60 Y=0)
+2026-03-20 00:19:39,862 - INFO - Arduino: STABLE_READY
+2026-03-20 00:19:39,863 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:39] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 00:19:40,462 - INFO - 127.0.0.1 - - [20/Mar/2026 00:19:40] "POST /next_sample HTTP/1.1" 200 -
+2026-03-20 02:21:24,643 - INFO - 127.0.0.1 - - [20/Mar/2026 02:21:24] "OPTIONS /manual_move HTTP/1.1" 200 -
+2026-03-20 02:21:24,660 - INFO - Manual move: axis=x, units=-1.0
+2026-03-20 02:21:24,663 - ERROR - Command error for 'MOVE -1.0,0': WriteFile failed (PermissionError(13, 'The device does not recognize the command.', None, 22))
+2026-03-20 02:21:24,667 - INFO - 127.0.0.1 - - [20/Mar/2026 02:21:24] "[35m[1mPOST /manual_move HTTP/1.1[0m" 500 -
+2026-03-20 02:21:44,015 - INFO - Loaded sensitivity: 0.3
+2026-03-20 02:21:44,068 - INFO - Scanning 0 serial ports (Bluetooth excluded)...
+2026-03-20 02:21:44,068 - WARNING - Arduino initialization failed — no device found
+2026-03-20 02:21:44,100 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3001
+ * Running on http://127.0.0.1:3001
+2026-03-20 02:21:44,100 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-20 02:24:00,871 - INFO - 127.0.0.1 - - [20/Mar/2026 02:24:00] "[33mGET /_next/webpack-hmr?id=nybk53xCsxih3zqvwN9R5 HTTP/1.1[0m" 404 -
+2026-03-20 02:24:02,232 - INFO - 127.0.0.1 - - [20/Mar/2026 02:24:02] "[33mGET /_next/webpack-hmr?id=nybk53xCsxih3zqvwN9R5 HTTP/1.1[0m" 404 -
+2026-03-20 02:24:03,472 - INFO - 127.0.0.1 - - [20/Mar/2026 02:24:03] "[33mGET /login HTTP/1.1[0m" 404 -
+2026-03-20 02:24:03,625 - INFO - 127.0.0.1 - - [20/Mar/2026 02:24:03] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
