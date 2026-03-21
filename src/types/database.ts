@@ -101,6 +101,8 @@ export interface ImageAnalysis {
       class: string
       class_id: number
       detection_id: string
+      original_class?: string // Added for audit trail
+      is_human_verified?: boolean // Added for validation workflow
     }>
     summary: {
       total_detections: number

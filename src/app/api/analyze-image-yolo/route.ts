@@ -155,68 +155,65 @@ export async function POST(request: NextRequest) {
     const yoloResult = await yoloResponse.json()
     console.log('✅ YOLO detection complete:', yoloResult.summary?.total_detections || 0, 'detections')
 
-    // Step 2: Send image + YOLO results to Gemini for enhanced analysis
-    console.log('📤 Step 2: Sending image + YOLO results to Gemini for analysis')
-
-    // Format YOLO results for the prompt
+    // Step 2: Send image + YOLO results to Gemini for a Master Audit
+    console.log('📤 Step 2: Sending image + YOLO results to Gemini for a Master Audit')
+    // Format YOLO results for the prompt with explicit identification for auditing
     const yoloSummary = yoloResult.summary || { total_detections: 0, by_class: {} }
+    const originalPredictions = yoloResult.predictions || []
 
-    // Keep the YOLO context very compact to reduce token usage for Gemini
     const yoloDetectionsText = `
-YOLO MODEL SUMMARY (for context only, do not re-count blindly):
+### STAGE 1: YOLO DETECTOR RESULTS (Preliminary baseline)
 Total detections: ${yoloSummary.total_detections}
-Detections by class (name: count):
-${Object.entries(yoloSummary.by_class)
-        .map(([className, count]) => `${className}: ${count}`)
-        .join(', ')}
+Initial Detection List (ID | Suspected Class | Location):
+${originalPredictions.slice(0, 50).map((p: any) => `- ${p.detection_id} | ${p.class} | [y:${p.y}, x:${p.x}, w:${p.width}, h:${p.height}]`).join('\n')}
 `
 
     // Create the enhanced prompt that incorporates YOLO results
-    const prompt = `You are acting as a board-certified Senior Medical Laboratory Scientist. Your task is to perform an ADVANCED CLASSIFICATION and VALIDATION of a urine microscopy image.
+    const prompt = `You are acting as a board-certified Senior Medical Laboratory Scientist. 
+Your task is to perform an ADVANCED MICROSCOPIC AUDIT of a urine sediment image.
 
 ### ANALYTICAL CONTEXT
-The YOLO detection model has provided a preliminary baseline (Stage 1). You are the Stage 2 "Final Arbiter."
+The Stage 1 (YOLO) detector has provided a "suspect list". You are the Stage 2 "Final Arbiter."
 ${yoloDetectionsText}
 
-### CORE MISSION: STRENGTHEN THE ANALYSIS
-1. **RE-CLASSIFY & REFINE**: YOLO is prone to misidentifying debris as RBCs or Bubbles as Crystals. Your primary objective is to RE-CLASSIFY every artifact found. Do not simply trust the YOLO counts; improve them with your superior visual reasoning.
-2. **VERIFY DETECTIONS**: Treat the provided YOLO summary as "suspected" cases. Cross-reference them with the visual evidence. If you see high-probability sediments that YOLO missed, you MUST add them.
-3. **HIGH-PRECISION COUNTING**: Perform a methodical scan (raster pattern). Count with clinical precision. If a cluster is detected by YOLO as "1", but you see "3" distinct overlapping cells, update the count to "3".
-4. **MORPHOLOGICAL VALIDATION**: For every sediment type (RBC, WBC, Casts, etc.), look for specific structural markers:
-   - *RBCs*: Look for biconcave shadows or "ghost cells."
-   - *WBCs*: Look for granular cytoplasm and lobated nuclei.
-   - *Casts*: Look for distinct cylindrical borders; distinguish from simple mucus strands.
-5. **FINAL VERDICT**: If your findings contradict the YOLO model, YOUR analysis takes precedence. Provide the clinical rationale in the "notes" field for any significant changes you made.
+### VISUAL SIGNATURES (Your reference guide)
+1. **RBC (Red Blood Cells)**: Small (7-8µm), perfectly circular, yellow-hinted, with a distinct smooth border and central pallor (bright center). They look like "ghost cells" or "doughnuts". 
+2. **WBC (White Blood Cells)**: Larger (10-15µm), granular cytoplasm, often with visible lobated nuclei. Look for "grainy" textures.
+3. **YEAST**: Smaller than RBCs, often oval/egg-shaped, and MUST show "budding" (look like a small '8' or 'snowman').
+4. **CASTS**: Long, cylindrical structures with parallel sides. Distinguish from "mucus" by their solid, definite borders.
+5. **BUBBLES / DEBRIS**: Thick black borders (oil bubbles) or jagged irregular shapes (artifacts). Do NOT count these.
+
+### CORE MISSION: CRAFT THE MASTER DETECTIONS LIST
+1. **AUDIT YOLO**: For every YOLO ID (eryth, leuko, epith, mycete), check the location:
+   - If it's a valid artifact, KEEP it (and fix the class to standard terminology).
+   - If it's debris/bubbles, EXCLUDE it from your list.
+2. **DISCOVER MISSING ITEMS**: Perform a thorough pixel-scan. If you see high-probability sediments that YOLO missed, you MUST ADD them with accurate [x, y, w, h] coordinates.
+3. **FINAL VERDICT**: Your counts and the final detections list MUST match perfectly.
 
 ### OUTPUT REQUIREMENTS
-- Return valid JSON only. Exactly match the schema.
-- Classify status as "normal", "abnormal", or "critical".
-- Ensure counts are returned as strings (e.g. "0-2", "5", ">20").
+- Return JSON only. Exactly match the schema.
+- **IMPORTANT**: Return a SINGLE consolidated "detections" array. Use standard names for "class" (rbc, wbc, epithelial_cells, crystals, casts, yeast, bacteria, sperm, parasites).
 
-Use this JSON template (replace the example values with your findings):
+Use this mapping for YOLO terms:
+- "eryth" -> rbc
+- "leuko" -> wbc
+- "mycete" -> yeast
+- "epith" / "epithn" -> epithelial_cells
+- "cryst" -> crystals
+
+JSON Template:
 {
-  "rbc": {"count": "0-2", "unit": "/HPF", "morphology": "Normal", "notes": "No significant findings", "status": "normal"},
-  "wbc": {"count": "0-5", "unit": "/HPF", "morphology": "Normal", "notes": "Within normal limits", "status": "normal"},
-  "epithelial_cells": {"count": "0-3", "unit": "/HPF", "morphology": "Normal", "notes": "Squamous epithelial cells present", "status": "normal"},
-  "crystals": {"count": "0", "unit": "/HPF", "morphology": "None", "notes": "No crystals observed", "status": "normal"},
-  "casts": {"count": "0", "unit": "/LPF", "morphology": "None", "notes": "No casts present", "status": "normal"},
-  "bacteria": {"count": "0", "unit": "/HPF", "morphology": "None", "notes": "No bacteria observed", "status": "normal"},
-  "yeast": {"count": "0", "unit": "/HPF", "morphology": "None", "notes": "No yeast cells", "status": "normal"},
-  "mucus": {"count": "0", "unit": "/LPF", "morphology": "None", "notes": "No mucus threads", "status": "normal"},
-  "sperm": {"count": "0", "unit": "/HPF", "morphology": "None", "notes": "No spermatozoa", "status": "normal"},
-  "parasites": {"count": "0", "unit": "/HPF", "morphology": "None", "notes": "No parasites", "status": "normal"},
+  "rbc": {"count": "0", "unit": "/HPF", "morphology": "Normal", "status": "normal"},
+  "wbc": {"count": "0", "unit": "/HPF", "morphology": "Normal", "status": "normal"},
+  "epithelial_cells": {"count": "0", "unit": "/HPF", "morphology": "Normal", "status": "normal"},
+  "yeast": {"count": "0", "unit": "/HPF", "morphology": "None", "status": "normal"},
+  "detections": [
+    {"detection_id": "original_id", "x": 100, "y": 150, "width": 40, "height": 40, "confidence": 0.95, "class": "rbc"},
+    {"detection_id": "gemini_new_1", "x": 300, "y": 200, "width": 30, "height": 30, "confidence": 0.99, "class": "wbc"}
+  ],
   "overall_accuracy": 95,
-  "summary": "Normal urinalysis findings with no significant abnormalities detected."
-}
-
-CLASS MAPPING FROM YOLO TO STANDARD TERMINOLOGY:
-- YOLO "eryth" → JSON "rbc" (Red Blood Cells)
-- YOLO "leuko" → JSON "wbc" (White Blood Cells)
-- YOLO "epith" or "epithn" → JSON "epithelial_cells"
-- YOLO "cryst" → JSON "crystals"
-- YOLO "cast" → JSON "casts"
-- YOLO "mycete" → JSON "yeast"
-- Note: YOLO may not detect all sediment types (bacteria, mucus, sperm, parasites), so you must still examine the entire image.`
+  "summary": "Explain significant findings or corrections here."
+}`
 
     // Simple rate limiting / backoff before calling Gemini
     const throttle = isGeminiThrottled()
@@ -304,13 +301,21 @@ CLASS MAPPING FROM YOLO TO STANDARD TERMINOLOGY:
     const analysis = JSON.parse(jsonText)
     console.log('✅ Gemini analysis complete')
 
-    // Return combined result
+    // Return combined result, using Gemini's audited detections if available
     return NextResponse.json({
       success: true,
       analysis,
       yolo_detections: {
-        predictions: yoloResult.predictions || [],
-        summary: yoloResult.summary || { total_detections: 0, by_class: {} }
+        predictions: analysis.detections || yoloResult.predictions || [],
+        summary: analysis.detections 
+          ? {
+              total_detections: analysis.detections.length,
+              by_class: analysis.detections.reduce((acc: Record<string, number>, d: any) => {
+                acc[d.class] = (acc[d.class] || 0) + 1;
+                return acc;
+              }, {})
+            }
+          : (yoloResult.summary || { total_detections: 0, by_class: {} })
       },
       timestamp: new Date().toISOString()
     })

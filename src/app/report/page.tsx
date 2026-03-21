@@ -50,6 +50,9 @@ import {
   Eye,
   EyeOff,
   Square,
+  Move,
+  Check,
+  AlertCircle
 } from "lucide-react";
 import { getMotorServerUrl } from "@/lib/motor-config";
 import ImageModal from "@/components/ImageModal";
@@ -64,7 +67,6 @@ import { getGeminiKeysFromLocalStorage, getGeminiModelFromLocalStorage } from "@
 import { getScanMethodFromLocalStorage } from "@/lib/scan-method";
 import ObjectiveSwitchModal from "@/components/ObjectiveSwitchModal";
 import ManualMotorControl from "@/components/ManualMotorControl";
-import { Move } from "lucide-react";
 
 export default function Report() {
   const router = useRouter();
@@ -236,12 +238,20 @@ export default function Report() {
       class: string
       class_id: number
       detection_id: string
+      original_class?: string
+      is_human_verified?: boolean
     }>
     summary: {
       total_detections: number
       by_class: Record<string, number>
     }
   } | null>(null)
+
+  // Comparison states for YOLO vs Gemini
+  const [lpfYoloOnlyResults, setLpfYoloOnlyResults] = useState<any>(null);
+  const [hpfYoloOnlyResults, setHpfYoloOnlyResults] = useState<any>(null);
+  const [viewModeLPF, setViewModeLPF] = useState<'yolo' | 'gemini'>('gemini');
+  const [viewModeHPF, setViewModeHPF] = useState<'yolo' | 'gemini'>('gemini');
   const [hpfYoloDetections, setHpfYoloDetections] = useState<{
     predictions: Array<{
       x: number
@@ -252,12 +262,159 @@ export default function Report() {
       class: string
       class_id: number
       detection_id: string
+      original_class?: string
+      is_human_verified?: boolean
     }>
     summary: {
       total_detections: number
       by_class: Record<string, number>
     }
   } | null>(null)
+
+  // Mapping for nice display names and category grouping
+  const CLASS_DISPLAY_NAMES: Record<string, string> = {
+    'rbc': 'Red Blood Cells',
+    'eryth': 'Red Blood Cells',
+    'wbc': 'White Blood Cells',
+    'leuko': 'White Blood Cells',
+    'epithelial_cells': 'Epithelial Cells',
+    'epith': 'Epithelial Cells',
+    'epithn': 'Epithelial Cells',
+    'crystals': 'Crystals',
+    'cryst': 'Crystals',
+    'casts': 'Casts',
+    'cast': 'Casts',
+    'yeast': 'Yeast',
+    'mycete': 'Yeast',
+    'bacteria': 'Bacteria',
+    'sperm': 'Spermatozoa',
+    'parasites': 'Parasites',
+    'mucus_threads': 'Mucus Threads',
+    'mucus': 'Mucus Threads',
+    'abnormal_crystals': 'Abnormal Crystals'
+  };
+
+  /**
+   * Re-classify an automated detection (Human-in-the-loop correction)
+   */
+  const reclassifyImage = async (
+    detectionId: string, 
+    newClass: string, 
+    isLPF: boolean
+  ) => {
+    if (!selectedTest) return;
+
+    const currentDetections = isLPF ? lpfYoloDetections : hpfYoloDetections;
+    const currentResults = isLPF ? lpfSedimentDetection : hpfSedimentDetection;
+    if (!currentDetections) return;
+
+    const imageIndex = isLPF ? currentLPFIndex : currentHPFIndex;
+    const images = isLPF ? lowPowerImages : highPowerImages;
+    const imageUrl = images[imageIndex];
+
+    console.log(`🔧 Re-classifying detection ${detectionId} to ${newClass}`);
+
+    // 1. Find the prediction
+    const predictions = [...currentDetections.predictions];
+    const predIdx = predictions.findIndex(p => p.detection_id === detectionId);
+    if (predIdx === -1) return;
+
+    const oldClass = predictions[predIdx].class;
+    
+    // Save original for audit if not already saved
+    if (!predictions[predIdx].original_class) {
+      predictions[predIdx].original_class = oldClass;
+    }
+    
+    predictions[predIdx].class = newClass;
+    predictions[predIdx].is_human_verified = true;
+
+    // 2. Re-summarize detections
+    const newSummaryByClass = { ...currentDetections.summary.by_class };
+    newSummaryByClass[oldClass] = Math.max(0, (newSummaryByClass[oldClass] || 0) - 1);
+    newSummaryByClass[newClass] = (newSummaryByClass[newClass] || 0) + 1;
+
+    const updatedDetections = {
+      ...currentDetections,
+      predictions,
+      summary: {
+        ...currentDetections.summary,
+        by_class: newSummaryByClass
+      }
+    };
+
+    // 3. Update top-level counts in the report
+    // This logic maps short codes to the full sediment object keys
+    const mapClassToKey = (cls: string): string => {
+      const c = cls.toLowerCase();
+      if (c === 'eryth' || c === 'rbc') return 'rbc';
+      if (c === 'leuko' || c === 'wbc') return 'wbc';
+      if (c.startsWith('epith')) return 'epithelial_cells';
+      if (c.startsWith('cryst')) return isLPF ? 'abnormal_crystals' : 'crystals';
+      if (c.startsWith('cast')) return 'casts';
+      if (c.startsWith('mycete') || c === 'yeast') return 'yeast';
+      if (c === 'mucus') return 'mucus_threads';
+      return c;
+    };
+
+    const oldKey = mapClassToKey(oldClass);
+    const newKey = mapClassToKey(newClass);
+
+    if (isLPF) {
+      setLpfYoloDetections(updatedDetections);
+      if (currentResults) {
+        const updatedResults = { ...currentResults } as any;
+        if (updatedResults[oldKey] !== undefined) updatedResults[oldKey] = Math.max(0, updatedResults[oldKey] - 1);
+        if (updatedResults[newKey] !== undefined) updatedResults[newKey] = (updatedResults[newKey] || 0) + 1;
+        setLpfSedimentDetection(updatedResults);
+        
+        // Save to DB
+        await upsertImageAnalysis({
+          test_id: selectedTest.id,
+          power_mode: "LPF",
+          image_index: imageIndex,
+          image_url: imageUrl,
+          lpf_epithelial_cells: updatedResults.epithelial_cells,
+          lpf_mucus_threads: updatedResults.mucus_threads,
+          lpf_casts: updatedResults.casts,
+          lpf_squamous_epithelial: updatedResults.squamous_epithelial,
+          lpf_abnormal_crystals: updatedResults.abnormal_crystals,
+          confidence: updatedResults.confidence,
+          analysis_notes: updatedResults.analysis_notes,
+          yolo_detections: updatedDetections,
+          analyzed_at: new Date().toISOString(),
+        });
+      }
+    } else {
+      setHpfYoloDetections(updatedDetections);
+      if (currentResults) {
+        const updatedResults = { ...currentResults } as any;
+        if (updatedResults[oldKey] !== undefined) updatedResults[oldKey] = Math.max(0, updatedResults[oldKey] - 1);
+        if (updatedResults[newKey] !== undefined) updatedResults[newKey] = (updatedResults[newKey] || 0) + 1;
+        setHpfSedimentDetection(updatedResults);
+
+        // Save to DB
+        await upsertImageAnalysis({
+          test_id: selectedTest.id,
+          power_mode: "HPF",
+          image_index: imageIndex,
+          image_url: imageUrl,
+          hpf_rbc: updatedResults.rbc,
+          hpf_wbc: updatedResults.wbc,
+          hpf_epithelial_cells: updatedResults.epithelial_cells,
+          hpf_crystals: updatedResults.crystals,
+          hpf_bacteria: updatedResults.bacteria,
+          hpf_yeast: updatedResults.yeast,
+          hpf_sperm: updatedResults.sperm,
+          hpf_parasites: updatedResults.parasites,
+          confidence: updatedResults.confidence,
+          analysis_notes: updatedResults.analysis_notes,
+          yolo_detections: updatedDetections,
+          analyzed_at: new Date().toISOString(),
+        });
+      }
+    }
+  };
   const [lpfCroppedImages, setLpfCroppedImages] = useState<Record<string, string>>({}) // detection_id -> base64 cropped image
   const [hpfCroppedImages, setHpfCroppedImages] = useState<Record<string, string>>({})
   const [highlightedDetection, setHighlightedDetection] = useState<string | null>(null) // detection_id to highlight
@@ -287,6 +444,96 @@ export default function Report() {
     },
     []
   );
+
+  /**
+   * Helper component to render a gallery of detections with re-classification controls
+   */
+  const DetectionGallery = ({ 
+    items, 
+    isLPF, 
+    title,
+    currentClass
+  }: { 
+    items: Array<any>, 
+    isLPF: boolean, 
+    title: string,
+    currentClass: string
+  }) => {
+    if (items.length === 0) return null;
+
+    // Filter valid output classes for the dropdown
+    const availableClasses = isLPF 
+      ? ['epithelial_cells', 'mucus_threads', 'casts', 'abnormal_crystals']
+      : ['rbc', 'wbc', 'epithelial_cells', 'crystals', 'bacteria', 'yeast', 'sperm', 'parasites'];
+
+    return (
+      <div className="flex flex-col items-center gap-1.5 w-full py-1">
+        <div className="flex flex-col gap-2 max-h-[250px] overflow-y-auto overflow-x-hidden p-1 border border-dashed border-blue-100 rounded bg-blue-50/20 w-fit min-w-[52px] no-scrollbar">
+          {items.map((item) => (
+            <div key={item.id} className="relative group w-12 h-12 mx-auto flex-shrink-0">
+              <img
+                src={item.image}
+                alt={title}
+                className={`w-full h-full object-contain rounded shadow-sm transition-all duration-200 cursor-pointer ${
+                  highlightedDetection === item.id
+                    ? 'outline outline-2 outline-blue-500 outline-offset-2'
+                    : item.is_human_verified 
+                      ? 'outline outline-1 outline-green-400 outline-offset-1'
+                      : 'border border-gray-100'
+                }`}
+                onClick={() => setHighlightedDetection(highlightedDetection === item.id ? null : item.id)}
+                title={`${title} • Conf: ${(item.confidence * 100).toFixed(1)}% ${item.is_human_verified ? '(Manual Verified)' : '(AI Guess)'}`}
+              />
+              
+              {/* Classification Indicator Badge (Top Left) */}
+              <div className={`absolute -top-1 -left-1 px-1 py-0.5 rounded text-[7px] font-bold text-white shadow-sm z-10 select-none pointer-events-none ${
+                item.is_human_verified ? 'bg-green-500' : 'bg-blue-600'
+              }`}>
+                {item.is_human_verified ? 'MAN' : 'AI'}
+              </div>
+
+              {/* Audit Icon (Bottom Right) */}
+              {item.is_human_verified && (
+                <div className="absolute -bottom-1 -right-1 bg-green-500 text-white rounded-full p-0.5 shadow-sm z-10 border border-white pointer-events-none" title={`Originally: ${item.original_class}`}>
+                  <Check className="w-2 h-2 stroke-[4px]" />
+                </div>
+              )}
+              
+              {/* Re-classify Trigger - Hover Icon in Top Right */}
+              <div className="absolute top-0 right-0 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                <div className="relative w-5 h-5 bg-white border border-blue-200 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-50 transition-colors cursor-pointer group/icon">
+                  <RefreshCw className="w-3 h-3 text-blue-600 group-hover/icon:rotate-180 transition-transform duration-500" />
+                  <select
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    value={item.class}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      reclassifyImage(item.id, e.target.value, isLPF);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    title="Re-classify detection"
+                  >
+                    <option disabled value="">Move to...</option>
+                    {availableClasses.map(cls => (
+                      <option key={cls} value={cls}>
+                        {CLASS_DISPLAY_NAMES[cls] || cls}
+                      </option>
+                    ))}
+                  <option value="debris">Archive (Debris)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* Gallery Caption */}
+      <span className="text-[9px] text-gray-400 font-medium whitespace-nowrap">
+        {items.length} {items.length === 1 ? 'cell' : 'cells'}
+      </span>
+    </div>
+  );
+};
 
   // Text-only Urinalysis Summary
   const [urinalysisText, setUrinalysisText] = useState({
@@ -462,142 +709,110 @@ export default function Report() {
     })
   }, [])
 
-  // Helper function to get cropped images by class name for LPF
-  const getLPFCroppedImagesByClass = useCallback((className: string): Array<{ id: string; image: string; confidence: number }> => {
-    // Debug logging
-    console.log(`🔍 getLPFCroppedImagesByClass called for: ${className}`)
-    console.log(`  - lpfYoloDetections:`, lpfYoloDetections ? `${lpfYoloDetections.predictions?.length || 0} predictions` : 'null')
-    console.log(`  - lpfCroppedImages:`, lpfCroppedImages ? `${Object.keys(lpfCroppedImages).length} images` : 'null')
-    
-    if (!lpfYoloDetections || !lpfCroppedImages || Object.keys(lpfCroppedImages).length === 0) {
-      console.log(`  ❌ Early return: missing detections or cropped images`)
-      return []
-    }
-    
-    // Map YOLO class names to table column names
-    const classMap: Record<string, string[]> = {
-      'epithelial_cells': ['epith', 'epithn'],
-      'mucus_threads': ['mucus'],
-      'casts': ['cast'],
-      'squamous_epithelial': ['epith', 'epithn'],
-      'abnormal_crystals': ['cryst'],
-    }
-    
-    const yoloClasses = classMap[className] || []
-    if (yoloClasses.length === 0) {
-      console.warn(`⚠️ No YOLO class mapping found for LPF class: ${className}`)
-      return []
-    }
-    
-    console.log(`  - Looking for YOLO classes:`, yoloClasses)
-    console.log(`  - Available YOLO predictions:`, lpfYoloDetections.predictions.map(p => p.class).join(', '))
-    
-    const matchingPredictions = lpfYoloDetections.predictions.filter(pred => {
-      const predClassLower = pred.class.toLowerCase()
-      const matches = yoloClasses.some(yc => {
-        const ycLower = yc.toLowerCase()
-        return predClassLower.includes(ycLower) || predClassLower === ycLower
-      })
-      if (matches) {
-        console.log(`  ✅ Match found: ${pred.class} matches ${className}`)
-      }
-      return matches
-    })
-    
-    console.log(`  - Matching predictions: ${matchingPredictions.length}`)
-    
-    const result = matchingPredictions
-      .map(pred => {
-        const croppedImage = lpfCroppedImages[pred.detection_id]
-        console.log(`  - Checking detection ${pred.detection_id}:`, croppedImage ? `has image (${croppedImage.length} chars)` : 'NO IMAGE')
-        return {
-          id: pred.detection_id,
-          image: croppedImage || '',
-          confidence: pred.confidence
-        }
-      })
-      .filter(item => {
-        const hasImage = item.image && item.image.length > 0
-        if (!hasImage) {
-          console.log(`  ⚠️ Filtered out ${item.id}: no image data`)
-        }
-        return hasImage
-      })
-    
-    console.log(`  ✅ Final result: ${result.length} cropped images for ${className}`)
-    
-    return result
-  }, [lpfYoloDetections, lpfCroppedImages])
 
   // Helper function to get cropped images by class name for HPF
-  const getHPFCroppedImagesByClass = useCallback((className: string): Array<{ id: string; image: string; confidence: number }> => {
-    // Debug logging
-    console.log(`🔍 getHPFCroppedImagesByClass called for: ${className}`)
-    console.log(`  - hpfYoloDetections:`, hpfYoloDetections ? `${hpfYoloDetections.predictions?.length || 0} predictions` : 'null')
-    console.log(`  - hpfCroppedImages:`, hpfCroppedImages ? `${Object.keys(hpfCroppedImages).length} images` : 'null')
-    
-    if (!hpfYoloDetections || !hpfCroppedImages || Object.keys(hpfCroppedImages).length === 0) {
-      console.log(`  ❌ Early return: missing detections or cropped images`)
+  const getHPFCroppedImagesByClass = useCallback((
+    className: string,
+    customDetections?: any,
+    customCropped?: any
+  ): Array<{ 
+    id: string; 
+    image: string; 
+    confidence: number;
+    class: string;
+    original_class?: string;
+    is_human_verified?: boolean;
+  }> => {
+    const currentDetections = customDetections || hpfYoloDetections;
+    const currentCropped = customCropped || hpfCroppedImages;
+
+    if (!currentDetections || !currentCropped || Object.keys(currentCropped).length === 0) {
       return []
     }
     
     // Map YOLO class names to table column names
     const classMap: Record<string, string[]> = {
-      'rbc': ['eryth'],
-      'wbc': ['leuko'],
-      'epithelial_cells': ['epith', 'epithn'],
-      'crystals': ['cryst'],
+      'rbc': ['eryth', 'rbc'],
+      'wbc': ['leuko', 'wbc'],
+      'epithelial_cells': ['epith', 'epithn', 'epithelial_cells'],
+      'crystals': ['cryst', 'crystals'],
       'bacteria': ['bacteria'],
-      'yeast': ['mycete'],
+      'yeast': ['mycete', 'yeast'],
       'sperm': ['sperm'],
-      'parasites': ['parasite'],
+      'parasites': ['parasite', 'parasites'],
     }
     
-    const yoloClasses = classMap[className] || []
-    if (yoloClasses.length === 0) {
-      console.warn(`⚠️ No YOLO class mapping found for HPF class: ${className}`)
+    const yoloClasses = classMap[className] || [className]
+    
+    const matchingPredictions = currentDetections.predictions.filter(pred => {
+      const predClassLower = pred.class.toLowerCase()
+      return yoloClasses.some(yc => predClassLower.includes(yc.toLowerCase()) || predClassLower === yc.toLowerCase() || predClassLower === className.toLowerCase())
+    })
+    
+    return matchingPredictions
+      .map(pred => ({
+        id: pred.detection_id,
+        image: currentCropped[pred.detection_id] || '',
+        confidence: pred.confidence,
+        class: pred.class,
+        original_class: pred.original_class,
+        is_human_verified: pred.is_human_verified
+      }))
+      .filter(item => item.image !== '')
+  }, [hpfYoloDetections, hpfCroppedImages])
+
+  // Helper function to get cropped images by class name for LPF
+  const getLPFCroppedImagesByClass = useCallback((
+    className: string,
+    customDetections?: any,
+    customCropped?: any
+  ): Array<{
+    id: string; 
+    image: string; 
+    confidence: number;
+    class: string;
+    original_class?: string;
+    is_human_verified?: boolean;
+  }> => {
+    const currentDetections = customDetections || lpfYoloDetections;
+    const currentCropped = customCropped || lpfCroppedImages;
+
+    if (!currentDetections || !currentCropped || Object.keys(currentCropped).length === 0) {
       return []
     }
     
-    console.log(`  - Looking for YOLO classes:`, yoloClasses)
-    console.log(`  - Available YOLO predictions:`, hpfYoloDetections.predictions.map(p => p.class).join(', '))
+    // Logic for mapping display names to YOLO class names
+    const classMap: Record<string, string[]> = {
+      'epithelial_cells': ['epith', 'epithn', 'epithelial_cells'],
+      'mucus_threads': ['mucus', 'mucus_threads'],
+      'casts': ['cast', 'casts'],
+      'abnormal_crystals': ['cryst', 'crystals'],
+      'squamous_epithelial': ['epith', 'epithn', 'squamous_epithelial'],
+    }
     
-    const matchingPredictions = hpfYoloDetections.predictions.filter(pred => {
+    const yoloClasses = classMap[className] || [className]
+    
+    const matchingPredictions = currentDetections.predictions.filter(pred => {
       const predClassLower = pred.class.toLowerCase()
-      const matches = yoloClasses.some(yc => {
-        const ycLower = yc.toLowerCase()
-        return predClassLower.includes(ycLower) || predClassLower === ycLower
-      })
-      if (matches) {
-        console.log(`  ✅ Match found: ${pred.class} matches ${className}`)
-      }
-      return matches
+      // Also match the standard class names we now use
+      return yoloClasses.some(yc => 
+        predClassLower.includes(yc.toLowerCase()) || 
+        predClassLower === yc.toLowerCase() ||
+        predClassLower === className.toLowerCase()
+      )
     })
     
-    console.log(`  - Matching predictions: ${matchingPredictions.length}`)
-    
-    const result = matchingPredictions
-      .map(pred => {
-        const croppedImage = hpfCroppedImages[pred.detection_id]
-        console.log(`  - Checking detection ${pred.detection_id}:`, croppedImage ? `has image (${croppedImage.length} chars)` : 'NO IMAGE')
-        return {
-          id: pred.detection_id,
-          image: croppedImage || '',
-          confidence: pred.confidence
-        }
-      })
-      .filter(item => {
-        const hasImage = item.image && item.image.length > 0
-        if (!hasImage) {
-          console.log(`  ⚠️ Filtered out ${item.id}: no image data`)
-        }
-        return hasImage
-      })
-    
-    console.log(`  ✅ Final result: ${result.length} cropped images for ${className}`)
-    
-    return result
-  }, [hpfYoloDetections, hpfCroppedImages])
+    return matchingPredictions
+      .map(pred => ({
+        id: pred.detection_id,
+        image: currentCropped[pred.detection_id] || '',
+        confidence: pred.confidence,
+        class: pred.class,
+        original_class: pred.original_class,
+        is_human_verified: pred.is_human_verified
+      }))
+      .filter(item => item.image !== '')
+  }, [lpfYoloDetections, lpfCroppedImages])
 
   // Debug: Log state changes
   useEffect(() => {
@@ -640,7 +855,7 @@ export default function Report() {
       console.log(
         `🔬 Starting LPF analysis for image ${
           imageIndex + 1
-      } (URL: ${imageUrl.substring(0, 50)}...)`
+        } (URL: ${imageUrl.substring(0, 50)}...)`
     );
 
     // Cancel any existing LPF request
@@ -836,6 +1051,7 @@ export default function Report() {
     [
       lpfAbortController,
       selectedTest,
+      confThreshold, // Add missing dependency
       setIsAnalyzingLPF,
       setLpfAbortController,
       setLpfSedimentDetection,
@@ -1011,6 +1227,18 @@ export default function Report() {
           yolo_detections: yoloDetections, // Save YOLO detections
           analyzed_at: new Date().toISOString(),
         });
+        setHpfSedimentDetection(detection);
+        setHpfYoloDetections(yoloDetections);
+
+        // Save as original YOLO results for comparison
+        setHpfYoloOnlyResults({
+            detection,
+            yolo_detections: yoloDetections,
+            cropped_images: croppedImagesHPF
+        });
+        setViewModeHPF('yolo'); // Default to YOLO for the first pass
+
+        setNotificationMessage("HPF image analyzed successfully (YOLO-only)");
         console.log("HPF AI analysis with YOLO detections saved to database");
         setNotificationMessage("HPF image analyzed and saved successfully");
         setNotificationType("success");
@@ -1048,11 +1276,13 @@ export default function Report() {
   }, [
     hpfAbortController,
     selectedTest,
+    confThreshold, // Add missing dependency
     setHpfSedimentDetection,
     setIsAnalyzingHPF,
     setNotificationMessage,
     setNotificationType,
     setShowNotification,
+    setHpfAbortController,
   ]);
 
   // Cleanup function to clear debounce timeouts
@@ -1760,121 +1990,63 @@ export default function Report() {
       setLpfYoloDetections(null);
       setLpfCroppedImages({});
 
-      // Clear loading state for previous image
-      setIsAnalyzingLPF((prev) => ({ ...prev, [currentLPFIndex]: false }));
-
       // Clear any existing debounce timeout
       if (lpfDebounceRef.current) {
         clearTimeout(lpfDebounceRef.current);
       }
 
-      // Debounce the analysis to prevent rapid-fire API calls
-      lpfDebounceRef.current = setTimeout(() => {
-        // Check for existing analysis for this specific image
-        const checkExistingAnalysis = async () => {
+      // Check for existing analysis for this specific image IMMEDIATELY (no debounce for cache)
+      const checkAndLoadCache = async () => {
         try {
-          console.log(
-            `📊 Checking database for existing LPF analysis: test=${selectedTest.id}, index=${currentLPFIndex}`
-          );
-          
-          // Add timeout to database query to prevent hanging
-          const existingAnalysis = await Promise.race([
-            getImageAnalysisByIndex(selectedTest.id, "LPF", currentLPFIndex),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Database query timeout')), 5000)
-            )
-          ]) as any;
+          console.log(`📊 Fast cache check for LPF: test=${selectedTest.id}, index=${currentLPFIndex}`);
+          const existingAnalysis = await getImageAnalysisByIndex(selectedTest.id, "LPF", currentLPFIndex);
 
           if (existingAnalysis) {
-            console.log(
-              "✅ Found existing LPF analysis in database - loading from cache"
-            );
-            console.log(
-              "📝 LPF Analysis text:",
-              existingAnalysis.analysis_notes
-            );
+            console.log("✅ Found existing LPF analysis in database - loading immediately");
             setLpfSedimentDetection({
-              epithelial_cells:
-                typeof existingAnalysis.lpf_epithelial_cells === "number"
-                  ? existingAnalysis.lpf_epithelial_cells
-                  : 0,
-              mucus_threads:
-                typeof existingAnalysis.lpf_mucus_threads === "number"
-                  ? existingAnalysis.lpf_mucus_threads
-                  : 0,
-              casts:
-                typeof existingAnalysis.lpf_casts === "number"
-                  ? existingAnalysis.lpf_casts
-                  : 0,
-              squamous_epithelial:
-                typeof existingAnalysis.lpf_squamous_epithelial === "number"
-                  ? existingAnalysis.lpf_squamous_epithelial
-                  : 0,
-              abnormal_crystals:
-                typeof existingAnalysis.lpf_abnormal_crystals === "number"
-                  ? existingAnalysis.lpf_abnormal_crystals
-                  : 0,
+              epithelial_cells: Number(existingAnalysis.lpf_epithelial_cells) || 0,
+              mucus_threads: Number(existingAnalysis.lpf_mucus_threads) || 0,
+              casts: Number(existingAnalysis.lpf_casts) || 0,
+              squamous_epithelial: Number(existingAnalysis.lpf_squamous_epithelial) || 0,
+              abnormal_crystals: Number(existingAnalysis.lpf_abnormal_crystals) || 0,
               confidence: existingAnalysis.confidence || 0,
               analysis_notes: existingAnalysis.analysis_notes || "",
             });
             
-            // Restore YOLO detections and regenerate cropped images
             if (existingAnalysis.yolo_detections) {
-              console.log("🔄 Restoring YOLO detections from database");
               setLpfYoloDetections(existingAnalysis.yolo_detections);
-              
-              // Regenerate cropped images from stored bounding boxes
               const imageUrl = lowPowerImages[currentLPFIndex];
               if (imageUrl && existingAnalysis.yolo_detections.predictions?.length > 0) {
                 const croppedImages: Record<string, string> = {}
                 for (const pred of existingAnalysis.yolo_detections.predictions) {
-                  try {
-                    const cropped = await cropImageFromBoundingBox(
-                      imageUrl,
-                      pred.x,
-                      pred.y,
-                      pred.width,
-                      pred.height
-                    )
-                    croppedImages[pred.detection_id] = cropped
-                  } catch (error) {
-                    console.error(`Failed to regenerate cropped image for detection ${pred.detection_id}:`, error)
-                  }
+                  const cropped = await cropImageFromBoundingBox(imageUrl, pred.x, pred.y, pred.width, pred.height)
+                  croppedImages[pred.detection_id] = cropped
                 }
-                setLpfCroppedImages(croppedImages)
-                console.log(`✅ Regenerated ${Object.keys(croppedImages).length} cropped images from stored YOLO detections`)
+                setLpfCroppedImages(croppedImages);
               }
             }
-          } else {
-            console.log(
-              "❌ No existing LPF analysis found - calling Gemini API for current image only"
-            );
-            // Only call API if no database data exists for this specific image
-            analyzeLPFImage(lowPowerImages[currentLPFIndex], currentLPFIndex);
+            // If data found, we're NOT analyzing anymore
+            setIsAnalyzingLPF((prev) => ({ ...prev, [currentLPFIndex]: false }));
+            return true; // Cache found
           }
-        } catch (error) {
-          console.error("Error checking existing LPF analysis:", error);
-          
-          // Check if it's a specific database error
-          if (error instanceof Error) {
-            if (error.message.includes('timeout')) {
-              console.log("⏰ Database query timed out - calling Gemini API as fallback");
-            } else if (error.message.includes('406') || error.message.includes('Not Acceptable')) {
-              console.log("🚫 Database query rejected (406) - calling Gemini API as fallback");
-            } else {
-              console.log("⚠️ Database check failed - calling Gemini API as fallback");
-            }
-          } else {
-            console.log("⚠️ Unknown database error - calling Gemini API as fallback");
-          }
-          
-          // Fallback to API call if database check fails
-          analyzeLPFImage(lowPowerImages[currentLPFIndex], currentLPFIndex);
+          return false; // No cache
+        } catch (e) {
+          console.error("Cache check failed:", e);
+          return false;
         }
       };
 
-        checkExistingAnalysis();
-      }, DEBOUNCE_DELAY);
+      // Run immediate check
+      checkAndLoadCache().then((found) => {
+        if (found) return; // Exit if cache loaded
+
+        // If no cache, set loading state and wait for debounce to call Gemini
+        setIsAnalyzingLPF((prev) => ({ ...prev, [currentLPFIndex]: true }));
+
+        lpfDebounceRef.current = setTimeout(() => {
+          analyzeLPFImage(lowPowerImages[currentLPFIndex], currentLPFIndex);
+        }, 500);
+      });
     } else {
       console.log(
         "🔄 LPF images cleared or no current image - clearing detection state"
@@ -1911,133 +2083,66 @@ export default function Report() {
       setHpfYoloDetections(null);
       setHpfCroppedImages({});
 
-      // Clear loading state for previous image
-      setIsAnalyzingHPF((prev) => ({ ...prev, [currentHPFIndex]: false }));
-
       // Clear any existing debounce timeout
       if (hpfDebounceRef.current) {
         clearTimeout(hpfDebounceRef.current);
       }
 
-      // Debounce the analysis to prevent rapid-fire API calls
-      hpfDebounceRef.current = setTimeout(() => {
-        // Check for existing analysis for this specific image
-        const checkExistingAnalysis = async () => {
+      // Check for existing analysis for this specific image IMMEDIATELY (no debounce for cache)
+      const checkAndLoadCache = async () => {
         try {
-          console.log(
-            `📊 Checking database for existing HPF analysis: test=${selectedTest.id}, index=${currentHPFIndex}`
-          );
-          
-          // Add timeout to database query to prevent hanging
-          const existingAnalysis = await Promise.race([
-            getImageAnalysisByIndex(selectedTest.id, "HPF", currentHPFIndex),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Database query timeout')), 5000)
-            )
-          ]) as any;
+          console.log(`📊 Fast cache check for HPF: test=${selectedTest.id}, index=${currentHPFIndex}`);
+          const existingAnalysis = await getImageAnalysisByIndex(selectedTest.id, "HPF", currentHPFIndex);
 
           if (existingAnalysis) {
-            console.log(
-              "✅ Found existing HPF analysis in database - loading from cache"
-            );
-            console.log(
-              "📝 HPF Analysis text:",
-              existingAnalysis.analysis_notes
-            );
+            console.log("✅ Found existing HPF analysis in database - loading immediately");
             setHpfSedimentDetection({
-              rbc:
-                typeof existingAnalysis.hpf_rbc === "number"
-                  ? existingAnalysis.hpf_rbc
-                  : 0,
-              wbc:
-                typeof existingAnalysis.hpf_wbc === "number"
-                  ? existingAnalysis.hpf_wbc
-                  : 0,
-              epithelial_cells:
-                typeof existingAnalysis.hpf_epithelial_cells === "number"
-                  ? existingAnalysis.hpf_epithelial_cells
-                  : 0,
-              crystals:
-                typeof existingAnalysis.hpf_crystals === "number"
-                  ? existingAnalysis.hpf_crystals
-                  : 0,
-              bacteria:
-                typeof existingAnalysis.hpf_bacteria === "number"
-                  ? existingAnalysis.hpf_bacteria
-                  : 0,
-              yeast:
-                typeof existingAnalysis.hpf_yeast === "number"
-                  ? existingAnalysis.hpf_yeast
-                  : 0,
-              sperm:
-                typeof existingAnalysis.hpf_sperm === "number"
-                  ? existingAnalysis.hpf_sperm
-                  : 0,
-              parasites:
-                typeof existingAnalysis.hpf_parasites === "number"
-                  ? existingAnalysis.hpf_parasites
-                  : 0,
+              rbc: Number(existingAnalysis.hpf_rbc) || 0,
+              wbc: Number(existingAnalysis.hpf_wbc) || 0,
+              epithelial_cells: Number(existingAnalysis.hpf_epithelial_cells) || 0,
+              crystals: Number(existingAnalysis.hpf_crystals) || 0,
+              bacteria: Number(existingAnalysis.hpf_bacteria) || 0,
+              yeast: Number(existingAnalysis.hpf_yeast) || 0,
+              sperm: Number(existingAnalysis.hpf_sperm) || 0,
+              parasites: Number(existingAnalysis.hpf_parasites) || 0,
               confidence: existingAnalysis.confidence || 0,
               analysis_notes: existingAnalysis.analysis_notes || "",
             });
             
-            // Restore YOLO detections and regenerate cropped images
             if (existingAnalysis.yolo_detections) {
-              console.log("🔄 Restoring YOLO detections from database");
               setHpfYoloDetections(existingAnalysis.yolo_detections);
-              
-              // Regenerate cropped images from stored bounding boxes
               const imageUrl = highPowerImages[currentHPFIndex];
               if (imageUrl && existingAnalysis.yolo_detections.predictions?.length > 0) {
                 const croppedImages: Record<string, string> = {}
                 for (const pred of existingAnalysis.yolo_detections.predictions) {
-                  try {
-                    const cropped = await cropImageFromBoundingBox(
-                      imageUrl,
-                      pred.x,
-                      pred.y,
-                      pred.width,
-                      pred.height
-                    )
-                    croppedImages[pred.detection_id] = cropped
-                  } catch (error) {
-                    console.error(`Failed to regenerate cropped image for detection ${pred.detection_id}:`, error)
-                  }
+                  const cropped = await cropImageFromBoundingBox(imageUrl, pred.x, pred.y, pred.width, pred.height)
+                  croppedImages[pred.detection_id] = cropped
                 }
-                setHpfCroppedImages(croppedImages)
-                console.log(`✅ Regenerated ${Object.keys(croppedImages).length} cropped images from stored YOLO detections`)
+                setHpfCroppedImages(croppedImages);
               }
             }
-          } else {
-            console.log(
-              "❌ No existing HPF analysis found - calling Gemini API for current image only"
-            );
-            // Only call API if no database data exists for this specific image
-            analyzeHPFImage(highPowerImages[currentHPFIndex], currentHPFIndex);
+            // If data found, we're NOT analyzing anymore
+            setIsAnalyzingHPF((prev) => ({ ...prev, [currentHPFIndex]: false }));
+            return true; // Cache found
           }
-        } catch (error) {
-          console.error("Error checking existing HPF analysis:", error);
-          
-          // Check if it's a specific database error
-          if (error instanceof Error) {
-            if (error.message.includes('timeout')) {
-              console.log("⏰ Database query timed out - calling Gemini API as fallback");
-            } else if (error.message.includes('406') || error.message.includes('Not Acceptable')) {
-              console.log("🚫 Database query rejected (406) - calling Gemini API as fallback");
-            } else {
-              console.log("⚠️ Database check failed - calling Gemini API as fallback");
-            }
-          } else {
-            console.log("⚠️ Unknown database error - calling Gemini API as fallback");
-          }
-          
-          // Fallback to API call if database check fails
-          analyzeHPFImage(highPowerImages[currentHPFIndex], currentHPFIndex);
+          return false; // No cache
+        } catch (e) {
+          console.error("Cache check failed:", e);
+          return false;
         }
       };
 
-      checkExistingAnalysis();
-      }, DEBOUNCE_DELAY);
+      // Run immediate check
+      checkAndLoadCache().then((found) => {
+        if (found) return; // Exit if cache loaded
+
+        // If no cache, set loading state and wait for debounce to call Gemini
+        setIsAnalyzingHPF((prev) => ({ ...prev, [currentHPFIndex]: true }));
+
+        hpfDebounceRef.current = setTimeout(() => {
+          analyzeHPFImage(highPowerImages[currentHPFIndex], currentHPFIndex);
+        }, 500);
+      });
     } else {
       console.log(
         "🔄 HPF images cleared or no current image - clearing detection state"
@@ -3230,7 +3335,7 @@ export default function Report() {
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
                                   strokeWidth={2}
-                                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 1 0 00-2-2H5a2 1 0 00-2 2v8a2 1 0 002 2z"
                                 />
                               </svg>
                             </button>
@@ -3247,7 +3352,7 @@ export default function Report() {
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 strokeWidth={2}
-                                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 1 0 00-2-2H5a2 1 0 00-2 2v8a2 1 0 002 2z"
                               />
                             </svg>
                           </div>
@@ -3718,10 +3823,10 @@ export default function Report() {
                                 target.style.display = "none";
                               }}
                             />
-                            {lpfYoloDetections && lpfYoloDetections.predictions.length > 0 && (
+                            {(viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.yolo_detections : lpfYoloDetections) && (viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.yolo_detections : lpfYoloDetections).predictions.length > 0 && (
                               <BoundingBoxOverlay
                                 imageRef={lpfImageRef}
-                                detections={lpfYoloDetections.predictions}
+                                detections={(viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.yolo_detections : lpfYoloDetections).predictions}
                                 highlightedDetectionId={highlightedDetection}
                                 showBoundingBoxes={showBoundingBox}
                               />
@@ -3817,17 +3922,30 @@ export default function Report() {
                             LPF Sediment Analysis
                           </h4>
                           <div className="flex items-center gap-2">
-                            {lpfSedimentDetection && (
-                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
-                                <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
-                                <span className="font-medium">
-                                  Confidence:{" "}
-                                  {lpfSedimentDetection.confidence
-                                    ? `${lpfSedimentDetection.confidence.toFixed(1)}%`
-                                    : "N/A"}
-                                </span>
-                              </span>
+                            {/* Confidence Threshold Badge */}
+                            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                                <span className="font-semibold">Min Conf: {confThreshold}</span>
+                            </span>
+
+                            {/* View Mode Toggle */}
+                            {lpfYoloOnlyResults && (
+                                <div className="flex bg-gray-100 rounded-md p-0.5 border border-gray-200">
+                                    <button 
+                                        onClick={() => setViewModeLPF('yolo')}
+                                        className={`px-2 py-1 text-[9px] font-bold rounded transition-all ${viewModeLPF === 'yolo' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                    >
+                                        YOLO
+                                    </button>
+                                    <button 
+                                        onClick={() => setViewModeLPF('gemini')}
+                                        disabled={!lpfSedimentDetection?.analysis_notes?.includes("Gemini")}
+                                        className={`px-2 py-1 text-[9px] font-bold rounded transition-all ${viewModeLPF === 'gemini' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'} disabled:opacity-50`}
+                                    >
+                                        GEMINI
+                                    </button>
+                                </div>
                             )}
+
                             <Button
                               variant="secondary"
                               size="sm"
@@ -3836,9 +3954,12 @@ export default function Report() {
                                 isAnalyzingLPF[currentLPFIndex] ||
                                 !lowPowerImages.length
                               }
-                              onClick={() => enhanceWithGemini("low")}
+                              onClick={() => {
+                                  enhanceWithGemini("low");
+                                  setViewModeLPF('gemini'); // Switch to Gemini view when enhancing
+                              }}
                             >
-                              Enhance with Gemini
+                              Enhance
                             </Button>
                           </div>
                         </div>
@@ -3880,7 +4001,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          (lpfSedimentDetection?.mucus_threads ||
+                                          ((viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.mucus_threads ||
                                             0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
@@ -3890,7 +4011,7 @@ export default function Report() {
                                           type="number"
                                           min="0"
                                           value={
-                                            lpfSedimentDetection?.mucus_threads || 0
+                                            (viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.mucus_threads || 0
                                           }
                                           onChange={(e) => {
                                             const newValue =
@@ -3923,27 +4044,13 @@ export default function Report() {
                                         />
                                       </div>
                                     </div>
-                                    {/* Cropped images gallery - separate container */}
-                                    {getLPFCroppedImagesByClass('mucus_threads').length > 0 && (
-                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
-                                        {getLPFCroppedImagesByClass('mucus_threads').map((item) => (
-                                          <img
-                                            key={item.id}
-                                            src={item.image}
-                                            alt="Mucus Thread"
-                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
-                                              highlightedDetection === item.id
-                                                ? 'border-red-500 shadow-lg'
-                                                : 'border-gray-300 hover:border-gray-500'
-                                            }`}
-                                            onClick={() => setHighlightedDetection(
-                                              highlightedDetection === item.id ? null : item.id
-                                            )}
-                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
-                                          />
-                                        ))}
-                                      </div>
-                                    )}
+                                    {/* Cropped images gallery */}
+                                    <DetectionGallery 
+                                      items={getLPFCroppedImagesByClass('mucus_threads', viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.yolo_detections : lpfYoloDetections, viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.cropped_images : lpfCroppedImages)}
+                                      isLPF={true}
+                                      title="Mucus Threads"
+                                      currentClass="mucus_threads"
+                                    />
                                   </div>
                                 </td>
                                 <td className="text-center py-2 px-2 align-top">
@@ -3952,7 +4059,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          (lpfSedimentDetection?.casts || 0) > 0
+                                          ((viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.casts || 0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
                                         }`}
@@ -3960,7 +4067,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={lpfSedimentDetection?.casts || 0}
+                                          value={(viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.casts || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -3989,27 +4096,13 @@ export default function Report() {
                                         />
                                       </div>
                                     </div>
-                                    {/* Cropped images gallery - separate container */}
-                                    {getLPFCroppedImagesByClass('casts').length > 0 && (
-                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
-                                        {getLPFCroppedImagesByClass('casts').map((item) => (
-                                          <img
-                                            key={item.id}
-                                            src={item.image}
-                                            alt="Cast"
-                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
-                                              highlightedDetection === item.id
-                                                ? 'border-red-500 shadow-lg'
-                                                : 'border-gray-300 hover:border-gray-500'
-                                            }`}
-                                            onClick={() => setHighlightedDetection(
-                                              highlightedDetection === item.id ? null : item.id
-                                            )}
-                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
-                                          />
-                                        ))}
-                                      </div>
-                                    )}
+                                    {/* Cropped images gallery */}
+                                    <DetectionGallery 
+                                      items={getLPFCroppedImagesByClass('casts', viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.yolo_detections : lpfYoloDetections, viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.cropped_images : lpfCroppedImages)}
+                                      isLPF={true}
+                                      title="Casts"
+                                      currentClass="casts"
+                                    />
                                   </div>
                                 </td>
                                 <td className="text-center py-2 px-2 align-top">
@@ -4018,7 +4111,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          (lpfSedimentDetection?.squamous_epithelial ||
+                                          ((viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.squamous_epithelial ||
                                             0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
@@ -4028,7 +4121,7 @@ export default function Report() {
                                           type="number"
                                           min="0"
                                           value={
-                                            lpfSedimentDetection?.squamous_epithelial ||
+                                            (viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.squamous_epithelial ||
                                             0
                                           }
                                           onChange={(e) => {
@@ -4062,27 +4155,13 @@ export default function Report() {
                                         />
                                       </div>
                                     </div>
-                                    {/* Cropped images gallery - separate container */}
-                                    {getLPFCroppedImagesByClass('squamous_epithelial').length > 0 && (
-                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
-                                        {getLPFCroppedImagesByClass('squamous_epithelial').map((item) => (
-                                          <img
-                                            key={item.id}
-                                            src={item.image}
-                                            alt="Squamous Epithelial"
-                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
-                                              highlightedDetection === item.id
-                                                ? 'border-red-500 shadow-lg'
-                                                : 'border-gray-300 hover:border-gray-500'
-                                            }`}
-                                            onClick={() => setHighlightedDetection(
-                                              highlightedDetection === item.id ? null : item.id
-                                            )}
-                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
-                                          />
-                                        ))}
-                                      </div>
-                                    )}
+                                    {/* Cropped images gallery */}
+                                    <DetectionGallery 
+                                      items={getLPFCroppedImagesByClass('squamous_epithelial', viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.yolo_detections : lpfYoloDetections, viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.cropped_images : lpfCroppedImages)}
+                                      isLPF={true}
+                                      title="Squamous Epithelial"
+                                      currentClass="squamous_epithelial"
+                                    />
                                   </div>
                                 </td>
                                 <td className="text-center py-2 px-2 align-top">
@@ -4091,7 +4170,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          (lpfSedimentDetection?.abnormal_crystals ||
+                                          ((viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.abnormal_crystals ||
                                             0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
@@ -4101,7 +4180,7 @@ export default function Report() {
                                           type="number"
                                           min="0"
                                           value={
-                                            lpfSedimentDetection?.abnormal_crystals ||
+                                            (viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.abnormal_crystals ||
                                             0
                                           }
                                           onChange={(e) => {
@@ -4135,38 +4214,24 @@ export default function Report() {
                                         />
                                       </div>
                                     </div>
-                                    {/* Cropped images gallery - separate container */}
-                                    {getLPFCroppedImagesByClass('abnormal_crystals').length > 0 && (
-                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
-                                        {getLPFCroppedImagesByClass('abnormal_crystals').map((item) => (
-                                          <img
-                                            key={item.id}
-                                            src={item.image}
-                                            alt="Abnormal Crystal"
-                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
-                                              highlightedDetection === item.id
-                                                ? 'border-red-500 shadow-lg'
-                                                : 'border-gray-300 hover:border-gray-500'
-                                            }`}
-                                            onClick={() => setHighlightedDetection(
-                                              highlightedDetection === item.id ? null : item.id
-                                            )}
-                                            title={`Confidence: ${(item.confidence * 100).toFixed(1)}%`}
-                                          />
-                                        ))}
-                                      </div>
-                                    )}
+                                    {/* Cropped images gallery */}
+                                    <DetectionGallery 
+                                      items={getLPFCroppedImagesByClass('abnormal_crystals', viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.yolo_detections : lpfYoloDetections, viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.cropped_images : lpfCroppedImages)}
+                                      isLPF={true}
+                                      title="Abnormal Crystals"
+                                      currentClass="abnormal_crystals"
+                                    />
                                   </div>
                                 </td>
                               </tr>
                               {/* Remarks Row */}
-                              {lpfSedimentDetection && lpfSedimentDetection.analysis_notes && (
+                              {(viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.analysis_notes && (
                                 <tr className="border-t-2 border-gray-300 bg-gray-50">
                                   <td colSpan={5} className="py-2 px-3 text-left">
                                     <div className="text-xs">
                                       <span className="font-semibold text-gray-700">Remarks: </span>
-                                      <span className="text-gray-600">
-                                        {lpfSedimentDetection.analysis_notes}
+                                      <span className="text-gray-600 italic">
+                                        {(viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection).analysis_notes}
                                       </span>
                                     </div>
                                   </td>
@@ -4234,10 +4299,10 @@ export default function Report() {
                                 e.currentTarget.style.display = "none";
                               }}
                             />
-                            {hpfYoloDetections && hpfYoloDetections.predictions.length > 0 && (
+                            {(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.yolo_detections : hpfYoloDetections) && (viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.yolo_detections : hpfYoloDetections).predictions.length > 0 && (
                               <BoundingBoxOverlay
                                 imageRef={hpfImageRef}
-                                detections={hpfYoloDetections.predictions}
+                                detections={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.yolo_detections : hpfYoloDetections).predictions}
                                 highlightedDetectionId={highlightedDetection}
                                 showBoundingBoxes={showBoundingBox}
                               />
@@ -4332,31 +4397,47 @@ export default function Report() {
                         <h4 className="font-semibold text-gray-900 text-sm">
                           HPF Sediment Analysis
                         </h4>
-                        <div className="flex items-center gap-2">
-                          {hpfSedimentDetection && (
-                            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
-                              <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
-                              <span className="font-medium">
-                                Confidence:{" "}
-                                {hpfSedimentDetection.confidence
-                                  ? `${hpfSedimentDetection.confidence.toFixed(1)}%`
-                                  : "N/A"}
-                              </span>
+                          <div className="flex items-center gap-2">
+                            {/* Confidence Threshold Badge */}
+                            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                                <span className="font-semibold">Min Conf: {confThreshold}</span>
                             </span>
-                          )}
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="h-6 px-2 text-[10px] font-semibold bg-white border border-gray-300 text-gray-800 hover:bg-gray-100"
-                            disabled={
-                              isAnalyzingHPF[currentHPFIndex] ||
-                              !highPowerImages.length
-                            }
-                            onClick={() => enhanceWithGemini("high")}
-                          >
-                            Enhance with Gemini
-                          </Button>
-                        </div>
+
+                            {/* View Mode Toggle */}
+                            {hpfYoloOnlyResults && (
+                                <div className="flex bg-gray-100 rounded-md p-0.5 border border-gray-200">
+                                    <button 
+                                        onClick={() => setViewModeHPF('yolo')}
+                                        className={`px-2 py-1 text-[9px] font-bold rounded transition-all ${viewModeHPF === 'yolo' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                    >
+                                        YOLO
+                                    </button>
+                                    <button 
+                                        onClick={() => setViewModeHPF('gemini')}
+                                        disabled={!hpfSedimentDetection?.analysis_notes?.includes("Gemini")}
+                                        className={`px-2 py-1 text-[9px] font-bold rounded transition-all ${viewModeHPF === 'gemini' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'} disabled:opacity-50`}
+                                    >
+                                        GEMINI
+                                    </button>
+                                </div>
+                            )}
+
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="h-6 px-2 text-[10px] font-semibold bg-white border border-gray-300 text-gray-800 hover:bg-gray-100"
+                              disabled={
+                                isAnalyzingHPF[currentHPFIndex] ||
+                                !highPowerImages.length
+                              }
+                              onClick={() => {
+                                  enhanceWithGemini("high");
+                                  setViewModeHPF('gemini'); // Switch to Gemini view when enhancing
+                              }}
+                            >
+                              Enhance
+                            </Button>
+                          </div>
                       </div>
 
                       {/* Loading Indicator */}
@@ -4408,7 +4489,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          (hpfSedimentDetection?.rbc || 0) > 0
+                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.rbc || 0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
                                         }`}
@@ -4416,7 +4497,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={hpfSedimentDetection?.rbc || 0}
+                                          value={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.rbc || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -4448,36 +4529,13 @@ export default function Report() {
                                         />
                                       </div>
                                     </div>
-                                    {/* Cropped images gallery - separate container */}
-                                    {getHPFCroppedImagesByClass('rbc').length > 0 && (
-                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
-                                        {getHPFCroppedImagesByClass('rbc').map((item) => (
-                                          <img
-                                            key={item.id}
-                                            src={item.image}
-                                            alt="RBC"
-                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
-                                              highlightedDetection === item.id
-                                                ? 'border-red-500 shadow-lg'
-                                                : 'border-gray-300 hover:border-gray-500'
-                                            }`}
-                                            onClick={() =>
-                                              setHighlightedDetection(
-                                                highlightedDetection === item.id ? null : item.id
-                                              )
-                                            }
-                                            onDoubleClick={() =>
-                                              setModalImage({
-                                                src: item.image,
-                                                alt: "RBC cropped field",
-                                                title: "RBC detection (YOLO)",
-                                              })
-                                            }
-                                            title={`RBC • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
-                                          />
-                                        ))}
-                                      </div>
-                                    )}
+                                    {/* Cropped images gallery */}
+                                    <DetectionGallery 
+                                      items={getHPFCroppedImagesByClass('rbc', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      isLPF={false}
+                                      title="RBC"
+                                      currentClass="rbc"
+                                    />
                                   </div>
                                 </td>
                                 <td className="text-center py-2 px-2 align-top">
@@ -4486,7 +4544,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          (hpfSedimentDetection?.wbc || 0) > 0
+                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.wbc || 0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
                                         }`}
@@ -4494,7 +4552,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={hpfSedimentDetection?.wbc || 0}
+                                          value={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.wbc || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -4526,36 +4584,13 @@ export default function Report() {
                                         />
                                       </div>
                                     </div>
-                                    {/* Cropped images gallery - separate container */}
-                                    {getHPFCroppedImagesByClass('wbc').length > 0 && (
-                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
-                                        {getHPFCroppedImagesByClass('wbc').map((item) => (
-                                          <img
-                                            key={item.id}
-                                            src={item.image}
-                                            alt="WBC"
-                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
-                                              highlightedDetection === item.id
-                                                ? 'border-red-500 shadow-lg'
-                                                : 'border-gray-300 hover:border-gray-500'
-                                            }`}
-                                            onClick={() =>
-                                              setHighlightedDetection(
-                                                highlightedDetection === item.id ? null : item.id
-                                              )
-                                            }
-                                            onDoubleClick={() =>
-                                              setModalImage({
-                                                src: item.image,
-                                                alt: "WBC cropped field",
-                                                title: "WBC detection (YOLO)",
-                                              })
-                                            }
-                                            title={`WBC • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
-                                          />
-                                        ))}
-                                      </div>
-                                    )}
+                                    {/* Cropped images gallery */}
+                                    <DetectionGallery 
+                                      items={getHPFCroppedImagesByClass('wbc', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      isLPF={false}
+                                      title="WBC"
+                                      currentClass="wbc"
+                                    />
                                   </div>
                                 </td>
                                 <td className="text-center py-2 px-2 align-top">
@@ -4564,7 +4599,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          (hpfSedimentDetection?.epithelial_cells ||
+                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.epithelial_cells ||
                                             0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
@@ -4574,7 +4609,7 @@ export default function Report() {
                                           type="number"
                                           min="0"
                                           value={
-                                            hpfSedimentDetection?.epithelial_cells ||
+                                            (viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.epithelial_cells ||
                                             0
                                           }
                                           onChange={(e) => {
@@ -4611,36 +4646,13 @@ export default function Report() {
                                         />
                                       </div>
                                     </div>
-                                    {/* Cropped images gallery - separate container */}
-                                    {getHPFCroppedImagesByClass('epithelial_cells').length > 0 && (
-                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
-                                        {getHPFCroppedImagesByClass('epithelial_cells').map((item) => (
-                                          <img
-                                            key={item.id}
-                                            src={item.image}
-                                            alt="Epithelial Cell"
-                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
-                                              highlightedDetection === item.id
-                                                ? 'border-red-500 shadow-lg'
-                                                : 'border-gray-300 hover:border-gray-500'
-                                            }`}
-                                            onClick={() =>
-                                              setHighlightedDetection(
-                                                highlightedDetection === item.id ? null : item.id
-                                              )
-                                            }
-                                            onDoubleClick={() =>
-                                              setModalImage({
-                                                src: item.image,
-                                                alt: "Epithelial cell cropped field",
-                                                title: "Epithelial cell detection (YOLO)",
-                                              })
-                                            }
-                                            title={`Epithelial Cells • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
-                                          />
-                                        ))}
-                                      </div>
-                                    )}
+                                    {/* Cropped images gallery */}
+                                    <DetectionGallery 
+                                      items={getHPFCroppedImagesByClass('epithelial_cells', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      isLPF={false}
+                                      title="Epithelial Cells"
+                                      currentClass="epithelial_cells"
+                                    />
                                   </div>
                                 </td>
                                 <td className="text-center py-2 px-2 align-top">
@@ -4649,7 +4661,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          (hpfSedimentDetection?.crystals || 0) > 0
+                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.crystals || 0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
                                         }`}
@@ -4657,7 +4669,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={hpfSedimentDetection?.crystals || 0}
+                                          value={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.crystals || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -4689,36 +4701,13 @@ export default function Report() {
                                         />
                                       </div>
                                     </div>
-                                    {/* Cropped images gallery - separate container */}
-                                    {getHPFCroppedImagesByClass('crystals').length > 0 && (
-                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
-                                        {getHPFCroppedImagesByClass('crystals').map((item) => (
-                                          <img
-                                            key={item.id}
-                                            src={item.image}
-                                            alt="Crystal"
-                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
-                                              highlightedDetection === item.id
-                                                ? 'border-red-500 shadow-lg'
-                                                : 'border-gray-300 hover:border-gray-500'
-                                            }`}
-                                            onClick={() =>
-                                              setHighlightedDetection(
-                                                highlightedDetection === item.id ? null : item.id
-                                              )
-                                            }
-                                            onDoubleClick={() =>
-                                              setModalImage({
-                                                src: item.image,
-                                                alt: "Crystal cropped field",
-                                                title: "Crystal detection (YOLO)",
-                                              })
-                                            }
-                                            title={`Crystals • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
-                                          />
-                                        ))}
-                                      </div>
-                                    )}
+                                    {/* Cropped images gallery */}
+                                    <DetectionGallery 
+                                      items={getHPFCroppedImagesByClass('crystals', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      isLPF={false}
+                                      title="Crystals"
+                                      currentClass="crystals"
+                                    />
                                   </div>
                                 </td>
                                 <td className="text-center py-2 px-2 align-top">
@@ -4727,7 +4716,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          (hpfSedimentDetection?.bacteria || 0) > 0
+                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.bacteria || 0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
                                         }`}
@@ -4735,7 +4724,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={hpfSedimentDetection?.bacteria || 0}
+                                          value={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.bacteria || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -4767,36 +4756,13 @@ export default function Report() {
                                         />
                                       </div>
                                     </div>
-                                    {/* Cropped images gallery - separate container */}
-                                    {getHPFCroppedImagesByClass('bacteria').length > 0 && (
-                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
-                                        {getHPFCroppedImagesByClass('bacteria').map((item) => (
-                                          <img
-                                            key={item.id}
-                                            src={item.image}
-                                            alt="Bacteria"
-                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
-                                              highlightedDetection === item.id
-                                                ? 'border-red-500 shadow-lg'
-                                                : 'border-gray-300 hover:border-gray-500'
-                                            }`}
-                                            onClick={() =>
-                                              setHighlightedDetection(
-                                                highlightedDetection === item.id ? null : item.id
-                                              )
-                                            }
-                                            onDoubleClick={() =>
-                                              setModalImage({
-                                                src: item.image,
-                                                alt: "Bacteria cropped field",
-                                                title: "Bacteria detection (YOLO)",
-                                              })
-                                            }
-                                            title={`Bacteria • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
-                                          />
-                                        ))}
-                                      </div>
-                                    )}
+                                    {/* Cropped images gallery */}
+                                    <DetectionGallery 
+                                      items={getHPFCroppedImagesByClass('bacteria', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      isLPF={false}
+                                      title="Bacteria"
+                                      currentClass="bacteria"
+                                    />
                                   </div>
                                 </td>
                                 <td className="text-center py-2 px-2 align-top">
@@ -4805,7 +4771,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          (hpfSedimentDetection?.yeast || 0) > 0
+                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.yeast || 0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
                                         }`}
@@ -4813,7 +4779,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={hpfSedimentDetection?.yeast || 0}
+                                          value={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.yeast || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -4845,36 +4811,13 @@ export default function Report() {
                                         />
                                       </div>
                                     </div>
-                                    {/* Cropped images gallery - separate container */}
-                                    {getHPFCroppedImagesByClass('yeast').length > 0 && (
-                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
-                                        {getHPFCroppedImagesByClass('yeast').map((item) => (
-                                          <img
-                                            key={item.id}
-                                            src={item.image}
-                                            alt="Yeast"
-                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
-                                              highlightedDetection === item.id
-                                                ? 'border-red-500 shadow-lg'
-                                                : 'border-gray-300 hover:border-gray-500'
-                                            }`}
-                                            onClick={() =>
-                                              setHighlightedDetection(
-                                                highlightedDetection === item.id ? null : item.id
-                                              )
-                                            }
-                                            onDoubleClick={() =>
-                                              setModalImage({
-                                                src: item.image,
-                                                alt: "Yeast cropped field",
-                                                title: "Yeast detection (YOLO)",
-                                              })
-                                            }
-                                            title={`Yeast • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
-                                          />
-                                        ))}
-                                      </div>
-                                    )}
+                                    {/* Cropped images gallery */}
+                                    <DetectionGallery 
+                                      items={getHPFCroppedImagesByClass('yeast', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      isLPF={false}
+                                      title="Yeast"
+                                      currentClass="yeast"
+                                    />
                                   </div>
                                 </td>
                                 <td className="text-center py-2 px-2 align-top">
@@ -4883,7 +4826,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          (hpfSedimentDetection?.sperm || 0) > 0
+                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.sperm || 0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
                                         }`}
@@ -4891,7 +4834,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={hpfSedimentDetection?.sperm || 0}
+                                          value={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.sperm || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -4923,36 +4866,13 @@ export default function Report() {
                                         />
                                       </div>
                                     </div>
-                                    {/* Cropped images gallery - separate container */}
-                                    {getHPFCroppedImagesByClass('sperm').length > 0 && (
-                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
-                                        {getHPFCroppedImagesByClass('sperm').map((item) => (
-                                          <img
-                                            key={item.id}
-                                            src={item.image}
-                                            alt="Sperm"
-                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
-                                              highlightedDetection === item.id
-                                                ? 'border-red-500 shadow-lg'
-                                                : 'border-gray-300 hover:border-gray-500'
-                                            }`}
-                                            onClick={() =>
-                                              setHighlightedDetection(
-                                                highlightedDetection === item.id ? null : item.id
-                                              )
-                                            }
-                                            onDoubleClick={() =>
-                                              setModalImage({
-                                                src: item.image,
-                                                alt: "Sperm cropped field",
-                                                title: "Sperm detection (YOLO)",
-                                              })
-                                            }
-                                            title={`Sperm • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
-                                          />
-                                        ))}
-                                      </div>
-                                    )}
+                                    {/* Cropped images gallery */}
+                                    <DetectionGallery 
+                                      items={getHPFCroppedImagesByClass('sperm', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      isLPF={false}
+                                      title="Sperm"
+                                      currentClass="sperm"
+                                    />
                                   </div>
                                 </td>
                                 <td className="text-center py-2 px-2 align-top">
@@ -4961,7 +4881,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          (hpfSedimentDetection?.parasites || 0) >
+                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.parasites || 0) >
                                           0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
@@ -4970,7 +4890,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={hpfSedimentDetection?.parasites || 0}
+                                          value={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.parasites || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -5002,47 +4922,24 @@ export default function Report() {
                                         />
                                       </div>
                                     </div>
-                                    {/* Cropped images gallery - separate container */}
-                                    {getHPFCroppedImagesByClass('parasites').length > 0 && (
-                                      <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto items-center">
-                                        {getHPFCroppedImagesByClass('parasites').map((item) => (
-                                          <img
-                                            key={item.id}
-                                            src={item.image}
-                                            alt="Parasite"
-                                            className={`w-12 h-12 object-cover rounded cursor-pointer border-2 transition-all ${
-                                              highlightedDetection === item.id
-                                                ? 'border-red-500 shadow-lg'
-                                                : 'border-gray-300 hover:border-gray-500'
-                                            }`}
-                                            onClick={() =>
-                                              setHighlightedDetection(
-                                                highlightedDetection === item.id ? null : item.id
-                                              )
-                                            }
-                                            onDoubleClick={() =>
-                                              setModalImage({
-                                                src: item.image,
-                                                alt: "Parasite cropped field",
-                                                title: "Parasite detection (YOLO)",
-                                              })
-                                            }
-                                            title={`Parasites • Confidence: ${(item.confidence * 100).toFixed(1)}% (double-click to view)`}
-                                          />
-                                        ))}
-                                      </div>
-                                    )}
+                                    {/* Cropped images gallery */}
+                                    <DetectionGallery 
+                                      items={getHPFCroppedImagesByClass('parasites', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      isLPF={false}
+                                      title="Parasites"
+                                      currentClass="parasites"
+                                    />
                                   </div>
                                 </td>
                               </tr>
                               {/* Remarks Row */}
-                              {hpfSedimentDetection && hpfSedimentDetection.analysis_notes && (
+                              {(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.analysis_notes && (
                                 <tr className="border-t-2 border-gray-300 bg-gray-50">
                                   <td colSpan={8} className="py-2 px-3 text-left">
                                     <div className="text-xs">
                                       <span className="font-semibold text-gray-700">Remarks: </span>
-                                      <span className="text-gray-600">
-                                        {hpfSedimentDetection.analysis_notes}
+                                      <span className="text-gray-600 italic">
+                                        {(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection).analysis_notes}
                                       </span>
                                     </div>
                                   </td>
