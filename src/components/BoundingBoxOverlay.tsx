@@ -18,6 +18,7 @@ interface BoundingBoxOverlayProps {
   detections: Detection[]
   highlightedDetectionId: string | null
   showBoundingBoxes: boolean
+  refreshTrigger?: any
 }
 
 export default function BoundingBoxOverlay({
@@ -25,6 +26,7 @@ export default function BoundingBoxOverlay({
   detections,
   highlightedDetectionId,
   showBoundingBoxes,
+  refreshTrigger,
 }: BoundingBoxOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -157,7 +159,7 @@ export default function BoundingBoxOverlay({
     return () => {
       window.removeEventListener('resize', handleResize)
     }
-  }, [imageRef, detections, highlightedDetectionId, showBoundingBoxes])
+  }, [imageRef, detections, highlightedDetectionId, showBoundingBoxes, refreshTrigger])
 
   if (!showBoundingBoxes || detections.length === 0) {
     return null

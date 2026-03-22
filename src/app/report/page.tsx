@@ -55,10 +55,12 @@ import {
   Move,
   Check,
   AlertCircle,
-  Calculator
+  Calculator,
+  Maximize
 } from "lucide-react";
 import { getMotorServerUrl } from "@/lib/motor-config";
 import ImageModal from "@/components/ImageModal";
+import FullScreenImageModal from "@/components/FullScreenImageModal";
 import Notification from "@/components/Notification";
 import StrasingerReferenceTable from "@/components/StrasingerReferenceTable";
 import YOLODetectionOverlay from "@/components/YOLODetectionOverlay";
@@ -71,6 +73,149 @@ import { getGeminiKeysFromLocalStorage, getGeminiModelFromLocalStorage } from "@
 import { getScanMethodFromLocalStorage } from "@/lib/scan-method";
 import ObjectiveSwitchModal from "@/components/ObjectiveSwitchModal";
 import ManualMotorControl from "@/components/ManualMotorControl";
+
+interface ManualDrawingOverlayProps {
+  imageRef: React.RefObject<HTMLImageElement | null>;
+  isDrawingMode: boolean;
+  onDrawingComplete: (rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => void;
+}
+
+function ManualDrawingOverlay({
+  imageRef,
+  isDrawingMode,
+  onDrawingComplete,
+}: ManualDrawingOverlayProps) {
+  const [isMouseDown, setIsMouseDown] = useState(false);
+  const [startPos, setStartPos] = useState<{ x: number; y: number } | null>(
+    null
+  );
+  const [currentRect, setCurrentRect] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  if (!isDrawingMode) return null;
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    setIsMouseDown(true);
+    setStartPos({ x: mouseX, y: mouseY });
+    setCurrentRect({ x: mouseX, y: mouseY, width: 0, height: 0 });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isMouseDown || !startPos || !containerRef.current) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    setCurrentRect({
+      x: Math.min(startPos.x, mouseX),
+      y: Math.min(startPos.y, mouseY),
+      width: Math.abs(mouseX - startPos.x),
+      height: Math.abs(mouseY - startPos.y),
+    });
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (
+      !isMouseDown ||
+      !currentRect ||
+      currentRect.width < 5 ||
+      currentRect.height < 5
+    ) {
+      setIsMouseDown(false);
+      setCurrentRect(null);
+      return;
+    }
+
+    // Calculate natural coordinates for the final rect
+    const container = containerRef.current!;
+    const containerRect = container.getBoundingClientRect();
+    const img = imageRef.current!;
+    const imgRect = img.getBoundingClientRect();
+    const imgNaturalWidth = img.naturalWidth;
+    const imgNaturalHeight = img.naturalHeight;
+    
+    // 1. Calculate the image position relative to the container
+    const relativeImgLeft = imgRect.left - containerRect.left;
+    const relativeImgTop = imgRect.top - containerRect.top;
+
+    // 2. Position within the <img> element's box
+    const mouseInImgX = currentRect.x - relativeImgLeft;
+    const mouseInImgY = currentRect.y - relativeImgTop;
+
+    // 3. Calculate internal letterboxing (object-fit: contain) inside the <img> element
+    const containerAspect = imgRect.width / imgRect.height;
+    const imageAspect = imgNaturalWidth / imgNaturalHeight;
+
+    let displayedWidth, displayedHeight, offsetX, offsetY;
+    if (imageAspect > containerAspect) {
+      displayedWidth = imgRect.width;
+      displayedHeight = imgRect.width / imageAspect;
+      offsetX = 0;
+      offsetY = (imgRect.height - displayedHeight) / 2;
+    } else {
+      displayedWidth = imgRect.height * imageAspect;
+      displayedHeight = imgRect.height;
+      offsetX = (imgRect.width - displayedWidth) / 2;
+      offsetY = 0;
+    }
+
+    const scaleX = imgNaturalWidth / displayedWidth;
+    const scaleY = imgNaturalHeight / displayedHeight;
+
+    // 4. Map to natural coordinates
+    const naturalRect = {
+      x: (mouseInImgX - offsetX) * scaleX,
+      y: (mouseInImgY - offsetY) * scaleY,
+      width: currentRect.width * scaleX,
+      height: currentRect.height * scaleY,
+    };
+
+    onDrawingComplete(naturalRect);
+    setIsMouseDown(false);
+    setCurrentRect(null);
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="absolute inset-0 z-[60] cursor-crosshair"
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
+      {currentRect && (
+        <div
+          className="absolute border-2 border-dashed border-red-500 bg-red-500/10 pointer-events-none"
+          style={{
+            left: currentRect.x,
+            top: currentRect.y,
+            width: currentRect.width,
+            height: currentRect.height,
+          }}
+        />
+      )}
+      <div className="absolute top-2 right-2 bg-red-600 text-white text-[10px] px-2 py-1 rounded font-bold animate-pulse">
+        DRAWING MODE ACTIVE
+      </div>
+    </div>
+  );
+}
 
 export default function Report() {
   const router = useRouter();
@@ -231,6 +376,29 @@ export default function Report() {
   const [showBoundingBox, setShowBoundingBox] = useState(true);
   const [showCrystalName, setShowCrystalName] = useState(true);
   
+  // Manual Drawing State
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [pendingManualDetection, setPendingManualDetection] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [showClassificationModal, setShowClassificationModal] = useState(false);
+  
+  // Volumetric Calculation States
+  const [fovWidth, setFovWidth] = useState(0.32);
+  const [fovHeight, setFovHeight] = useState(0.30);
+  
+  // Full-screen image preview state
+  const [fullScreenData, setFullScreenData] = useState<{
+    src: string;
+    alt: string;
+    title: string;
+    detections: any[];
+    mode: 'low' | 'high';
+  } | null>(null);
+  
   // YOLO detections and cropped images state
   const [lpfYoloDetections, setLpfYoloDetections] = useState<{
     predictions: Array<{
@@ -292,6 +460,24 @@ export default function Report() {
     'mucus': 'Mucus Threads',
     'abnormal_crystals': 'Abnormal Crystals'
   };
+
+  const LPF_DRAW_CLASSES = [
+    { id: 'epithelial_cells', name: 'Epithelial Cells', icon: '👤' },
+    { id: 'casts', name: 'Casts', icon: '📦' },
+    { id: 'mucus_threads', name: 'Mucus Threads', icon: '🕸️' },
+    { id: 'abnormal_crystals', name: 'Abnormal Crystals', icon: '✨' },
+  ];
+
+  const HPF_DRAW_CLASSES = [
+    { id: 'rbc', name: 'RBC', icon: '🔴' },
+    { id: 'wbc', name: 'WBC', icon: '⚪' },
+    { id: 'epithelial_cells', name: 'Epithelial Cells', icon: '👤' },
+    { id: 'crystals', name: 'Crystals', icon: '💎' },
+    { id: 'bacteria', name: 'Bacteria', icon: '🦠' },
+    { id: 'yeast', name: 'Yeast', icon: '🍄' },
+    { id: 'sperm', name: 'Spermatozoa', icon: '🏊' },
+    { id: 'parasites', name: 'Parasites', icon: '🦟' },
+  ];
 
   /**
    * Re-classify an automated detection (Human-in-the-loop correction)
@@ -414,6 +600,187 @@ export default function Report() {
       }
     }
     await autoUpdateSummary();
+  };
+
+  /**
+   * Complete manual drawing and open classification UI
+   */
+  const handleManualDrawingComplete = (rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => {
+    setPendingManualDetection(rect);
+    setShowClassificationModal(true);
+    setIsDrawingMode(false); // Turn off drawing mode after successful Rect
+  };
+
+  /**
+   * Save manual detection with chosen class
+   */
+  const saveManualDetection = async (className: string) => {
+    if (!pendingManualDetection || !selectedTest) return;
+
+    const isLPF = powerMode === "low";
+    const currentDetections = isLPF ? lpfYoloDetections : hpfYoloDetections;
+    const currentResults = isLPF ? lpfSedimentDetection : hpfSedimentDetection;
+
+    const imageIndex = isLPF ? currentLPFIndex : currentHPFIndex;
+    const images = isLPF ? lowPowerImages : highPowerImages;
+    const imageUrl = images[imageIndex];
+
+    console.log(
+      `💾 Saving manual detection as ${className} for ${powerMode} image ${imageIndex}`
+    );
+
+    // 0. Generate cropped image for the manual detection locally
+    const newId = `manual_${Date.now()}`;
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const bitmap = await createImageBitmap(blob);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = pendingManualDetection.width;
+      canvas.height = pendingManualDetection.height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(
+          bitmap,
+          pendingManualDetection.x,
+          pendingManualDetection.y,
+          pendingManualDetection.width,
+          pendingManualDetection.height,
+          0,
+          0,
+          pendingManualDetection.width,
+          pendingManualDetection.height
+        );
+        const croppedBase64 = canvas.toDataURL("image/jpeg", 0.9);
+        
+        // Update cropped images state
+        if (isLPF) {
+          setLpfCroppedImages(prev => ({ ...prev, [newId]: croppedBase64 }));
+        } else {
+          setHpfCroppedImages(prev => ({ ...prev, [newId]: croppedBase64 }));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to crop manual detection:", err);
+    }
+
+    // Create a new detection object
+    const newPrediction = {
+      x: pendingManualDetection.x,
+      y: pendingManualDetection.y,
+      width: pendingManualDetection.width,
+      height: pendingManualDetection.height,
+      confidence: 1.0, // Manual is always 100%
+      class: className,
+      class_id: -99, // Custom ID for manual
+      detection_id: newId,
+      is_human_verified: true,
+    };
+
+    // 1. Update detections list
+    const existingPredictions = currentDetections
+      ? [...currentDetections.predictions]
+      : [];
+    const updatedPredictions = [...existingPredictions, newPrediction];
+
+    const newSummary = {
+      total_detections: updatedPredictions.length,
+      by_class: { ...(currentDetections?.summary.by_class || {}) },
+    };
+    newSummary.by_class[className] =
+      (newSummary.by_class[className] || 0) + 1;
+
+    const updatedDetections = {
+      predictions: updatedPredictions,
+      summary: newSummary,
+    };
+
+    // 2. Update summary counts
+    const mapClassToKey = (cls: string): string => {
+      const c = cls.toLowerCase();
+      if (c === "eryth" || c === "rbc") return "rbc";
+      if (c === "leuko" || c === "wbc") return "wbc";
+      if (c.startsWith("epith")) return "epithelial_cells";
+      if (c.startsWith("cryst")) return isLPF ? "abnormal_crystals" : "crystals";
+      if (c.startsWith("cast")) return "casts";
+      if (c.startsWith("mycete") || c === "yeast") return "yeast";
+      if (c === "mucus") return "mucus_threads";
+      return c;
+    };
+
+    const key = mapClassToKey(className);
+
+    if (isLPF) {
+      setLpfYoloDetections(updatedDetections as any);
+      if (currentResults) {
+        const updatedResults = { ...currentResults } as any;
+        if (updatedResults[key] !== undefined)
+          updatedResults[key] = (updatedResults[key] || 0) + 1;
+        setLpfSedimentDetection(updatedResults);
+
+        // Save to DB
+        await upsertImageAnalysis({
+          test_id: selectedTest.id,
+          power_mode: "LPF",
+          image_index: imageIndex,
+          image_url: imageUrl,
+          lpf_epithelial_cells: updatedResults.epithelial_cells,
+          lpf_mucus_threads: updatedResults.mucus_threads,
+          lpf_casts: updatedResults.casts,
+          lpf_squamous_epithelial: updatedResults.squamous_epithelial,
+          lpf_abnormal_crystals: updatedResults.abnormal_crystals,
+          confidence: updatedResults.confidence,
+          analysis_notes: updatedResults.analysis_notes,
+          yolo_detections: updatedDetections as any,
+          analyzed_at: new Date().toISOString(),
+        });
+      }
+    } else {
+      setHpfYoloDetections(updatedDetections as any);
+      if (currentResults) {
+        const updatedResults = { ...currentResults } as any;
+        if (updatedResults[key] !== undefined)
+          updatedResults[key] = (updatedResults[key] || 0) + 1;
+        setHpfSedimentDetection(updatedResults);
+
+        // Save to DB
+        await upsertImageAnalysis({
+          test_id: selectedTest.id,
+          power_mode: "HPF",
+          image_index: imageIndex,
+          image_url: imageUrl,
+          hpf_rbc: updatedResults.rbc,
+          hpf_wbc: updatedResults.wbc,
+          hpf_epithelial_cells: updatedResults.epithelial_cells,
+          hpf_crystals: updatedResults.crystals,
+          hpf_bacteria: updatedResults.bacteria,
+          hpf_yeast: updatedResults.yeast,
+          hpf_sperm: updatedResults.sperm,
+          hpf_parasites: updatedResults.parasites,
+          confidence: updatedResults.confidence,
+          analysis_notes: updatedResults.analysis_notes,
+          yolo_detections: updatedDetections as any,
+          analyzed_at: new Date().toISOString(),
+        });
+      }
+    }
+
+    // Reset state
+    setPendingManualDetection(null);
+    setShowClassificationModal(false);
+    await autoUpdateSummary();
+
+    setNotificationMessage(
+      `Manual ${CLASS_DISPLAY_NAMES[className] || className} added!`
+    );
+    setNotificationType("success");
+    setShowNotification(true);
   };
   const [lpfCroppedImages, setLpfCroppedImages] = useState<Record<string, string>>({}) // detection_id -> base64 cropped image
   const [hpfCroppedImages, setHpfCroppedImages] = useState<Record<string, string>>({})
@@ -641,6 +1008,13 @@ export default function Report() {
       bacteria: number;
       casts: number;
     };
+    volumetric: {
+      hpfArea: number;
+      totalHpfs: number;
+      mlFactor: number;
+      rbcPerMl: number;
+      wbcPerMl: number;
+    };
   } | null>(null);
   const [showCalculationModal, setShowCalculationModal] = useState(false);
 
@@ -834,6 +1208,13 @@ export default function Report() {
           epithelialCells: avgLpf.epithelialCells,
           bacteria: avgHpf.bacteria,
           casts: avgLpf.casts,
+        },
+        volumetric: {
+          hpfArea: fovWidth * fovHeight,
+          totalHpfs: 484 / (fovWidth * fovHeight),
+          mlFactor: (484 / (fovWidth * fovHeight)) / 0.24,
+          rbcPerMl: Math.round(avgHpf.rbc * ((484 / (fovWidth * fovHeight)) / 0.24)),
+          wbcPerMl: Math.round(avgHpf.wbc * ((484 / (fovWidth * fovHeight)) / 0.24)),
         }
       });
 
@@ -844,7 +1225,37 @@ export default function Report() {
     } catch (err) {
       console.error("❌ Failed to auto-update summary:", err);
     }
-  }, [selectedTest, lpfSedimentDetection, hpfSedimentDetection, currentLPFIndex, currentHPFIndex]);
+  }, [selectedTest, lpfSedimentDetection, hpfSedimentDetection, currentLPFIndex, currentHPFIndex, fovWidth, fovHeight]);
+
+  // Synchronize full-screen data when parent state changes (e.g. after navigation)
+  useEffect(() => {
+    if (fullScreenData) {
+      if (fullScreenData.mode === 'low') {
+        const currentSrc = lowPowerImages[currentLPFIndex];
+        const currentDetections = lpfYoloDetections?.predictions || [];
+        // Only update if data actually changed to avoid cycles
+        if (fullScreenData.src !== currentSrc || JSON.stringify(fullScreenData.detections) !== JSON.stringify(currentDetections)) {
+          setFullScreenData(prev => prev ? ({
+            ...prev,
+            src: currentSrc,
+            detections: currentDetections,
+            title: `Low Power Field - Field ${currentLPFIndex + 1}`
+          }) : null);
+        }
+      } else {
+        const currentSrc = highPowerImages[currentHPFIndex];
+        const currentDetections = hpfYoloDetections?.predictions || [];
+        if (fullScreenData.src !== currentSrc || JSON.stringify(fullScreenData.detections) !== JSON.stringify(currentDetections)) {
+          setFullScreenData(prev => prev ? ({
+            ...prev,
+            src: currentSrc,
+            detections: currentDetections,
+            title: `High Power Field - Field ${currentHPFIndex + 1}`
+          }) : null);
+        }
+      }
+    }
+  }, [currentLPFIndex, currentHPFIndex, lpfYoloDetections, hpfYoloDetections, lowPowerImages, highPowerImages, fullScreenData?.mode]);
 
 
   // Debouncing refs to prevent rapid-fire API calls
@@ -4080,6 +4491,12 @@ export default function Report() {
                                 )}
                               </button>
                             )}
+
+                            <ManualDrawingOverlay
+                              imageRef={lpfImageRef}
+                              isDrawingMode={isDrawingMode && powerMode === "low"}
+                              onDrawingComplete={handleManualDrawingComplete}
+                            />
                           </div>
                         ) : (
                           <div className="flex items-center justify-center h-full">
@@ -4129,12 +4546,44 @@ export default function Report() {
                         {/* Action Buttons */}
                         <div className="absolute top-4 right-4 flex gap-2">
                           <button
+                            onClick={() => {
+                              if (lowPowerImages.length === 0) return;
+                              setFullScreenData({
+                                src: lowPowerImages[currentLPFIndex],
+                                alt: `LPF Field ${currentLPFIndex + 1}`,
+                                title: `Low Power Field Analysis - Image ${currentLPFIndex + 1}`,
+                                detections: lpfYoloDetections?.predictions || [],
+                                mode: 'low',
+                              });
+                            }}
+                            className="bg-gray-900/80 text-white p-2 rounded-md hover:bg-black transition-colors shadow-lg disabled:bg-gray-600 disabled:cursor-not-allowed"
+                            title="Full Screen View"
+                            disabled={lowPowerImages.length === 0}
+                          >
+                            <Maximize className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => recountImage("low")}
                             className="bg-gray-900 text-white p-2 rounded-md hover:bg-black transition-colors shadow-lg disabled:bg-gray-600 disabled:cursor-not-allowed"
                             title="Recount current image"
                             disabled={lowPowerImages.length === 0}
                           >
                             <RefreshCw className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setPowerMode("low");
+                              setIsDrawingMode(!isDrawingMode);
+                            }}
+                            className={`${
+                              isDrawingMode && powerMode === "low" 
+                                ? "bg-red-600 animate-pulse" 
+                                : "bg-blue-600 hover:bg-blue-700"
+                            } text-white p-2 rounded-md transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
+                            title={isDrawingMode ? "Cancel Drawing" : "Manually draw box"}
+                            disabled={lowPowerImages.length === 0}
+                          >
+                            {isDrawingMode && powerMode === "low" ? <X className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                           </button>
                           <button
                             onClick={() => {
@@ -4537,6 +4986,12 @@ export default function Report() {
                                 )}
                               </button>
                             )}
+                            
+                            <ManualDrawingOverlay
+                              imageRef={hpfImageRef}
+                              isDrawingMode={isDrawingMode && powerMode === "high"}
+                              onDrawingComplete={handleManualDrawingComplete}
+                            />
                           </div>
                         ) : (
                         <div className="flex items-center justify-center h-full">
@@ -4586,6 +5041,23 @@ export default function Report() {
                       {/* Action Buttons */}
                       <div className="absolute top-4 right-4 flex gap-2">
                         <button
+                          onClick={() => {
+                            if (highPowerImages.length === 0) return;
+                            setFullScreenData({
+                              src: highPowerImages[currentHPFIndex],
+                              alt: `HPF Field ${currentHPFIndex + 1}`,
+                              title: `High Power Field Analysis - Image ${currentHPFIndex + 1}`,
+                              detections: hpfYoloDetections?.predictions || [],
+                              mode: 'high',
+                            });
+                          }}
+                          className="bg-gray-900/80 text-white p-2 rounded-md hover:bg-black transition-colors shadow-lg disabled:bg-gray-600 disabled:cursor-not-allowed"
+                          title="Full Screen View"
+                          disabled={highPowerImages.length === 0}
+                        >
+                          <Maximize className="h-4 w-4" />
+                        </button>
+                        <button
                           onClick={() => recountImage("high")}
                           className="bg-gray-900 text-white p-2 rounded-md hover:bg-black transition-colors shadow-lg disabled:bg-gray-600 disabled:cursor-not-allowed"
                           title="Recount current image"
@@ -4593,7 +5065,22 @@ export default function Report() {
                         >
                           <RefreshCw className="h-4 w-4" />
                         </button>
-                          <button
+                        <button
+                          onClick={() => {
+                            setPowerMode("high");
+                            setIsDrawingMode(!isDrawingMode);
+                          }}
+                          className={`${
+                            isDrawingMode && powerMode === "high" 
+                              ? "bg-red-600 animate-pulse" 
+                              : "bg-blue-600 hover:bg-blue-700"
+                          } text-white p-2 rounded-md transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
+                          title={isDrawingMode ? "Cancel Drawing" : "Manually draw box"}
+                          disabled={highPowerImages.length === 0}
+                        >
+                          {isDrawingMode && powerMode === "high" ? <X className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                        </button>
+                        <button
                             onClick={() => {
                               if (highPowerImages.length === 0) return;
                               removeCapturedImage(currentHPFIndex, "high");
@@ -5412,9 +5899,9 @@ export default function Report() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Microscopic */}
-                    <div className="space-y-1">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    {/* Left Side: Microscopic */}
+                    <div className="md:col-span-7 space-y-1">
                       <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-700 mb-1">
                         Microscopic
                       </div>
@@ -5493,8 +5980,84 @@ export default function Report() {
                       </div>
                     </div>
 
-                    {/* Remarks */}
-                    <div className="space-y-1 md:col-span-2">
+                    {/* Right Side: Volumetric Computation */}
+                    <div className="md:col-span-5 bg-blue-50/30 rounded-lg p-3 border border-blue-100/50">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-blue-800 mb-2 flex items-center gap-1.5">
+                        <Calculator className="w-3 h-3" />
+                        Volumetric Computation
+                      </div>
+                      <div className="space-y-3">
+                        {/* Formula Breakdown */}
+                        <div className="space-y-1.5">
+                          <div className="flex flex-col gap-1.5 text-[10px]">
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-500 italic">FOV Area (W x H)</span>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={fovWidth}
+                                  onChange={(e) =>
+                                    setFovWidth(parseFloat(e.target.value) || 0)
+                                  }
+                                  className="w-10 text-[9px] font-bold text-gray-900 bg-white border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                                <span className="text-gray-400">×</span>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={fovHeight}
+                                  onChange={(e) =>
+                                    setFovHeight(parseFloat(e.target.value) || 0)
+                                  }
+                                  className="w-10 text-[9px] font-bold text-gray-900 bg-white border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                                <span className="text-gray-400 text-[8px] ml-1">
+                                  ={(fovWidth * fovHeight).toFixed(3)} mm²
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-baseline text-[10px]">
+                            <span className="text-gray-500 italic">Total Field (22x22 / Area)</span>
+                            <span className="font-mono font-medium text-gray-700">
+                              {Math.round(484 / (fovWidth * fovHeight)).toLocaleString()} Fields
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-baseline text-[10px] border-b border-blue-100 pb-1.5 mb-1.5">
+                            <span className="text-gray-500 italic">mL Factor (Fields / 0.24mL)</span>
+                            <span className="font-mono font-bold text-blue-700">
+                              {Math.round((484 / (fovWidth * fovHeight)) / 0.24).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Results */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-white p-2 rounded border border-blue-100 shadow-sm">
+                            <div className="text-[9px] font-bold text-gray-400 uppercase leading-none mb-1">Total RBC</div>
+                            <div className="text-sm font-black text-gray-900 leading-none">
+                              {summaryCalculations?.volumetric.rbcPerMl.toLocaleString() || "0"}
+                              <span className="text-[8px] font-normal text-gray-400 ml-1">/mL</span>
+                            </div>
+                          </div>
+                          <div className="bg-white p-2 rounded border border-blue-100 shadow-sm">
+                            <div className="text-[9px] font-bold text-gray-400 uppercase leading-none mb-1">Total WBC</div>
+                            <div className="text-sm font-black text-gray-900 leading-none">
+                              {summaryCalculations?.volumetric.wbcPerMl.toLocaleString() || "0"}
+                              <span className="text-[8px] font-normal text-gray-400 ml-1">/mL</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-[9px] text-gray-400 leading-tight italic">
+                          * Based on {summaryCalculations?.hpf.fields || 0} fields examined and standardized urine concentration factor (12:1).
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Remarks inside the grid for full width */}
+                    <div className="space-y-1 md:col-span-12">
                       <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-700 mb-1">
                         Remarks
                       </div>
@@ -5525,6 +6088,46 @@ export default function Report() {
           />
         </div>
 
+        {/* Full-screen Analysis Review */}
+        <FullScreenImageModal
+          isOpen={!!fullScreenData}
+          onClose={() => setFullScreenData(null)}
+          imageSrc={fullScreenData?.src || ""}
+          imageAlt={fullScreenData?.alt || ""}
+          title={fullScreenData?.title || ""}
+          detections={fullScreenData?.detections || []}
+          hasNext={
+            fullScreenData?.mode === 'low' 
+              ? currentLPFIndex < lowPowerImages.length - 1 
+              : currentHPFIndex < highPowerImages.length - 1
+          }
+          hasPrev={
+            fullScreenData?.mode === 'low' 
+              ? currentLPFIndex > 0 
+              : currentHPFIndex > 0
+          }
+          onNext={() => {
+            if (fullScreenData?.mode === 'low') {
+              setCurrentLPFIndex(prev => Math.min(prev + 1, lowPowerImages.length - 1));
+            } else {
+              setCurrentHPFIndex(prev => Math.min(prev + 1, highPowerImages.length - 1));
+            }
+          }}
+          onPrev={() => {
+            if (fullScreenData?.mode === 'low') {
+              setCurrentLPFIndex(prev => Math.max(prev - 1, 0));
+            } else {
+              setCurrentHPFIndex(prev => Math.max(prev - 1, 0));
+            }
+          }}
+        />
+
+        {/* Sync full-screen data when parent state changes */}
+        {(() => {
+          // Use a separate effect below for this to avoid render-phase state updates
+          return null;
+        })()}
+
         {/* Motor Events Log - persistent panel for Get Samples routine */}
         <MotorEventsLog
           show={showMotorLog}
@@ -5548,6 +6151,80 @@ export default function Report() {
           fromObjective="LPF"
           toObjective="HPF"
         />
+
+        {/* Classification Modal for Manual Add */}
+        {showClassificationModal && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+            <div 
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => {
+                setShowClassificationModal(false);
+                setPendingManualDetection(null);
+              }}
+            />
+            <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="bg-gray-900 px-4 py-3 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Edit className="w-4 h-4" />
+                  Classify Manual Sediment
+                </h3>
+                <button 
+                  onClick={() => {
+                    setShowClassificationModal(false);
+                    setPendingManualDetection(null);
+                  }}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-4">
+                <p className="text-[11px] text-gray-500 mb-4 leading-relaxed bg-gray-50 p-2 rounded border border-gray-100">
+                  Select the appropriate category for the box you just drew. This will update the total count for this field.
+                </p>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {(powerMode === "low" ? LPF_DRAW_CLASSES : HPF_DRAW_CLASSES).map((cls) => (
+                    <button
+                      key={cls.id}
+                      onClick={() => saveManualDetection(cls.id)}
+                      className="flex flex-col items-center justify-center py-3 px-2 rounded-lg border-2 border-gray-100 hover:border-blue-500 hover:bg-blue-50 transition-all group"
+                    >
+                      <span className="text-[10px] font-bold text-gray-800 uppercase tracking-tight text-center">
+                        {cls.name}
+                      </span>
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => {
+                      setShowClassificationModal(false);
+                      setPendingManualDetection(null);
+                    }}
+                    className="flex flex-col items-center justify-center py-3 px-2 rounded-lg border-2 border-gray-100 bg-gray-50 hover:bg-red-50 hover:border-red-200 transition-all col-span-2 mt-1"
+                  >
+                    <span className="text-[10px] font-bold text-red-500 uppercase tracking-tighter">Discard / Debris</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 px-4 py-3 flex justify-end items-center gap-3 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowClassificationModal(false);
+                    setPendingManualDetection(null);
+                  }}
+                  className="text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <div className="text-[9px] text-gray-400 italic">
+                  ID: manual_{Date.now().toString().slice(-4)}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Suspense>
   );

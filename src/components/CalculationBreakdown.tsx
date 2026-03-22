@@ -26,6 +26,13 @@ type CalculationBreakdownProps = {
       bacteria: number
       casts: number
     }
+    volumetric?: {
+      hpfArea: number
+      totalHpfs: number
+      mlFactor: number
+      rbcPerMl: number
+      wbcPerMl: number
+    }
   } | null
 }
 
@@ -86,6 +93,7 @@ export default function CalculationBreakdown({ isOpen, data }: CalculationBreakd
           <MathRow label="Epithelial" values={data.lpf.epithelialCells} avg={data.averages.epithelialCells} unit="LPF" />
           <MathRow label="Casts" values={data.lpf.casts} avg={data.averages.casts} unit="LPF" />
         </div>
+
       </div>
     </div>
   )
