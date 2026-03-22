@@ -92,15 +92,31 @@ export default function BoundingBoxOverlay({
     const scaleX = displayedWidth / imgNaturalWidth
     const scaleY = displayedHeight / imgNaturalHeight
 
-    // Class colors
+    // Class colors (supports both YOLO and standard names)
     const colors: Record<string, string> = {
-      cast: '#00FF00', // Green
-      cryst: '#FFFF00', // Yellow
-      epith: '#FF00FF', // Magenta
+      // YOLO names
+      cast: '#00FF00',   // Green
+      cryst: '#FFFF00',  // Yellow
+      epith: '#FF00FF',  // Magenta
       epithn: '#0000FF', // Blue
-      eryth: '#00FFFF', // Cyan
-      leuko: '#FFA500', // Orange
+      eryth: '#00FFFF',  // Cyan
+      leuko: '#FFA500',  // Orange
       mycete: '#FF00FF', // Magenta
+      
+      // Standard names (from Gemini)
+      rbc: '#00FFFF',             // Cyan
+      wbc: '#FFA500',             // Orange
+      epithelial_cells: '#FF00FF', // Magenta
+      crystals: '#FFFF00',         // Yellow
+      casts: '#00FF00',            // Green
+      yeast: '#FF00FF',            // Magenta
+      bacteria: '#FF5555',         // Coral
+      sperm: '#AAAAAA',            // Grey
+      spermatozoa: '#AAAAAA',      // Grey
+      parasites: '#800080',        // Purple
+      mucus: '#A0A0A0',            // Darker Grey
+      mucus_threads: '#A0A0A0',    // Darker Grey
+      abnormal_crystals: '#FFD700', // Gold
     }
 
     // Draw bounding boxes

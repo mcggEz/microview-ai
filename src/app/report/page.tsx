@@ -17,17 +17,19 @@ import {
   updateTest,
   deleteTest,
 } from "@/lib/api-client";
+import { supabase } from "@/lib/supabase";
+import type { LPFSedimentDetection, HPFSedimentDetection } from "@/lib/gemini";
+import type { ImageAnalysis } from "@/types/database";
 import {
   deleteImageFromTest,
   deleteImageFromStorage,
   addImageToTest,
   uploadImageToStorage,
   getImageAnalysisByIndex,
+  getImageAnalysis,
   upsertImageAnalysis,
   deleteImageAnalysisByImage,
 } from "@/lib/api";
-import { supabase } from "@/lib/supabase";
-import type { LPFSedimentDetection, HPFSedimentDetection } from "@/lib/gemini";
 import {
   Calendar,
   Microscope,
@@ -52,7 +54,8 @@ import {
   Square,
   Move,
   Check,
-  AlertCircle
+  AlertCircle,
+  Calculator
 } from "lucide-react";
 import { getMotorServerUrl } from "@/lib/motor-config";
 import ImageModal from "@/components/ImageModal";
@@ -61,6 +64,7 @@ import StrasingerReferenceTable from "@/components/StrasingerReferenceTable";
 import YOLODetectionOverlay from "@/components/YOLODetectionOverlay";
 import BoundingBoxOverlay from "@/components/BoundingBoxOverlay";
 import MotorEventsLog from "@/components/MotorEventsLog";
+import CalculationBreakdown from "@/components/CalculationBreakdown";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { getGeminiKeysFromLocalStorage, getGeminiModelFromLocalStorage } from "@/lib/client-gemini-keys";
@@ -247,11 +251,6 @@ export default function Report() {
     }
   } | null>(null)
 
-  // Comparison states for YOLO vs Gemini
-  const [lpfYoloOnlyResults, setLpfYoloOnlyResults] = useState<any>(null);
-  const [hpfYoloOnlyResults, setHpfYoloOnlyResults] = useState<any>(null);
-  const [viewModeLPF, setViewModeLPF] = useState<'yolo' | 'gemini'>('gemini');
-  const [viewModeHPF, setViewModeHPF] = useState<'yolo' | 'gemini'>('gemini');
   const [hpfYoloDetections, setHpfYoloDetections] = useState<{
     predictions: Array<{
       x: number
@@ -414,6 +413,7 @@ export default function Report() {
         });
       }
     }
+    await autoUpdateSummary();
   };
   const [lpfCroppedImages, setLpfCroppedImages] = useState<Record<string, string>>({}) // detection_id -> base64 cropped image
   const [hpfCroppedImages, setHpfCroppedImages] = useState<Record<string, string>>({})
@@ -599,6 +599,51 @@ export default function Report() {
   const [hpfAbortController, setHpfAbortController] =
     useState<AbortController | null>(null);
 
+  // Timer for analysis
+  const [analysisTimer, setAnalysisTimer] = useState(0);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    const currentlyAnalyzing = Object.values(isAnalyzingLPF).some(v => v) || 
+                              Object.values(isAnalyzingHPF).some(v => v);
+
+    if (currentlyAnalyzing) {
+      interval = setInterval(() => {
+        setAnalysisTimer(prev => prev + 0.1);
+      }, 100);
+    } else {
+      setAnalysisTimer(0);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isAnalyzingLPF, isAnalyzingHPF]);
+
+  // State for calculation breakdown
+  const [summaryCalculations, setSummaryCalculations] = useState<{
+    lpf: {
+      fields: number;
+      epithelialCells: number[];
+      casts: number[];
+      squamous: number[];
+    };
+    hpf: {
+      fields: number;
+      rbc: number[];
+      wbc: number[];
+      bacteria: number[];
+    };
+    averages: {
+      rbc: number;
+      wbc: number;
+      epithelialCells: number;
+      bacteria: number;
+      casts: number;
+    };
+  } | null>(null);
+  const [showCalculationModal, setShowCalculationModal] = useState(false);
+
   // Helper function to create dropdown options based on sediment type
   const getDropdownOptions = (type: string) => {
     const options = {
@@ -617,6 +662,189 @@ export default function Report() {
     };
     return options[type as keyof typeof options] || ["0"];
   };
+
+  /**
+   * Helper to map numerical average to reporting range based on available dropdown options.
+   * Follows RMT standard of finding the appropriate range for an average count per field.
+   */
+  const mapValueToRange = (value: number, options: string[]): string => {
+    if (value <= 0) return options[0];
+    
+    // Iterate through options to find the best fit
+    for (const opt of options) {
+      if (opt === "0" || opt === "None") continue;
+      
+      if (opt.includes("-")) {
+        const parts = opt.split("-");
+        const low = parseFloat(parts[0]);
+        const high = parseFloat(parts[1]);
+        if (value >= low && value <= high) return opt;
+      } else if (opt.startsWith(">")) {
+        const threshold = parseFloat(opt.substring(1));
+        if (value >= threshold) return opt;
+      } else if (opt.startsWith("<")) {
+        const threshold = parseFloat(opt.substring(1));
+        if (value < threshold) return opt;
+      } else {
+        // Direct number match
+        const num = parseFloat(opt);
+        if (Math.round(value) === num) return opt;
+      }
+    }
+    
+    // Find where the value falls if it didn't match perfectly
+    // This handles values between defined ranges by selecting the first one where high >= value
+    for (const opt of options) {
+      if (opt === "0" || opt === "None") continue;
+      if (opt.includes("-")) {
+        const high = parseFloat(opt.split("-")[1]);
+        if (value <= high) return opt;
+      } else if (opt.startsWith(">")) {
+        const threshold = parseFloat(opt.substring(1));
+        if (value >= threshold) return opt;
+      }
+    }
+    
+    return options[options.length - 1]; // Fallback to highest range (Many)
+  };
+
+  /**
+   * Automatically updates the Urinalysis Summary based on all current image analyses.
+   * Fetches all LPF/HPF analyses for the test, averages them, and maps to categories.
+   */
+  const autoUpdateSummary = useCallback(async () => {
+    if (!selectedTest) return;
+
+    try {
+      console.log(`📊 Auto-calculating urinalysis summary for test: ${selectedTest.id}`);
+      
+      // Fetch all recorded analyses for this test
+      const results = await Promise.all([
+        getImageAnalysis(selectedTest.id, "LPF"),
+        getImageAnalysis(selectedTest.id, "HPF")
+      ]);
+      const lpfAnalyses = results[0] as ImageAnalysis[];
+      const hpfAnalyses = results[1] as ImageAnalysis[];
+
+      // Ensure we have something to analyze. If DB is empty but we have local state, continue.
+      if (lpfAnalyses.length === 0 && hpfAnalyses.length === 0 && !lpfSedimentDetection && !hpfSedimentDetection) {
+        console.log("ℹ️ No image analyses found yet to summarize.");
+        return;
+      }
+
+      // 🛠️ CRITICAL FIX: Ensure the CURRENT image is always part of the calculation, 
+      // even if the database hasn't recorded it yet.
+      if (lpfSedimentDetection) {
+        const foundIndex = lpfAnalyses.findIndex(a => a.image_index === currentLPFIndex);
+        if (foundIndex !== -1) {
+          // Replace existing DB record with fresh local data
+          lpfAnalyses[foundIndex] = {
+            ...lpfAnalyses[foundIndex],
+            lpf_epithelial_cells: lpfSedimentDetection.epithelial_cells,
+            lpf_mucus_threads: lpfSedimentDetection.mucus_threads,
+            lpf_casts: lpfSedimentDetection.casts,
+            lpf_squamous_epithelial: lpfSedimentDetection.squamous_epithelial,
+            lpf_abnormal_crystals: lpfSedimentDetection.abnormal_crystals,
+          };
+        } else if (lowPowerImages[currentLPFIndex]) {
+          // If not in DB, ADD it as a temporary record for the calculation
+          lpfAnalyses.push({
+            image_index: currentLPFIndex,
+            lpf_epithelial_cells: lpfSedimentDetection.epithelial_cells,
+            lpf_mucus_threads: lpfSedimentDetection.mucus_threads,
+            lpf_casts: lpfSedimentDetection.casts,
+            lpf_squamous_epithelial: lpfSedimentDetection.squamous_epithelial,
+            lpf_abnormal_crystals: lpfSedimentDetection.abnormal_crystals,
+          } as ImageAnalysis);
+        }
+      }
+
+      if (hpfSedimentDetection) {
+        const foundIndex = hpfAnalyses.findIndex(a => a.image_index === currentHPFIndex);
+        if (foundIndex !== -1) {
+          // Replace existing DB record with fresh local data
+          hpfAnalyses[foundIndex] = {
+            ...hpfAnalyses[foundIndex],
+            hpf_rbc: hpfSedimentDetection.rbc,
+            hpf_wbc: hpfSedimentDetection.wbc,
+            hpf_epithelial_cells: hpfSedimentDetection.epithelial_cells,
+            hpf_crystals: hpfSedimentDetection.crystals,
+            hpf_bacteria: hpfSedimentDetection.bacteria,
+            hpf_yeast: hpfSedimentDetection.yeast,
+            hpf_sperm: hpfSedimentDetection.sperm,
+            hpf_parasites: hpfSedimentDetection.parasites,
+          };
+        } else if (highPowerImages[currentHPFIndex]) {
+          // If not in DB, ADD it as a temporary record for the calculation
+          hpfAnalyses.push({
+            image_index: currentHPFIndex,
+            hpf_rbc: hpfSedimentDetection.rbc,
+            hpf_wbc: hpfSedimentDetection.wbc,
+            hpf_epithelial_cells: hpfSedimentDetection.epithelial_cells,
+            hpf_crystals: hpfSedimentDetection.crystals,
+            hpf_bacteria: hpfSedimentDetection.bacteria,
+            hpf_yeast: hpfSedimentDetection.yeast,
+            hpf_sperm: hpfSedimentDetection.sperm,
+            hpf_parasites: hpfSedimentDetection.parasites,
+          } as ImageAnalysis);
+        }
+      }
+
+      const lpfCount = lpfAnalyses.length || 1;
+      const hpfCount = hpfAnalyses.length || 1;
+
+      // Calculate averages across fields
+      const avgLpf = {
+        epithelialCells: lpfAnalyses.reduce((sum: number, a: ImageAnalysis) => sum + (a.lpf_epithelial_cells || 0), 0) / lpfCount,
+        casts: lpfAnalyses.reduce((sum: number, a: ImageAnalysis) => sum + (a.lpf_casts || 0), 0) / lpfCount,
+        squamous: lpfAnalyses.reduce((sum: number, a: ImageAnalysis) => sum + (a.lpf_squamous_epithelial || 0), 0) / lpfCount,
+      };
+
+      const avgHpf = {
+        rbc: hpfAnalyses.reduce((sum: number, a: ImageAnalysis) => sum + (a.hpf_rbc || 0), 0) / hpfCount,
+        wbc: hpfAnalyses.reduce((sum: number, a: ImageAnalysis) => sum + (a.hpf_wbc || 0), 0) / hpfCount,
+        bacteria: hpfAnalyses.reduce((sum: number, a: ImageAnalysis) => sum + (a.hpf_bacteria || 0), 0) / hpfCount,
+      };
+
+      // Map to RMT reporting ranges
+      const updatedSummary = {
+        rbc: mapValueToRange(avgHpf.rbc, getDropdownOptions("rbcs")),
+        pusCells: mapValueToRange(avgHpf.wbc, getDropdownOptions("rbcs")),
+        epithelialCells: mapValueToRange(avgLpf.epithelialCells, getDropdownOptions("epithelialCells")),
+        bacteria: mapValueToRange(avgHpf.bacteria, getDropdownOptions("bacteria")),
+      };
+
+      // Update calculation breakdown state
+      setSummaryCalculations({
+        lpf: {
+          fields: lpfCount,
+          epithelialCells: lpfAnalyses.map(a => a.lpf_epithelial_cells || 0),
+          casts: lpfAnalyses.map(a => a.lpf_casts || 0),
+          squamous: lpfAnalyses.map(a => a.lpf_squamous_epithelial || 0),
+        },
+        hpf: {
+          fields: hpfCount,
+          rbc: hpfAnalyses.map(a => a.hpf_rbc || 0),
+          wbc: hpfAnalyses.map(a => a.hpf_wbc || 0),
+          bacteria: hpfAnalyses.map(a => a.hpf_bacteria || 0),
+        },
+        averages: {
+          rbc: avgHpf.rbc,
+          wbc: avgHpf.wbc,
+          epithelialCells: avgLpf.epithelialCells,
+          bacteria: avgHpf.bacteria,
+          casts: avgLpf.casts,
+        }
+      });
+
+      // Update state using functional update to avoid dependency on urinalysisText
+      setUrinalysisText(prev => ({ ...prev, ...updatedSummary }));
+      console.log("✅ Urinalysis Summary auto-adjusted based on microscopic counts.");
+      
+    } catch (err) {
+      console.error("❌ Failed to auto-update summary:", err);
+    }
+  }, [selectedTest, lpfSedimentDetection, hpfSedimentDetection, currentLPFIndex, currentHPFIndex]);
 
 
   // Debouncing refs to prevent rapid-fire API calls
@@ -1046,6 +1274,9 @@ export default function Report() {
       
       // Clear analysis state
       analysisStateRef.current.lpf[analysisKey] = false;
+
+      // Trigger summary update
+      autoUpdateSummary();
     }
     },
     [
@@ -1230,14 +1461,6 @@ export default function Report() {
         setHpfSedimentDetection(detection);
         setHpfYoloDetections(yoloDetections);
 
-        // Save as original YOLO results for comparison
-        setHpfYoloOnlyResults({
-            detection,
-            yolo_detections: yoloDetections,
-            cropped_images: croppedImagesHPF
-        });
-        setViewModeHPF('yolo'); // Default to YOLO for the first pass
-
         setNotificationMessage("HPF image analyzed successfully (YOLO-only)");
         console.log("HPF AI analysis with YOLO detections saved to database");
         setNotificationMessage("HPF image analyzed and saved successfully");
@@ -1272,6 +1495,9 @@ export default function Report() {
       
       // Clear analysis state
       analysisStateRef.current.hpf[analysisKey] = false;
+
+      // Trigger summary update
+      autoUpdateSummary();
     }
   }, [
     hpfAbortController,
@@ -1868,6 +2094,7 @@ export default function Report() {
           (updatedDetection.analysis_notes || "") + " (Manually corrected)",
         analyzed_at: new Date().toISOString(),
       });
+      await autoUpdateSummary();
     } catch (error) {
       console.error("Error saving LPF count to database:", error);
     }
@@ -1909,6 +2136,7 @@ export default function Report() {
           (updatedDetection.analysis_notes || "") + " (Manually corrected)",
         analyzed_at: new Date().toISOString(),
       });
+      await autoUpdateSummary();
     } catch (error) {
       console.error("Error saving HPF count to database:", error);
     }
@@ -1949,6 +2177,13 @@ export default function Report() {
     setCurrentHPFIndex(0);
     setCurrentLPFIndex(0);
   }, [selectedTest]);
+
+  // Initial load of summary when test changes
+  useEffect(() => {
+    if (selectedTest) {
+      autoUpdateSummary();
+    }
+  }, [selectedTest, autoUpdateSummary, lpfSedimentDetection, hpfSedimentDetection]);
 
   // Ensure indices are valid when image arrays change
   useEffect(() => {
@@ -3823,10 +4058,10 @@ export default function Report() {
                                 target.style.display = "none";
                               }}
                             />
-                            {(viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.yolo_detections : lpfYoloDetections) && (viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.yolo_detections : lpfYoloDetections).predictions.length > 0 && (
+                            {lpfYoloDetections && lpfYoloDetections.predictions.length > 0 && (
                               <BoundingBoxOverlay
                                 imageRef={lpfImageRef}
-                                detections={(viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.yolo_detections : lpfYoloDetections).predictions}
+                                detections={lpfYoloDetections.predictions}
                                 highlightedDetectionId={highlightedDetection}
                                 showBoundingBoxes={showBoundingBox}
                               />
@@ -3927,24 +4162,6 @@ export default function Report() {
                                 <span className="font-semibold">Min Conf: {confThreshold}</span>
                             </span>
 
-                            {/* View Mode Toggle */}
-                            {lpfYoloOnlyResults && (
-                                <div className="flex bg-gray-100 rounded-md p-0.5 border border-gray-200">
-                                    <button 
-                                        onClick={() => setViewModeLPF('yolo')}
-                                        className={`px-2 py-1 text-[9px] font-bold rounded transition-all ${viewModeLPF === 'yolo' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                    >
-                                        YOLO
-                                    </button>
-                                    <button 
-                                        onClick={() => setViewModeLPF('gemini')}
-                                        disabled={!lpfSedimentDetection?.analysis_notes?.includes("Gemini")}
-                                        className={`px-2 py-1 text-[9px] font-bold rounded transition-all ${viewModeLPF === 'gemini' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'} disabled:opacity-50`}
-                                    >
-                                        GEMINI
-                                    </button>
-                                </div>
-                            )}
 
                             <Button
                               variant="secondary"
@@ -3956,7 +4173,6 @@ export default function Report() {
                               }
                               onClick={() => {
                                   enhanceWithGemini("low");
-                                  setViewModeLPF('gemini'); // Switch to Gemini view when enhancing
                               }}
                             >
                               Enhance
@@ -3969,7 +4185,7 @@ export default function Report() {
                           <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-md">
                             <div className="flex items-center justify-center gap-2 text-xs text-blue-700">
                               <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                              <span>Analyzing image...</span>
+                              <span>Analyzing image... ({analysisTimer.toFixed(1)}s)</span>
                             </div>
                           </div>
                         )}
@@ -4001,7 +4217,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          ((viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.mucus_threads ||
+                                          (lpfSedimentDetection?.mucus_threads ||
                                             0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
@@ -4011,7 +4227,7 @@ export default function Report() {
                                           type="number"
                                           min="0"
                                           value={
-                                            (viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.mucus_threads || 0
+                                            lpfSedimentDetection?.mucus_threads || 0
                                           }
                                           onChange={(e) => {
                                             const newValue =
@@ -4046,7 +4262,7 @@ export default function Report() {
                                     </div>
                                     {/* Cropped images gallery */}
                                     <DetectionGallery 
-                                      items={getLPFCroppedImagesByClass('mucus_threads', viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.yolo_detections : lpfYoloDetections, viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.cropped_images : lpfCroppedImages)}
+                                      items={getLPFCroppedImagesByClass('mucus_threads', lpfYoloDetections, lpfCroppedImages)}
                                       isLPF={true}
                                       title="Mucus Threads"
                                       currentClass="mucus_threads"
@@ -4059,7 +4275,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          ((viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.casts || 0) > 0
+                                          (lpfSedimentDetection?.casts || 0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
                                         }`}
@@ -4067,7 +4283,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={(viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.casts || 0}
+                                          value={lpfSedimentDetection?.casts || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -4098,7 +4314,7 @@ export default function Report() {
                                     </div>
                                     {/* Cropped images gallery */}
                                     <DetectionGallery 
-                                      items={getLPFCroppedImagesByClass('casts', viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.yolo_detections : lpfYoloDetections, viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.cropped_images : lpfCroppedImages)}
+                                      items={getLPFCroppedImagesByClass('casts', lpfYoloDetections, lpfCroppedImages)}
                                       isLPF={true}
                                       title="Casts"
                                       currentClass="casts"
@@ -4111,7 +4327,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          ((viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.squamous_epithelial ||
+                                          (lpfSedimentDetection?.squamous_epithelial ||
                                             0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
@@ -4121,7 +4337,7 @@ export default function Report() {
                                           type="number"
                                           min="0"
                                           value={
-                                            (viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.squamous_epithelial ||
+                                            lpfSedimentDetection?.squamous_epithelial ||
                                             0
                                           }
                                           onChange={(e) => {
@@ -4157,7 +4373,7 @@ export default function Report() {
                                     </div>
                                     {/* Cropped images gallery */}
                                     <DetectionGallery 
-                                      items={getLPFCroppedImagesByClass('squamous_epithelial', viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.yolo_detections : lpfYoloDetections, viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.cropped_images : lpfCroppedImages)}
+                                      items={getLPFCroppedImagesByClass('squamous_epithelial', lpfYoloDetections, lpfCroppedImages)}
                                       isLPF={true}
                                       title="Squamous Epithelial"
                                       currentClass="squamous_epithelial"
@@ -4170,7 +4386,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          ((viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.abnormal_crystals ||
+                                          (lpfSedimentDetection?.abnormal_crystals ||
                                             0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
@@ -4180,7 +4396,7 @@ export default function Report() {
                                           type="number"
                                           min="0"
                                           value={
-                                            (viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.abnormal_crystals ||
+                                            lpfSedimentDetection?.abnormal_crystals ||
                                             0
                                           }
                                           onChange={(e) => {
@@ -4216,7 +4432,7 @@ export default function Report() {
                                     </div>
                                     {/* Cropped images gallery */}
                                     <DetectionGallery 
-                                      items={getLPFCroppedImagesByClass('abnormal_crystals', viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.yolo_detections : lpfYoloDetections, viewModeLPF === 'yolo' ? lpfYoloOnlyResults?.cropped_images : lpfCroppedImages)}
+                                      items={getLPFCroppedImagesByClass('abnormal_crystals', lpfYoloDetections, lpfCroppedImages)}
                                       isLPF={true}
                                       title="Abnormal Crystals"
                                       currentClass="abnormal_crystals"
@@ -4225,13 +4441,13 @@ export default function Report() {
                                 </td>
                               </tr>
                               {/* Remarks Row */}
-                              {(viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection)?.analysis_notes && (
+                              {lpfSedimentDetection?.analysis_notes && (
                                 <tr className="border-t-2 border-gray-300 bg-gray-50">
                                   <td colSpan={5} className="py-2 px-3 text-left">
                                     <div className="text-xs">
                                       <span className="font-semibold text-gray-700">Remarks: </span>
                                       <span className="text-gray-600 italic">
-                                        {(viewModeLPF === 'yolo' && lpfYoloOnlyResults ? lpfYoloOnlyResults.detection : lpfSedimentDetection).analysis_notes}
+                                        {lpfSedimentDetection.analysis_notes}
                                       </span>
                                     </div>
                                   </td>
@@ -4299,10 +4515,10 @@ export default function Report() {
                                 e.currentTarget.style.display = "none";
                               }}
                             />
-                            {(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.yolo_detections : hpfYoloDetections) && (viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.yolo_detections : hpfYoloDetections).predictions.length > 0 && (
+                            {hpfYoloDetections && hpfYoloDetections.predictions.length > 0 && (
                               <BoundingBoxOverlay
                                 imageRef={hpfImageRef}
-                                detections={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.yolo_detections : hpfYoloDetections).predictions}
+                                detections={hpfYoloDetections.predictions}
                                 highlightedDetectionId={highlightedDetection}
                                 showBoundingBoxes={showBoundingBox}
                               />
@@ -4403,24 +4619,6 @@ export default function Report() {
                                 <span className="font-semibold">Min Conf: {confThreshold}</span>
                             </span>
 
-                            {/* View Mode Toggle */}
-                            {hpfYoloOnlyResults && (
-                                <div className="flex bg-gray-100 rounded-md p-0.5 border border-gray-200">
-                                    <button 
-                                        onClick={() => setViewModeHPF('yolo')}
-                                        className={`px-2 py-1 text-[9px] font-bold rounded transition-all ${viewModeHPF === 'yolo' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                    >
-                                        YOLO
-                                    </button>
-                                    <button 
-                                        onClick={() => setViewModeHPF('gemini')}
-                                        disabled={!hpfSedimentDetection?.analysis_notes?.includes("Gemini")}
-                                        className={`px-2 py-1 text-[9px] font-bold rounded transition-all ${viewModeHPF === 'gemini' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'} disabled:opacity-50`}
-                                    >
-                                        GEMINI
-                                    </button>
-                                </div>
-                            )}
 
                             <Button
                               variant="secondary"
@@ -4432,7 +4630,6 @@ export default function Report() {
                               }
                               onClick={() => {
                                   enhanceWithGemini("high");
-                                  setViewModeHPF('gemini'); // Switch to Gemini view when enhancing
                               }}
                             >
                               Enhance
@@ -4445,7 +4642,7 @@ export default function Report() {
                         <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-md">
                           <div className="flex items-center justify-center gap-2 text-xs text-blue-700">
                             <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                            <span>Analyzing image...</span>
+                            <span>Analyzing image... ({analysisTimer.toFixed(1)}s)</span>
                           </div>
                         </div>
                       )}
@@ -4489,7 +4686,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.rbc || 0) > 0
+                                          (hpfSedimentDetection?.rbc || 0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
                                         }`}
@@ -4497,7 +4694,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.rbc || 0}
+                                          value={hpfSedimentDetection?.rbc || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -4531,7 +4728,7 @@ export default function Report() {
                                     </div>
                                     {/* Cropped images gallery */}
                                     <DetectionGallery 
-                                      items={getHPFCroppedImagesByClass('rbc', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      items={getHPFCroppedImagesByClass('rbc', hpfYoloDetections, hpfCroppedImages)}
                                       isLPF={false}
                                       title="RBC"
                                       currentClass="rbc"
@@ -4544,7 +4741,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.wbc || 0) > 0
+                                          (hpfSedimentDetection?.wbc || 0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
                                         }`}
@@ -4552,7 +4749,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.wbc || 0}
+                                          value={hpfSedimentDetection?.wbc || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -4586,7 +4783,7 @@ export default function Report() {
                                     </div>
                                     {/* Cropped images gallery */}
                                     <DetectionGallery 
-                                      items={getHPFCroppedImagesByClass('wbc', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      items={getHPFCroppedImagesByClass('wbc', hpfYoloDetections, hpfCroppedImages)}
                                       isLPF={false}
                                       title="WBC"
                                       currentClass="wbc"
@@ -4599,7 +4796,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.epithelial_cells ||
+                                          (hpfSedimentDetection?.epithelial_cells ||
                                             0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
@@ -4609,7 +4806,7 @@ export default function Report() {
                                           type="number"
                                           min="0"
                                           value={
-                                            (viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.epithelial_cells ||
+                                            hpfSedimentDetection?.epithelial_cells ||
                                             0
                                           }
                                           onChange={(e) => {
@@ -4648,7 +4845,7 @@ export default function Report() {
                                     </div>
                                     {/* Cropped images gallery */}
                                     <DetectionGallery 
-                                      items={getHPFCroppedImagesByClass('epithelial_cells', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      items={getHPFCroppedImagesByClass('epithelial_cells', hpfYoloDetections, hpfCroppedImages)}
                                       isLPF={false}
                                       title="Epithelial Cells"
                                       currentClass="epithelial_cells"
@@ -4661,7 +4858,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.crystals || 0) > 0
+                                          (hpfSedimentDetection?.crystals || 0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
                                         }`}
@@ -4669,7 +4866,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.crystals || 0}
+                                          value={hpfSedimentDetection?.crystals || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -4703,7 +4900,7 @@ export default function Report() {
                                     </div>
                                     {/* Cropped images gallery */}
                                     <DetectionGallery 
-                                      items={getHPFCroppedImagesByClass('crystals', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      items={getHPFCroppedImagesByClass('crystals', hpfYoloDetections, hpfCroppedImages)}
                                       isLPF={false}
                                       title="Crystals"
                                       currentClass="crystals"
@@ -4716,7 +4913,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.bacteria || 0) > 0
+                                          (hpfSedimentDetection?.bacteria || 0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
                                         }`}
@@ -4724,7 +4921,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.bacteria || 0}
+                                          value={hpfSedimentDetection?.bacteria || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -4758,7 +4955,7 @@ export default function Report() {
                                     </div>
                                     {/* Cropped images gallery */}
                                     <DetectionGallery 
-                                      items={getHPFCroppedImagesByClass('bacteria', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      items={getHPFCroppedImagesByClass('bacteria', hpfYoloDetections, hpfCroppedImages)}
                                       isLPF={false}
                                       title="Bacteria"
                                       currentClass="bacteria"
@@ -4771,7 +4968,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.yeast || 0) > 0
+                                          (hpfSedimentDetection?.yeast || 0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
                                         }`}
@@ -4779,7 +4976,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.yeast || 0}
+                                          value={hpfSedimentDetection?.yeast || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -4813,7 +5010,7 @@ export default function Report() {
                                     </div>
                                     {/* Cropped images gallery */}
                                     <DetectionGallery 
-                                      items={getHPFCroppedImagesByClass('yeast', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      items={getHPFCroppedImagesByClass('yeast', hpfYoloDetections, hpfCroppedImages)}
                                       isLPF={false}
                                       title="Yeast"
                                       currentClass="yeast"
@@ -4826,7 +5023,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.sperm || 0) > 0
+                                          (hpfSedimentDetection?.sperm || 0) > 0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
                                         }`}
@@ -4834,7 +5031,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.sperm || 0}
+                                          value={hpfSedimentDetection?.sperm || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -4868,7 +5065,7 @@ export default function Report() {
                                     </div>
                                     {/* Cropped images gallery */}
                                     <DetectionGallery 
-                                      items={getHPFCroppedImagesByClass('sperm', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      items={getHPFCroppedImagesByClass('sperm', hpfYoloDetections, hpfCroppedImages)}
                                       isLPF={false}
                                       title="Sperm"
                                       currentClass="sperm"
@@ -4881,7 +5078,7 @@ export default function Report() {
                                     <div className="flex justify-center w-full">
                                       <div
                                         className={`rounded px-3 py-1 text-xs font-medium w-[60px] flex-shrink-0 ${
-                                          ((viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.parasites || 0) >
+                                          (hpfSedimentDetection?.parasites || 0) >
                                           0
                                             ? "bg-gray-200 text-gray-700"
                                             : "bg-gray-50 text-gray-500"
@@ -4890,7 +5087,7 @@ export default function Report() {
                                         <input
                                           type="number"
                                           min="0"
-                                          value={(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.parasites || 0}
+                                          value={hpfSedimentDetection?.parasites || 0}
                                           onChange={(e) => {
                                             const newValue =
                                               parseInt(e.target.value) || 0;
@@ -4924,7 +5121,7 @@ export default function Report() {
                                     </div>
                                     {/* Cropped images gallery */}
                                     <DetectionGallery 
-                                      items={getHPFCroppedImagesByClass('parasites', viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.yolo_detections : hpfYoloDetections, viewModeHPF === 'yolo' ? hpfYoloOnlyResults?.cropped_images : hpfCroppedImages)}
+                                      items={getHPFCroppedImagesByClass('parasites', hpfYoloDetections, hpfCroppedImages)}
                                       isLPF={false}
                                       title="Parasites"
                                       currentClass="parasites"
@@ -4933,13 +5130,13 @@ export default function Report() {
                                 </td>
                               </tr>
                               {/* Remarks Row */}
-                              {(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection)?.analysis_notes && (
+                              {hpfSedimentDetection?.analysis_notes && (
                                 <tr className="border-t-2 border-gray-300 bg-gray-50">
                                   <td colSpan={8} className="py-2 px-3 text-left">
                                     <div className="text-xs">
                                       <span className="font-semibold text-gray-700">Remarks: </span>
                                       <span className="text-gray-600 italic">
-                                        {(viewModeHPF === 'yolo' && hpfYoloOnlyResults ? hpfYoloOnlyResults.detection : hpfSedimentDetection).analysis_notes}
+                                        {hpfSedimentDetection.analysis_notes}
                                       </span>
                                     </div>
                                   </td>
@@ -5192,9 +5389,28 @@ export default function Report() {
                 {/* Text-only Urinalysis Summary (based on provided report) */}
                 <div className="bg-white rounded-t-xl p-3 sm:p-4 shadow-md border border-gray-100 mt-3">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-gray-900">
-                      Urinalysis Summary
-                    </h3>
+                    <div className="flex items-center gap-2 relative">
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Urinalysis Summary
+                      </h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`h-6 px-2 text-[10px] items-center text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex transition-colors ${showCalculationModal ? 'bg-blue-100' : ''}`}
+                        onClick={() => setShowCalculationModal(!showCalculationModal)}
+                        disabled={!summaryCalculations}
+                      >
+                        <Calculator className="w-3 h-3 mr-1" />
+                        Show Calculation
+                      </Button>
+
+                      {/* Dropdown Breakdown */}
+                      <CalculationBreakdown
+                        isOpen={showCalculationModal}
+                        onClose={() => setShowCalculationModal(false)}
+                        data={summaryCalculations}
+                      />
+                    </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Microscopic */}
@@ -5348,14 +5564,8 @@ export default function Report() {
 
       if (isLPF) {
         setIsAnalyzingLPF((prev) => ({ ...prev, [imageIndex]: true }));
-        setLpfSedimentDetection(null);
-        setLpfYoloDetections(null);
-        setLpfCroppedImages({});
       } else {
         setIsAnalyzingHPF((prev) => ({ ...prev, [imageIndex]: true }));
-        setHpfSedimentDetection(null);
-        setHpfYoloDetections(null);
-        setHpfCroppedImages({});
       }
 
       // Convert image URL to File object
