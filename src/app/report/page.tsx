@@ -56,7 +56,8 @@ import {
   Check,
   AlertCircle,
   Calculator,
-  Maximize
+  Maximize,
+  LayoutGrid
 } from "lucide-react";
 import { getMotorServerUrl } from "@/lib/motor-config";
 import ImageModal from "@/components/ImageModal";
@@ -398,6 +399,9 @@ export default function Report() {
     detections: any[];
     mode: 'low' | 'high';
   } | null>(null);
+
+  // See All Fields Modal State
+  const [showAllFieldsModal, setShowAllFieldsModal] = useState<'low' | 'high' | null>(null);
   
   // YOLO detections and cropped images state
   const [lpfYoloDetections, setLpfYoloDetections] = useState<{
@@ -1604,6 +1608,47 @@ export default function Report() {
       console.log("📝 New LPF YOLO-only analysis text:", detection.analysis_notes);
       setLpfSedimentDetection(detection);
       
+      // Stage 2: Fire off background Gemini report generator
+      fetch('/api/generate-yolo-summary', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-gemini-api-keys': JSON.stringify(getGeminiKeysFromLocalStorage())
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          yoloSummary: yoloDetections.summary,
+          powerMode: 'LPF'
+        })
+      })
+      .then(res => res.json())
+      .then(async data => {
+        if (data.success && data.note) {
+          setLpfSedimentDetection(prev => {
+            if (!prev) return prev;
+            const updated = { ...prev, analysis_notes: data.note };
+            // Fire background update to db
+            upsertImageAnalysis({
+              test_id: selectedTest.id,
+              power_mode: "LPF",
+              image_index: imageIndex,
+              image_url: imageUrl,
+              lpf_epithelial_cells: updated.epithelial_cells,
+              lpf_mucus_threads: updated.mucus_threads,
+              lpf_casts: updated.casts,
+              lpf_squamous_epithelial: updated.squamous_epithelial,
+              lpf_abnormal_crystals: updated.abnormal_crystals,
+              confidence: updated.confidence,
+              analysis_notes: updated.analysis_notes,
+              yolo_detections: yoloDetections,
+              analyzed_at: new Date().toISOString(),
+            }).catch(console.error);
+            return updated;
+          });
+        }
+      })
+      .catch(console.error);
+      
       // Crop images from YOLO detections
       const croppedImages: Record<string, string> = {}
       if (yoloDetections.predictions.length > 0) {
@@ -1817,6 +1862,50 @@ export default function Report() {
       
       console.log("📝 New HPF YOLO-only analysis text:", detection.analysis_notes);
       setHpfSedimentDetection(detection);
+
+      // Stage 2: Fire off background Gemini report generator
+      fetch('/api/generate-yolo-summary', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-gemini-api-keys': JSON.stringify(getGeminiKeysFromLocalStorage())
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          yoloSummary: yoloDetections.summary,
+          powerMode: 'HPF'
+        })
+      })
+      .then(res => res.json())
+      .then(async data => {
+        if (data.success && data.note) {
+          setHpfSedimentDetection(prev => {
+            if (!prev) return prev;
+            const updated = { ...prev, analysis_notes: data.note };
+            // Fire background update to db
+            upsertImageAnalysis({
+              test_id: selectedTest.id,
+              power_mode: "HPF",
+              image_index: imageIndex,
+              image_url: imageUrl,
+              hpf_rbc: updated.rbc,
+              hpf_wbc: updated.wbc,
+              hpf_epithelial_cells: updated.epithelial_cells,
+              hpf_crystals: updated.crystals,
+              hpf_bacteria: updated.bacteria,
+              hpf_yeast: updated.yeast,
+              hpf_sperm: updated.sperm,
+              hpf_parasites: updated.parasites,
+              confidence: updated.confidence,
+              analysis_notes: updated.analysis_notes,
+              yolo_detections: yoloDetections,
+              analyzed_at: new Date().toISOString(),
+            }).catch(console.error);
+            return updated;
+          });
+        }
+      })
+      .catch(console.error);
       
       // Crop images from YOLO detections
       const croppedImagesHPF: Record<string, string> = {}
@@ -1921,6 +2010,99 @@ export default function Report() {
     setShowNotification,
     setHpfAbortController,
   ]);
+
+  // Auto-heal Gemini pending notes for LPF
+  useEffect(() => {
+    if (lpfSedimentDetection?.analysis_notes?.includes('Detailed Gemini report pending') && lpfYoloDetections && selectedTest && lowPowerImages[currentLPFIndex]) {
+      console.log('🔄 Auto-healing pending LPF Gemini report...');
+      fetch('/api/generate-yolo-summary', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-gemini-api-keys': JSON.stringify(getGeminiKeysFromLocalStorage())
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          yoloSummary: lpfYoloDetections.summary,
+          powerMode: 'LPF'
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.note) {
+          setLpfSedimentDetection(prev => {
+            if (!prev) return prev;
+            const updated = { ...prev, analysis_notes: data.note };
+            upsertImageAnalysis({
+              test_id: selectedTest.id,
+              power_mode: "LPF",
+              image_index: currentLPFIndex,
+              image_url: lowPowerImages[currentLPFIndex],
+              lpf_epithelial_cells: updated.epithelial_cells,
+              lpf_mucus_threads: updated.mucus_threads,
+              lpf_casts: updated.casts,
+              lpf_squamous_epithelial: updated.squamous_epithelial,
+              lpf_abnormal_crystals: updated.abnormal_crystals,
+              confidence: updated.confidence,
+              analysis_notes: updated.analysis_notes,
+              yolo_detections: lpfYoloDetections,
+              analyzed_at: new Date().toISOString(),
+            }).catch(console.error);
+            return updated;
+          });
+        }
+      })
+      .catch(console.error);
+    }
+  }, [lpfSedimentDetection?.analysis_notes, lpfYoloDetections, selectedTest, currentLPFIndex, lowPowerImages, setLpfSedimentDetection]);
+
+  // Auto-heal Gemini pending notes for HPF
+  useEffect(() => {
+    if (hpfSedimentDetection?.analysis_notes?.includes('Detailed Gemini report pending') && hpfYoloDetections && selectedTest && highPowerImages[currentHPFIndex]) {
+      console.log('🔄 Auto-healing pending HPF Gemini report...');
+      fetch('/api/generate-yolo-summary', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-gemini-api-keys': JSON.stringify(getGeminiKeysFromLocalStorage())
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          yoloSummary: hpfYoloDetections.summary,
+          powerMode: 'HPF'
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.note) {
+          setHpfSedimentDetection(prev => {
+            if (!prev) return prev;
+            const updated = { ...prev, analysis_notes: data.note };
+            upsertImageAnalysis({
+              test_id: selectedTest.id,
+              power_mode: "HPF",
+              image_index: currentHPFIndex,
+              image_url: highPowerImages[currentHPFIndex],
+              hpf_rbc: updated.rbc,
+              hpf_wbc: updated.wbc,
+              hpf_epithelial_cells: updated.epithelial_cells,
+              hpf_crystals: updated.crystals,
+              hpf_bacteria: updated.bacteria,
+              hpf_yeast: updated.yeast,
+              hpf_sperm: updated.sperm,
+              hpf_parasites: updated.parasites,
+              confidence: updated.confidence,
+              analysis_notes: updated.analysis_notes,
+              yolo_detections: hpfYoloDetections,
+              analyzed_at: new Date().toISOString(),
+            }).catch(console.error);
+            return updated;
+          });
+        }
+      })
+      .catch(console.error);
+    }
+  }, [hpfSedimentDetection?.analysis_notes, hpfYoloDetections, selectedTest, currentHPFIndex, highPowerImages, setHpfSedimentDetection]);
 
   // Cleanup function to clear debounce timeouts
   useEffect(() => {
@@ -4546,6 +4728,14 @@ export default function Report() {
                         {/* Action Buttons */}
                         <div className="absolute top-4 right-4 flex gap-2">
                           <button
+                            onClick={() => setShowAllFieldsModal('low')}
+                            className="bg-gray-900/80 text-white p-2 rounded-md hover:bg-black transition-colors shadow-lg disabled:bg-gray-600 disabled:cursor-not-allowed"
+                            title="See all fields"
+                            disabled={lowPowerImages.length === 0}
+                          >
+                            <LayoutGrid className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => {
                               if (lowPowerImages.length === 0) return;
                               setFullScreenData({
@@ -5040,6 +5230,14 @@ export default function Report() {
 
                       {/* Action Buttons */}
                       <div className="absolute top-4 right-4 flex gap-2">
+                        <button
+                          onClick={() => setShowAllFieldsModal('high')}
+                          className="bg-gray-900/80 text-white p-2 rounded-md hover:bg-black transition-colors shadow-lg disabled:bg-gray-600 disabled:cursor-not-allowed"
+                          title="See all fields"
+                          disabled={highPowerImages.length === 0}
+                        >
+                          <LayoutGrid className="h-4 w-4" />
+                        </button>
                         <button
                           onClick={() => {
                             if (highPowerImages.length === 0) return;
@@ -6076,6 +6274,59 @@ export default function Report() {
             )}
           </div>
         </div>
+
+        {/* See All Fields Floating Modal */}
+      {showAllFieldsModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-[95vw] h-[95vh] max-w-none flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <Microscope className="h-6 w-6 text-blue-600" />
+                All {showAllFieldsModal === 'low' ? 'Low' : 'High'} Power Fields
+              </h2>
+              <button
+                onClick={() => setShowAllFieldsModal(null)}
+                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors cursor-pointer"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 bg-gray-100">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                {(showAllFieldsModal === 'low' ? lowPowerImages : highPowerImages).map((src, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`relative cursor-pointer rounded-lg border-4 overflow-hidden aspect-video transition-all hover:scale-[1.02] ${
+                      (showAllFieldsModal === 'low' ? currentLPFIndex : currentHPFIndex) === idx 
+                        ? 'border-blue-500 shadow-lg ring-4 ring-blue-500/30' 
+                        : 'border-white shadow-sm hover:shadow-md hover:border-gray-300'
+                    }`}
+                    onClick={() => {
+                      if (showAllFieldsModal === 'low') setCurrentLPFIndex(idx);
+                      else setCurrentHPFIndex(idx);
+                      setShowAllFieldsModal(null);
+                    }}
+                  >
+                    <img src={src} alt={`Field ${idx + 1}`} className="w-full h-full object-cover bg-black" />
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1.5 text-center font-medium border-t border-gray-700/50">
+                      Field {idx + 1}
+                      {(showAllFieldsModal === 'low' ? currentLPFIndex : currentHPFIndex) === idx && 
+                        <span className="ml-2 text-blue-300 font-bold">(Current)</span>
+                      }
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {(showAllFieldsModal === 'low' ? lowPowerImages : highPowerImages).length === 0 && (
+                <div className="flex flex-col items-center justify-center h-40 text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">
+                  <EyeOff className="h-8 w-8 text-gray-400 mb-2" />
+                  <p>No images captured yet.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
         {/* Image Modal */}
         <div className="z-[9999]">

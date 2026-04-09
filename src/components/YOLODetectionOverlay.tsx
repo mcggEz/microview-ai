@@ -82,32 +82,39 @@ export default function YOLODetectionOverlay({
 
       // Convert to blob for API
       tempCanvas.toBlob(async (blob) => {
-        if (!blob) {
+        try {
+          if (!blob) {
+            setIsDetecting(false)
+            return
+          }
+
+          // Create FormData
+          const formData = new FormData()
+          const file = new File([blob], 'frame.jpg', { type: 'image/jpeg' })
+          formData.append('image', file)
+          formData.append('conf', confThreshold.toString())
+
+          // Call API
+          const response = await fetch('/api/detect-sediments', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+          })
+
+          if (!response.ok) {
+            console.warn('Detection frame skipped due to API error:', response.statusText)
+            setIsDetecting(false)
+            return // Skip this frame on error without crashing
+          }
+
+          const data: DetectionResult = await response.json()
+          setDetections(data)
+
           setIsDetecting(false)
-          return
+        } catch (innerErr) {
+          console.error('Detection frame error:', innerErr)
+          setIsDetecting(false)
         }
-
-        // Create FormData
-        const formData = new FormData()
-        const file = new File([blob], 'frame.jpg', { type: 'image/jpeg' })
-        formData.append('image', file)
-        formData.append('conf', confThreshold.toString())
-
-        // Call API
-        const response = await fetch('/api/detect-sediments', {
-          method: 'POST',
-          body: formData,
-          credentials: 'include',
-        })
-
-        if (!response.ok) {
-          throw new Error('Detection failed')
-        }
-
-        const data: DetectionResult = await response.json()
-        setDetections(data)
-
-        setIsDetecting(false)
       }, 'image/jpeg', 0.8)
     } catch (err) {
       console.error('Detection error:', err)
