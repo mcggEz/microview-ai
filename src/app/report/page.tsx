@@ -57,7 +57,8 @@ import {
   AlertCircle,
   Calculator,
   Maximize,
-  LayoutGrid
+  LayoutGrid,
+  FileText
 } from "lucide-react";
 import { getMotorServerUrl } from "@/lib/motor-config";
 import ImageModal from "@/components/ImageModal";
@@ -3819,6 +3820,44 @@ export default function Report() {
                   <span className="hidden sm:inline tracking-tight">
                     {selectedTest.status === "reviewed" ? "Verified" : "Unverified"}
                   </span>
+                </Button>
+              )}
+
+              {/* Preview / Print Report */}
+              {selectedTest && selectedPatient && (
+                <Button
+                  onClick={() => {
+                    const previewData = {
+                      patient: {
+                        name: selectedPatient.name,
+                        patient_id: selectedPatient.patient_id,
+                        age: selectedPatient.age,
+                        gender: selectedPatient.gender,
+                      },
+                      test: {
+                        test_code: selectedTest.test_code,
+                        analysis_date: selectedTest.analysis_date,
+                        status: selectedTest.status,
+                        collection_time: selectedTest.collection_time,
+                        technician: selectedTest.technician,
+                      },
+                      urinalysis: urinalysisText,
+                      calculations: summaryCalculations,
+                      lpfDetection: lpfSedimentDetection,
+                      hpfDetection: hpfSedimentDetection,
+                      lowPowerImages,
+                      highPowerImages,
+                      user,
+                    };
+                    sessionStorage.setItem("previewReportData", JSON.stringify(previewData));
+                    router.push("/preview");
+                  }}
+                  variant="secondary"
+                  className="h-7 px-2.5 rounded-md bg-gray-200 text-gray-900 hover:bg-gray-300 text-xs font-semibold tracking-tight shadow-sm border border-gray-300"
+                  title="Preview & Print Report"
+                >
+                  <FileText className="h-3 w-3" />
+                  <span className="hidden sm:inline tracking-tight ml-1">Preview</span>
                 </Button>
               )}
             </div>
