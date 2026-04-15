@@ -22,17 +22,16 @@ flowchart TB
     DB[(Supabase DB)]
     ST[(Supabase Storage)]
     VLM[Google Gemini VLM]
+    YOLO[YOLO v11 - Hugging Face Space]
   end
 
   subgraph Local Workstation [Raspberry Pi / Laptop]
     UI[Next.js Web App]
     
     subgraph Microservices
-      YOLO[YOLO v11 Backend - FastAPI]
       MOTOR[Motor Server - Flask]
     end
     
-    UI <-->|Control & Capture| YOLO
     UI <-->|Scan Commands| MOTOR
   end
 
@@ -54,7 +53,7 @@ flowchart TB
 
 ### Software Stack
 - **Frontend**: **Next.js 15** (React 19, TypeScript, Tailwind) - Central orchestrator and UI.
-- **AI Backend**: **FastAPI (`mv-backend1-yolo`)** - Runs **YOLO v11** for real-time urine sediment detection.
+- **AI Backend**: **Hugging Face Spaces** - Hosts the **YOLO v11** model for real-time urine sediment detection.
 - **Hardware Backend**: **Flask (`mv-backend2-motor`)** - Manages automated stage movement via serial communication.
 - **Database & Storage**: **Supabase** - Handles authentication, patient reports, and image archival.
 - **Clinical Insight**: **Google Gemini 2.0** - Large Vision-Language Model for generating detailed urinalysis reports based on scan findings.
@@ -120,8 +119,8 @@ flowchart TD
 ### 2. AI Analysis & Reporting Process
 ```mermaid
 flowchart TD
-    Start([Proceed from Image Acquisition]) --> SendFastAPI[Send Images to FastAPI YOLO Backend]
-    SendFastAPI --> YoloDetect[YOLOv11 Scans Images<br/>Locates & Classifies Sediments]
+    Start([Proceed from Image Acquisition]) --> SendHF[Send Images to Hugging Face YOLO Backend]
+    SendHF --> YoloDetect[YOLOv11 Scans Images<br/>Locates & Classifies Sediments]
     
     YoloDetect --> AnyDetected{Are sediments<br/>detected?}
     
