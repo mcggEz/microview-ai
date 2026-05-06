@@ -40,8 +40,7 @@ flowchart TB
     STEP[Stepper Motors X/Y]
     CAM[Microscope Camera Sensor]
     
-    MOTOR <-->|Serial - Attempt 1| ARD
-    MOTOR -.->|Direct GPIO - Attempt 2| STEP
+    MOTOR <-->|Serial| ARD
     ARD -->|Pulses| STEP
     CAM -->|USB / CSI Video Feed| UI
   end
@@ -75,8 +74,7 @@ flowchart LR
   SENSOR -->|USB / CSI Video| RPI[Raspberry Pi / Laptop]
 
   RPI -->|USB/Serial| ARD[Arduino]
-  RPI -.->|Direct GPIO| STEP[Stepper Motors]
-  ARD -->|Pins 4-11| STEP
+  ARD -->|Pins 4-11| STEP[Stepper Motors]
   STEP -.->|Mechanical Drive| STAGE
 
   RPI -->|Dashboard UI| MON[Monitor]
