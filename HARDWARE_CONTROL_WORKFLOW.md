@@ -7,7 +7,7 @@ This document explains the technical implementation of the hardware control syst
 ## 1. System Architecture
 The hardware system follows a "Bridge" architecture:
 - **Frontend**: Next.js (React) dashboard provides the UI for manual jogging and automated scanning.
-- **Middleware**: Python Flask server running on a Raspberry Pi (or laptop) acts as the bridge.
+- **Middleware**: Python Flask server running on a Raspberry Pi acts as the bridge.
 - **Actuators**: Stepper motors controlled via an Arduino.
 
 ---

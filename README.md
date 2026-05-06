@@ -25,7 +25,7 @@ flowchart TB
     YOLO[YOLO v11 - Hugging Face Space]
   end
 
-  subgraph Local Workstation [Raspberry Pi / Laptop]
+  subgraph Local Workstation [Raspberry Pi]
     UI[Next.js Web App]
     
     subgraph Microservices
@@ -71,7 +71,7 @@ flowchart LR
     SENSOR[Camera Sensor]
   end
 
-  INET((Internet)) <-->|WiFi / Ethernet| RPI[Raspberry Pi / Laptop]
+  INET((Internet)) <-->|WiFi / Ethernet| RPI[Raspberry Pi]
   
   PSU[Power Supply System]
   PSU -->|5V| RPI
@@ -92,7 +92,7 @@ flowchart LR
 ### Key Hardware Components
 - **Microscope Automation**: Driven by **28BYJ-48 Stepper Motors** with **ULN2003 drivers**, controlled via an Arduino to enable precise serpentine scanning (LPF/HPF).
 - **Imaging System**: A high-definition camera sensor mounted on the microscope eyepiece; its feed is ingested by the Raspberry Pi for processing in the Web App.
-- **Control Unit**: A **Raspberry Pi** (or Laptop) running the local microservices and the web interface, providing a unified console for the lab technician.
+- **Control Unit**: A **Raspberry Pi** running the local microservices and the web interface, providing a unified console for the lab technician.
 - **Precision Scanning**: Includes a **600ms settle time** after each mechanical move to ensure zero vibration during image capture.
 
 ### 📍 Arduino Pinout Configuration
