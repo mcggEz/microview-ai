@@ -71,10 +71,15 @@ flowchart LR
     SENSOR[Camera Sensor]
   end
 
-  SENSOR -->|USB / CSI Video| RPI[Raspberry Pi / Laptop]
+  INET((Internet)) <-->|WiFi / Ethernet| RPI[Raspberry Pi / Laptop]
+  PSU[5V/12V PSU] --> RPI
+  PSU --> ARD[Arduino]
+  PSU --> STEP[Stepper Motors]
 
-  RPI -->|USB/Serial| ARD[Arduino]
-  ARD -->|Pins 4-11| STEP[Stepper Motors]
+  SENSOR -->|USB / CSI Video| RPI
+
+  RPI -->|USB/Serial| ARD
+  ARD -->|Pins 4-11| STEP
   STEP -.->|Mechanical Drive| STAGE
 
   RPI -->|Dashboard UI| MON[Monitor]
