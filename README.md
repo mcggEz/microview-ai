@@ -40,8 +40,8 @@ flowchart TB
     STEP[Stepper Motors X/Y]
     CAM[Microscope Camera Sensor]
     
-    MOTOR <-->|Serial (Attempt 1)| ARD
-    MOTOR -.->|Direct GPIO (Attempt 2)| STEP
+    MOTOR <-->|Serial - Attempt 1| ARD
+    MOTOR -.->|Direct GPIO - Attempt 2| STEP
     ARD -->|Pulses| STEP
     CAM -->|USB / CSI Video Feed| UI
   end
