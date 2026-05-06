@@ -17,39 +17,41 @@ This research contributes to the advancement of accessible medical diagnostics a
 ## 🏗️ System Architecture
 
 ```mermaid
-flowchart TB
-  subgraph Cloud Services
-    DB[(Supabase DB)]
-    ST[(Supabase Storage)]
-    VLM[Google Gemini 1.5/2.0]
-    YOLO[YOLO v11 - Hugging Face Space]
+flowchart LR
+  subgraph Hardware["Hardware Assembly"]
+    direction TB
+    CAM[Microscope Camera Sensor]
+    ARD[Arduino Nano/Uno]
+    STEP[Stepper Motors X/Y]
+    ARD -->|Pulses| STEP
   end
 
-  subgraph Local Workstation [Raspberry Pi]
+  subgraph RPI_Section["Raspberry Pi"]
+    direction TB
     UI[Next.js Web App]
-    
     subgraph Microservices
       MOTOR[Flask Server]
     end
-    
     UI <-->|REST API Commands| MOTOR
   end
 
-  subgraph Hardware Assembly
-    ARD[Arduino Nano/Uno]
-    STEP[Stepper Motors X/Y]
-    CAM[Microscope Camera Sensor]
-    
-    MOTOR <-->|Serial| ARD
-    ARD -->|Pulses| STEP
-    CAM -->|USB / CSI Video Feed| UI
+  subgraph Cloud["Cloud Services"]
+    direction TB
+    DB[(Supabase DB)]
+    ST[(Supabase Storage)]
+    YOLO[YOLO v11]
+    VLM[Google Gemini 2.0]
   end
 
-  %% Data Flow
-  UI <-->|Auth & Report Logs| DB
-  UI -->|Save Image Captures| ST
-  UI <-->|Raw Images & Detections| YOLO
-  UI <-->|Cropped Images & Prompts| VLM
+  %% Hardware to Pi
+  CAM -->|USB / CSI Video Feed| UI
+  MOTOR <-->|Serial| ARD
+
+  %% Pi to Cloud
+  UI <-->|Auth & Logs| DB
+  UI -->|Save Captures| ST
+  UI <-->|Detections| YOLO
+  UI <-->|Reasoning| VLM
 ```
 
 ### Software Stack
