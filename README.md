@@ -21,7 +21,7 @@ flowchart TB
   subgraph Cloud Services
     DB[(Supabase DB)]
     ST[(Supabase Storage)]
-    VLM[Google Gemini VLM]
+    VLM[Google Gemini 1.5/2.0]
     YOLO[YOLO v11 - Hugging Face Space]
   end
 
@@ -29,10 +29,10 @@ flowchart TB
     UI[Next.js Web App]
     
     subgraph Microservices
-      MOTOR[Motor Server - Flask]
+      MOTOR[Flask Server]
     end
     
-    UI <-->|Scan Commands| MOTOR
+    UI <-->|REST API Commands| MOTOR
   end
 
   subgraph Hardware Assembly
@@ -40,15 +40,17 @@ flowchart TB
     STEP[Stepper Motors X/Y]
     CAM[Microscope Camera Sensor]
     
-    MOTOR <-->|Serial| ARD
+    MOTOR <-->|Serial (Attempt 1)| ARD
+    MOTOR -.->|Direct GPIO (Attempt 2)| STEP
     ARD -->|Pulses| STEP
-    CAM -->|USB / CSI| UI
+    CAM -->|USB / CSI Video Feed| UI
   end
 
   %% Data Flow
-  UI -->|Auth & Logs| DB
-  UI -->|Save Captures| ST
-  UI -->|Reasoning| VLM
+  UI <-->|Auth & Report Logs| DB
+  UI -->|Save Image Captures| ST
+  UI <-->|Raw Images & Detections| YOLO
+  UI <-->|Cropped Images & Prompts| VLM
 ```
 
 ### Software Stack
@@ -70,13 +72,14 @@ flowchart LR
     SENSOR[Camera Sensor]
   end
 
-  SENSOR -->|USB / CSI| RPI[Raspberry Pi / Laptop]
+  SENSOR -->|USB / CSI Video| RPI[Raspberry Pi / Laptop]
 
   RPI -->|USB/Serial| ARD[Arduino]
-  ARD -->|Pins 4-11| STEP[Stepper Motors]
+  RPI -.->|Direct GPIO| STEP[Stepper Motors]
+  ARD -->|Pins 4-11| STEP
   STEP -.->|Mechanical Drive| STAGE
 
-  RPI -->|UI| MON[Monitor]
+  RPI -->|Dashboard UI| MON[Monitor]
 ```
 
 ### Key Hardware Components
@@ -84,6 +87,22 @@ flowchart LR
 - **Imaging System**: A high-definition camera sensor mounted on the microscope eyepiece; its feed is ingested by the Raspberry Pi for processing in the Web App.
 - **Control Unit**: A **Raspberry Pi** (or Laptop) running the local microservices and the web interface, providing a unified console for the lab technician.
 - **Precision Scanning**: Includes a **600ms settle time** after each mechanical move to ensure zero vibration during image capture.
+
+### 📍 Arduino Pinout Configuration
+
+Depending on the actuator type used in your assembly, follow the corresponding pinout:
+
+#### **Option A: Servo Motor Setup**
+Used for lightweight, rapid positioning.
+- **X-axis Servo**: Pin 3 (PWM)
+- **Y-axis Servo**: Pin 5 (PWM)
+- **Power**: 5V and GND from Arduino or external source.
+
+#### **Option B: Stepper Motor Setup (28BYJ-48 + ULN2003)**
+Used for high-precision, high-torque positioning.
+- **X-axis Stepper**: Pins 8, 9, 10, 11
+- **Y-axis Stepper**: Pins 4, 5, 6, 7
+- **Power**: 5V-12V external power recommended for drivers.
 
 
 ---
