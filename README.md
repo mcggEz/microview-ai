@@ -74,11 +74,11 @@ flowchart LR
   INET((Internet)) <-->|WiFi / Ethernet| RPI[Raspberry Pi / Laptop]
   
   PSU[Power Supply System]
-  PSU --> RPI
-  PSU --> ARD[Arduino]
-  PSU --> STEP[Stepper Motors]
-  PSU --> MON[Monitor]
-  PSU --> SCOPE
+  PSU -->|5V| RPI
+  PSU -->|5V| ARD[Arduino]
+  PSU -->|5V/12V| STEP[Stepper Motors]
+  PSU -->|12V| MON[Monitor]
+  PSU -->|110/220V| SCOPE
 
   SENSOR -->|USB / CSI Video| RPI
 
