@@ -72,9 +72,13 @@ flowchart LR
   end
 
   INET((Internet)) <-->|WiFi / Ethernet| RPI[Raspberry Pi / Laptop]
-  PSU[5V/12V PSU] --> RPI
+  
+  PSU[Power Supply System]
+  PSU --> RPI
   PSU --> ARD[Arduino]
   PSU --> STEP[Stepper Motors]
+  PSU --> MON[Monitor]
+  PSU --> SCOPE
 
   SENSOR -->|USB / CSI Video| RPI
 
@@ -82,7 +86,7 @@ flowchart LR
   ARD -->|Pins 4-11| STEP
   STEP -.->|Mechanical Drive| STAGE
 
-  RPI -->|Dashboard UI| MON[Monitor]
+  RPI -->|Dashboard UI| MON
 ```
 
 ### Key Hardware Components
